@@ -6,6 +6,7 @@ export interface User {
     email: string;
     university: string;
     role: UserRole;
+    regNumber?: string;
     createdAt: Date;
     fcmToken?: string;
 }
@@ -41,10 +42,12 @@ export interface Course {
     fullCode: string;
     lecturerUid?: string;
     lecturerName?: string;
+    isCarryover?: boolean;
+    accepted?: boolean;
     createdAt: Date;
 }
 
-export type PostType = 'lecture' | 'assignment' | 'test' | 'note' | 'announcement' | 'cancellation';
+export type PostType = 'lecture' | 'assignment' | 'test' | 'note' | 'announcement' | 'cancellation' | 'attendance';
 export type LectureStatus = 'scheduled' | 'cancelled' | 'rescheduled';
 
 export interface Post {
@@ -68,6 +71,7 @@ export interface Post {
     marks?: number;
     topics?: string;
     linkedPostId?: string;
+    isCarryover?: boolean;
 }
 
 export interface AppNotification {

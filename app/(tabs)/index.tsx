@@ -99,7 +99,7 @@ export default function HomeScreen() {
                                             ? 'cancelled'
                                             : 'upcoming'
                                     }
-                                    isCarryover={(lecture as Post & { _isCarryover?: boolean })._isCarryover}
+                                    isCarryover={lecture.isCarryover}
                                     onPress={() =>
                                         router.push(
                                             `/post/${lecture.id}?spaceId=${lecture.spaceId}&courseId=${lecture.courseId}`
@@ -132,7 +132,7 @@ export default function HomeScreen() {
                             <PostCard
                                 key={post.id}
                                 post={post}
-                                isCarryover={(post as Post & { _isCarryover?: boolean })._isCarryover}
+                                isCarryover={post.isCarryover}
                                 onPress={() =>
                                     router.push(
                                         `/post/${post.id}?spaceId=${post.spaceId}&courseId=${post.courseId}`

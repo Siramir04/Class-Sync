@@ -99,3 +99,9 @@ export async function changePassword(newPassword: string): Promise<void> {
     if (!user) throw new Error('No user logged in');
     await updatePassword(user, newPassword);
 }
+/**
+ * Update the user's Firestore profile.
+ */
+export async function updateUserProfile(uid: string, updates: Partial<User>): Promise<void> {
+    await updateDoc(doc(db, 'users', uid), updates as any);
+}

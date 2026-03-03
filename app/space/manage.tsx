@@ -12,6 +12,8 @@ import {
     FlatList,
     Modal,
     Pressable,
+    Switch,
+    ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +24,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useCourses } from '../../hooks/useCourses';
 import { getSpaceById, updateSpace, deleteSpace, transferOwnership, getSpaceMembers, removeSpaceMember, promoteToAssistantMonitor } from '../../services/spaceService';
 import { assignLecturer } from '../../services/courseService';
+import { getAttendanceSettings, updateCourseAttendanceSettings } from '../../services/attendanceService';
+import { CourseAttendanceSettings } from '../../types/attendance';
 import Card from '../../components/ui/Card';
 import Tag from '../../components/ui/Tag';
 import Button from '../../components/ui/Button';
@@ -138,13 +142,11 @@ export default function SpaceManageScreen() {
                 {/* Courses */}
                 <Text style={styles.sectionTitle}>Courses</Text>
                 {courses.map((course) => (
-                    <Card key={course.id} style={styles.courseCard}>
-                        <Text style={styles.courseName}>{course.courseName}</Text>
-                        <Text style={styles.courseCode}>{course.fullCode}</Text>
-                        <Text style={styles.lecturerName}>
-                            {course.lecturerName || 'No Lecturer assigned'}
-                        </Text>
-                    </Card>
+                    <CourseCardWithAttendance
+                        key={course.id}
+                        course={course}
+                        spaceId={spaceId!}
+                    />
                 ))}
 
                 <Divider />
@@ -206,6 +208,54 @@ export default function SpaceManageScreen() {
     );
 }
 
+function CourseCardWithAttendance({ course, spaceId }: { course: Course, spaceId: string }) {
+    const [enabled, setEnabled] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        getAttendanceSettings(course.id, spaceId)
+            .then((settings: CourseAttendanceSettings) => setEnabled(settings.isEnabled))
+            .catch(() => { })
+            .finally(() => setLoading(false));
+    }, [course.id, spaceId]);
+
+    const toggleAttendance = async (value: boolean) => {
+        try {
+            await updateCourseAttendanceSettings(course.id, spaceId, { isEnabled: value });
+            setEnabled(value);
+        } catch (error) {
+            Alert.alert('Error', 'Failed to update attendance settings');
+        }
+    };
+
+    return (
+        <Card style={styles.courseCard}>
+            <View style={styles.courseHeader}>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.courseName}>{course.courseName}</Text>
+                    <Text style={styles.courseCode}>{course.fullCode}</Text>
+                </View>
+                <View style={styles.attendanceToggle}>
+                    <Text style={styles.toggleLabel}>Attendance</Text>
+                    {loading ? (
+                        <ActivityIndicator size="small" color={Colors.primaryBlue} />
+                    ) : (
+                        <Switch
+                            value={enabled}
+                            onValueChange={toggleAttendance}
+                            trackColor={{ false: Colors.border, true: Colors.primaryBlue + '80' }}
+                            thumbColor={enabled ? Colors.primaryBlue : '#f4f3f4'}
+                        />
+                    )}
+                </View>
+            </View>
+            <Text style={styles.lecturerName}>
+                {course.lecturerName || 'No Lecturer assigned'}
+            </Text>
+        </Card>
+    );
+}
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -239,6 +289,20 @@ const styles = StyleSheet.create({
     },
     courseCard: {
         marginBottom: Spacing.sm,
+    },
+    courseHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+    },
+    attendanceToggle: {
+        alignItems: 'center',
+    },
+    toggleLabel: {
+        ...Typography.label,
+        fontSize: 10,
+        color: Colors.textSecondary,
+        marginBottom: 2,
     },
     courseName: {
         ...Typography.sectionHeader,

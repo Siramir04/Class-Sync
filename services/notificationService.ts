@@ -88,6 +88,8 @@ export function subscribeToUserNotifications(
             return {
                 id: d.id,
                 ...data,
+                isRead: Boolean(data.isRead),
+                isCarryover: Boolean(data.isCarryover),
                 createdAt: data.createdAt?.toDate?.() ?? new Date(),
             } as AppNotification;
         });
@@ -111,6 +113,8 @@ export async function getUserNotifications(
         return {
             id: d.id,
             ...data,
+            isRead: Boolean(data.isRead),
+            isCarryover: Boolean(data.isCarryover),
             createdAt: data.createdAt?.toDate?.() ?? new Date(),
         } as AppNotification;
     });

@@ -101,6 +101,8 @@ export async function joinCourseByCode(
                     id: courseDoc.id,
                     spaceId: spaceDoc.id,
                     ...courseData,
+                    isCarryover: Boolean(courseData.isCarryover),
+                    accepted: Boolean(courseData.accepted),
                     createdAt: courseData.createdAt?.toDate?.() ?? new Date(),
                 } as Course,
                 spaceId: spaceDoc.id,
@@ -122,6 +124,8 @@ export async function getCoursesBySpace(spaceId: string): Promise<Course[]> {
             id: d.id,
             spaceId,
             ...data,
+            isCarryover: Boolean(data.isCarryover),
+            accepted: Boolean(data.accepted),
             createdAt: data.createdAt?.toDate?.() ?? new Date(),
         } as Course;
     });
@@ -143,6 +147,8 @@ export function subscribeToCourses(
                     id: d.id,
                     spaceId,
                     ...data,
+                    isCarryover: Boolean(data.isCarryover),
+                    accepted: Boolean(data.accepted),
                     createdAt: data.createdAt?.toDate?.() ?? new Date(),
                 } as Course;
             });
@@ -253,6 +259,8 @@ export async function getCourseMembers(
         return {
             ...data,
             uid: d.id,
+            isCarryover: Boolean(data.isCarryover),
+            accepted: Boolean(data.accepted),
             joinedAt: data.joinedAt?.toDate?.() ?? new Date(),
             acceptDeadline: data.acceptDeadline?.toDate?.(),
         } as CourseMember;
@@ -273,6 +281,8 @@ export async function getCourseById(
         id: snap.id,
         spaceId,
         ...data,
+        isCarryover: Boolean(data.isCarryover),
+        accepted: Boolean(data.accepted),
         createdAt: data.createdAt?.toDate?.() ?? new Date(),
     } as Course;
 }
@@ -299,6 +309,8 @@ export async function findCourseByFullCode(
                     id: d.id,
                     spaceId: spaceDoc.id,
                     ...data,
+                    isCarryover: Boolean(data.isCarryover),
+                    accepted: Boolean(data.accepted),
                     createdAt: data.createdAt?.toDate?.() ?? new Date(),
                 } as Course,
                 spaceId: spaceDoc.id,

@@ -66,7 +66,7 @@ export async function createPost(
                 spaceId,
                 courseId,
                 type: post.type,
-                isCarryover: memberData.isCarryover || false,
+                isCarryover: Boolean(memberData.isCarryover),
             });
         }
     } catch (error) {
@@ -202,8 +202,7 @@ export async function getRecentPostsForUser(
             postsSnap.docs.forEach((d) => {
                 const post = docToPost(d);
                 // Tag carryover status from member data
-                (post as Post & { _isCarryover?: boolean })._isCarryover =
-                    memberData.isCarryover || false;
+                post.isCarryover = Boolean(memberData.isCarryover);
                 allPosts.push(post);
             });
         }
@@ -289,5 +288,6 @@ function docToPost(d: any): Post {
         marks: data.marks,
         topics: data.topics,
         linkedPostId: data.linkedPostId,
+        isCarryover: Boolean(data.isCarryover),
     };
 }

@@ -28,6 +28,7 @@ const allOptions: PostTypeOption[] = [
     { type: 'note', label: 'Post Note', icon: 'pushpin', color: Colors.success, description: 'Share a class note or reminder' },
     { type: 'announcement', label: 'Announcement', icon: 'megaphone-outline', color: Colors.primaryBlue, description: 'Make an important announcement' },
     { type: 'cancellation', label: 'Cancel Class', icon: 'close-circle-outline', color: Colors.error, description: 'Cancel a scheduled lecture' },
+    { type: 'attendance', label: 'Start Attendance', icon: 'qr-code-outline', color: Colors.primaryBlue, description: 'Start a QR-based attendance session' },
 ];
 
 export default function PostTypeSheet({

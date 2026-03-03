@@ -266,6 +266,8 @@ export async function getSpaceMembers(spaceId: string): Promise<CourseMember[]> 
         return {
             ...data,
             uid: d.id,
+            isCarryover: Boolean(data.isCarryover),
+            accepted: Boolean(data.accepted),
             joinedAt: data.joinedAt?.toDate?.() ?? new Date(),
             acceptDeadline: data.acceptDeadline?.toDate?.(),
         } as CourseMember;

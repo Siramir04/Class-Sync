@@ -21,7 +21,7 @@ import Tag from '../../components/ui/Tag';
 import Divider from '../../components/ui/Divider';
 import Button from '../../components/ui/Button';
 import { useSpaceStore } from '../../store/spaceStore';
-import { logoutUser, changePassword } from '../../services/authService';
+import { logoutUser, changePassword, updateUserProfile } from '../../services/authService';
 import { format } from 'date-fns';
 
 export default function ProfileScreen() {
@@ -47,26 +47,57 @@ export default function ProfileScreen() {
     };
 
     const handleChangePassword = () => {
-        if (Alert.prompt) {
-            Alert.prompt('Change Password', 'Enter your new password:', [
+        if (!Alert.prompt) {
+            Alert.alert('Change Password', 'This feature is only available on iOS.');
+            return;
+        }
+        Alert.prompt('Change Password', 'Enter your new password:', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Update',
+                onPress: async (newPassword?: string) => {
+                    if (newPassword && newPassword.length >= 6) {
+                        try {
+                            await changePassword(newPassword);
+                            Alert.alert('Success', 'Password updated successfully.');
+                        } catch {
+                            Alert.alert('Error', 'Could not update password.');
+                        }
+                    }
+                },
+            },
+        ]);
+    };
+
+    const handleUpdateRegNumber = () => {
+        if (!Alert.prompt) {
+            Alert.alert('Registration Number', 'Please use a device that supports prompts or contact support.');
+            return;
+        }
+        Alert.prompt(
+            'Registration Number',
+            'Required for attendance tracking:',
+            [
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Update',
-                    onPress: async (newPassword?: string) => {
-                        if (newPassword && newPassword.length >= 6) {
+                    onPress: async (regNumber?: string) => {
+                        if (regNumber && regNumber.trim()) {
                             try {
-                                await changePassword(newPassword);
-                                Alert.alert('Success', 'Password updated successfully.');
-                            } catch {
-                                Alert.alert('Error', 'Could not update password.');
+                                await updateUserProfile(user!.uid, { regNumber: regNumber.trim() });
+                                // Update local store
+                                useAuthStore.getState().setUser({ ...user!, regNumber: regNumber.trim() });
+                                Alert.alert('Success', 'Registration number updated.');
+                            } catch (error) {
+                                Alert.alert('Error', 'Could not update registration number.');
                             }
                         }
                     },
                 },
-            ]);
-        } else {
-            Alert.alert('Change Password', 'This feature is only available on iOS.');
-        }
+            ],
+            'plain-text',
+            user?.regNumber || ''
+        );
     };
 
     const roleLabel =
@@ -86,6 +117,9 @@ export default function ProfileScreen() {
                     <Avatar name={user?.fullName || '?'} size={72} />
                     <Text style={styles.fullName}>{user?.fullName}</Text>
                     <Text style={styles.university}>{user?.university}</Text>
+                    {user?.regNumber && (
+                        <Text style={styles.regNumber}>{user.regNumber}</Text>
+                    )}
                     <Tag label={roleLabel} variant="role" style={styles.roleTag} />
                     <Text style={styles.memberSince}>
                         Member since {user?.createdAt ? format(new Date(user.createdAt), 'MMMM yyyy') : '—'}
@@ -133,6 +167,13 @@ export default function ProfileScreen() {
 
                 {/* Settings */}
                 <Text style={styles.sectionTitle}>Settings</Text>
+
+                <TouchableOpacity style={styles.settingsRow} onPress={handleUpdateRegNumber}>
+                    <Ionicons name="id-card-outline" size={20} color={Colors.textSecondary} />
+                    <Text style={styles.settingsLabel}>Registration Number</Text>
+                    <Text style={styles.settingsValue}>{user?.regNumber || 'Not set'}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.border} />
+                </TouchableOpacity>
 
                 <TouchableOpacity style={styles.settingsRow}>
                     <Ionicons name="create-outline" size={20} color={Colors.textSecondary} />
@@ -193,6 +234,12 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
         marginTop: 4,
     },
+    regNumber: {
+        ...Typography.codeDisplay,
+        fontSize: 14,
+        color: Colors.accentBlue,
+        marginTop: 4,
+    },
     roleTag: {
         marginTop: Spacing.sm,
     },
@@ -239,6 +286,11 @@ const styles = StyleSheet.create({
         color: Colors.textPrimary,
         flex: 1,
         marginLeft: Spacing.md,
+    },
+    settingsValue: {
+        ...Typography.label,
+        color: Colors.textSecondary,
+        marginRight: Spacing.sm,
     },
     logoutRow: {
         flexDirection: 'row',

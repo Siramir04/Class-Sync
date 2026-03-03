@@ -25,6 +25,9 @@ import PostTypeSheet from '../../components/sheets/PostTypeSheet';
 import CreatePostSheet, { CreatePostData } from '../../components/sheets/CreatePostSheet';
 import { Post, PostType, Space } from '../../types';
 import { createPost } from '../../services/postService';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { AttendanceSession } from '../../types/attendance';
 
 const postTypeFilters = ['All', 'Lectures', 'Assignments', 'Tests', 'Notes', 'Announcements'] as const;
 const postTypeMap: Record<string, PostType | undefined> = {
@@ -51,6 +54,7 @@ export default function SpaceFeedScreen() {
     const [showCreateSheet, setShowCreateSheet] = useState(false);
     const [selectedPostType, setSelectedPostType] = useState<PostType>('lecture');
     const [createLoading, setCreateLoading] = useState(false);
+    const [activeSessions, setActiveSessions] = useState<AttendanceSession[]>([]);
 
     const isMonitor = user?.uid === space?.monitorUid || user?.uid === space?.assistantMonitorUid;
     const isLecturer = user?.role === 'lecturer';
@@ -59,6 +63,29 @@ export default function SpaceFeedScreen() {
         if (!spaceId) return;
         loadData();
     }, [spaceId]);
+
+    // Listen for active attendance sessions
+    useEffect(() => {
+        if (!spaceId || courses.length === 0) return;
+
+        const unsubscribes: (() => void)[] = [];
+
+        courses.forEach(course => {
+            const sessionsRef = collection(db, 'spaces', spaceId, 'courses', course.id, 'sessions');
+            const q = query(sessionsRef, where('isActive', '==', true));
+
+            const unsub = onSnapshot(q, (snapshot) => {
+                const liveSessions = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as AttendanceSession));
+                setActiveSessions(prev => {
+                    const filtered = prev.filter(s => s.courseId !== course.id);
+                    return [...filtered, ...liveSessions];
+                });
+            });
+            unsubscribes.push(unsub);
+        });
+
+        return () => unsubscribes.forEach(unsub => unsub());
+    }, [spaceId, courses]);
 
     const loadData = async () => {
         setLoading(true);
@@ -206,6 +233,28 @@ export default function SpaceFeedScreen() {
                 ))}
             </ScrollView>
 
+            {/* Active Sessions Banner */}
+            {activeSessions.length > 0 && (
+                <View style={styles.activeSessionsContainer}>
+                    {activeSessions.map(session => (
+                        <TouchableOpacity
+                            key={session.id}
+                            style={styles.sessionBanner}
+                            onPress={() => router.push(`/attendance/session/${session.id}?courseId=${session.courseId}&spaceId=${spaceId}`)}
+                        >
+                            <View style={styles.sessionIcon}>
+                                <Ionicons name="qr-code" size={20} color={Colors.white} />
+                            </View>
+                            <View style={styles.sessionInfo}>
+                                <Text style={styles.sessionTitle}>Live Attendance: {session.courseCode}</Text>
+                                <Text style={styles.sessionSubtitle}>Started by {session.initiatedByName} · Tap to join</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={18} color={Colors.white + '80'} />
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
+
             {/* Activity Feed */}
             <FlatList
                 data={filteredPosts}
@@ -240,8 +289,20 @@ export default function SpaceFeedScreen() {
                 visible={showPostTypeSheet}
                 onClose={() => setShowPostTypeSheet(false)}
                 onSelect={(type) => {
-                    setSelectedPostType(type);
-                    setShowCreateSheet(true);
+                    if (type === 'attendance') {
+                        // Find the first course to start attendance if 'All' is selected, 
+                        // or use the active course.
+                        const course = activeCourse !== 'All'
+                            ? courses.find(c => c.courseCode === activeCourse)
+                            : courses[0];
+
+                        if (course) {
+                            router.push(`/attendance/session/new?courseId=${course.id}&spaceId=${spaceId}&courseCode=${course.courseCode}&courseName=${encodeURIComponent(course.courseName)}`);
+                        }
+                    } else {
+                        setSelectedPostType(type);
+                        setShowCreateSheet(true);
+                    }
                 }}
             />
 
@@ -334,6 +395,46 @@ const styles = StyleSheet.create({
     feedContent: {
         padding: Spacing.screenPadding,
         paddingBottom: 100,
+    },
+    activeSessionsContainer: {
+        paddingHorizontal: Spacing.screenPadding,
+        marginTop: Spacing.md,
+        gap: 8,
+    },
+    sessionBanner: {
+        backgroundColor: Colors.primaryBlue,
+        borderRadius: 12,
+        padding: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        shadowColor: Colors.primaryBlue,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 4,
+    },
+    sessionIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    sessionInfo: {
+        flex: 1,
+    },
+    sessionTitle: {
+        ...Typography.buttonText,
+        fontSize: 14,
+        color: Colors.white,
+    },
+    sessionSubtitle: {
+        ...Typography.label,
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.8)',
+        marginTop: 2,
     },
     fab: {
         position: 'absolute',

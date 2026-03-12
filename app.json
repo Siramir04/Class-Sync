@@ -34,7 +34,12 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-barcode-scanner"
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "ClassSync uses your camera to scan QR codes for attendance marking."
+        }
+      ]
     ],
     "extra": {
       "router": {},

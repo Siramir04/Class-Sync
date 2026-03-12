@@ -5,17 +5,45 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../constants/colors';
 import { Typography } from '../constants/typography';
 import { useAuthStore } from '../store/authStore';
+import VideoIntro from '../components/intro/VideoIntro';
 
 export default function SplashScreen() {
     const router = useRouter();
     const { isAuthenticated, isLoading } = useAuthStore();
+    const [showIntro, setShowIntro] = useState<boolean | null>(null);
 
     useEffect(() => {
+        checkIntro();
+    }, []);
+
+    const checkIntro = async () => {
+        try {
+            const hasSeenIntro = await AsyncStorage.getItem('hasSeenIntro');
+            if (hasSeenIntro === 'true') {
+                setShowIntro(false);
+            } else {
+                setShowIntro(true);
+            }
+        } catch (error) {
+            setShowIntro(false);
+        }
+    };
+
+    const handleIntroFinish = async () => {
+        try {
+            await AsyncStorage.setItem('hasSeenIntro', 'true');
+            setShowIntro(false);
+        } catch (error) {
+            setShowIntro(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isLoading || showIntro === null || showIntro === true) return;
+
         const timer = setTimeout(async () => {
             try {
                 const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
-
-                if (isLoading) return;
 
                 if (!hasSeenOnboarding) {
                     router.replace('/onboarding');
@@ -27,10 +55,14 @@ export default function SplashScreen() {
             } catch {
                 router.replace('/(auth)/login');
             }
-        }, 2000);
+        }, 1000);
 
         return () => clearTimeout(timer);
-    }, [isLoading, isAuthenticated]);
+    }, [isLoading, isAuthenticated, showIntro]);
+
+    if (showIntro === true) {
+        return <VideoIntro onFinish={handleIntroFinish} />;
+    }
 
     return (
         <View style={styles.container}>

@@ -26,7 +26,7 @@
       "permissions": [
         "android.permission.CAMERA"
       ],
-      "package": "Classsync.by.simplrlabs"
+      "package": "com.simplrlabs.classsync"
     },
     "web": {
       "favicon": "./assets/favicon.png"

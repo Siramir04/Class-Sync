@@ -55,8 +55,14 @@ export default function RegisterScreen() {
         setLoading(true);
         try {
             const user = await registerUser(email, password, fullName, university, role);
-            setUser(user);
-            router.replace('/(tabs)');
+            
+            try {
+                setUser(user);
+                router.replace('/(tabs)');
+            } catch (navError) {
+                console.error('Registration navigation error:', navError);
+                Alert.alert('Navigation Error', 'Failed to redirect after registration.');
+            }
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Registration failed';
             setErrors({ general: message });

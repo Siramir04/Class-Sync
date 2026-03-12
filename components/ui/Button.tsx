@@ -46,10 +46,18 @@ export default function Button({
         textStyle,
     ];
 
+    const handlePress = () => {
+        try {
+            onPress();
+        } catch (error) {
+            console.error('Button onPress error:', error);
+        }
+    };
+
     return (
         <TouchableOpacity
             style={buttonStyles}
-            onPress={onPress}
+            onPress={handlePress}
             disabled={disabled || loading}
             activeOpacity={0.8}
         >

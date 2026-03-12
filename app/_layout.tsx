@@ -1,4 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { ErrorUtils } from 'react-native';
+
+const originalHandler = ErrorUtils.getGlobalHandler();
+ErrorUtils.setGlobalHandler((error, isFatal) => {
+  console.log('GLOBAL ERROR:', error.message, error.stack);
+  originalHandler(error, isFatal);
+});
+
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';

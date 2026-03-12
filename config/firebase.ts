@@ -14,11 +14,18 @@ const firebaseConfig = {
   measurementId: "G-B56X5G7GJ2",
 };
 
-const app = initializeApp(firebaseConfig);
+let app, auth, db;
 
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage),
-});
+try {
+  app = initializeApp(firebaseConfig);
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+  });
+  db = getFirestore(app);
+  console.log('Firebase initialized successfully');
+} catch (error) {
+  console.error('Firebase initialization failed:', error);
+}
 
-export const db = getFirestore(app);
+export { auth, db };
 export default app;

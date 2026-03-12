@@ -39,8 +39,14 @@ export default function LoginScreen() {
         try {
             const firebaseUser = await loginUser(email, password);
             const userData = await getCurrentUser(firebaseUser.uid);
-            setUser(userData);
-            router.replace('/(tabs)');
+            
+            try {
+                setUser(userData);
+                router.replace('/(tabs)');
+            } catch (navError) {
+                console.error('Login navigation error:', navError);
+                Alert.alert('Navigation Error', 'Failed to redirect after login.');
+            }
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Login failed';
             setError(message);

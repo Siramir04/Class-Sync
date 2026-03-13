@@ -21,6 +21,7 @@ const typeIcons: Record<PostType, string> = {
     note: 'pin-outline',
     announcement: 'megaphone-outline',
     cancellation: 'close-circle-outline',
+    attendance: 'time-outline',
 };
 
 const typeLabels: Record<PostType, string> = {
@@ -30,6 +31,7 @@ const typeLabels: Record<PostType, string> = {
     note: 'Note',
     announcement: 'Announcement',
     cancellation: 'Cancellation',
+    attendance: 'Attendance',
 };
 
 export default function PostCard({ post, isCarryover = false, onPress }: PostCardProps) {

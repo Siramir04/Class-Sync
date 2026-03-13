@@ -28,6 +28,7 @@ const typeLabels: Record<PostType, string> = {
     note: 'Note',
     announcement: 'Announcement',
     cancellation: 'Cancellation',
+    attendance: 'Attendance',
 };
 
 export default function PostDetailScreen() {

@@ -377,9 +377,9 @@ export async function exportAttendanceToExcel(
 
         // 6. Generate file
         const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-        const uri = `${FileSystem.cacheDirectory}ClassSync_${courseCode}_Attendance_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const uri = `${cacheDirectory!}ClassSync_${courseCode}_Attendance_${new Date().toISOString().split('T')[0]}.xlsx`;
 
-        await FileSystem.writeAsStringAsync(uri, wbout, { encoding: FileSystem.EncodingType.Base64 });
+        await writeAsStringAsync(uri, wbout, { encoding: EncodingType.Base64 });
 
         // 7. Share
         await Sharing.shareAsync(uri);

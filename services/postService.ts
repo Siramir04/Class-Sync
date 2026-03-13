@@ -84,6 +84,7 @@ function getPostTypeEmoji(type: PostType): string {
         note: '📌',
         announcement: '📢',
         cancellation: '❌',
+        attendance: '⏱️',
     };
     return emojiMap[type] || '📌';
 }

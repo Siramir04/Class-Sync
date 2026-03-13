@@ -89,7 +89,9 @@ export function usePushNotifications() {
                     handleNotification: async () => ({
                         shouldShowAlert: true,
                         shouldPlaySound: true,
-                        shouldSetBadge: true,
+                        shouldSetBadge: false,
+                        shouldShowBanner: true,
+                        shouldShowList: true,
                     }),
                 });
 

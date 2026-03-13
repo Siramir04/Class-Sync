@@ -43,6 +43,7 @@ const typeLabels: Record<PostType, string> = {
     note: 'Post Note',
     announcement: 'Announcement',
     cancellation: 'Cancel Class',
+    attendance: 'Attendance',
 };
 
 export default function CreatePostSheet({

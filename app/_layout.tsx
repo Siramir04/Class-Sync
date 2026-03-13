@@ -1,16 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { ErrorUtils } from 'react-native';
-
-const originalHandler = ErrorUtils.getGlobalHandler();
-ErrorUtils.setGlobalHandler((error, isFatal) => {
-  console.log('GLOBAL ERROR:', error.message, error.stack);
-  originalHandler(error, isFatal);
-});
-
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { View, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useCarryoverAutoAccept } from '../hooks/useCarryoverAutoAccept';
@@ -45,10 +38,16 @@ export default function RootLayout() {
         if (isLoading || !fontsLoaded) return;
 
         const inAuthGroup = segments[0] === '(auth)';
+        const isIndex = !segments[0];
+        const isOnboarding = segments[0] === 'onboarding';
 
-        if (!isAuthenticated && !inAuthGroup) {
-            // Not logged in and not in auth screens — splash handles routing
+        if (!isAuthenticated) {
+            // Redirect to login if trying to access protected routes
+            if (!inAuthGroup && !isIndex && !isOnboarding) {
+                router.replace('/(auth)/login');
+            }
         } else if (isAuthenticated && inAuthGroup) {
+            // Redirect to main app if already logged in and in auth group
             router.replace('/(tabs)');
         }
     }, [isAuthenticated, segments, isLoading, fontsLoaded]);
@@ -62,7 +61,7 @@ export default function RootLayout() {
     }
 
     return (
-        <>
+        <SafeAreaProvider>
             <StatusBar style="dark" />
             <Slot />
 
@@ -81,6 +80,6 @@ export default function RootLayout() {
                     onDismiss={dismissSheet}
                 />
             )}
-        </>
+        </SafeAreaProvider>
     );
 }

@@ -72,7 +72,7 @@ export default function OnboardingScreen() {
     return (
         <View style={styles.container}>
             {activeIndex < 2 && (
-                <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+                <TouchableOpacity style={styles.skipButton} onPress={handleSkip} activeOpacity={0.7}>
                     <Text style={styles.skipText}>Skip</Text>
                 </TouchableOpacity>
             )}
@@ -108,7 +108,7 @@ export default function OnboardingScreen() {
             {activeIndex === 2 && (
                 <View style={styles.bottomButtons}>
                     <Button title="Create Account" onPress={handleComplete} />
-                    <TouchableOpacity onPress={handleLogin} style={styles.loginLink}>
+                    <TouchableOpacity onPress={handleLogin} style={styles.loginLink} activeOpacity={0.7}>
                         <Text style={styles.loginText}>I already have an account</Text>
                     </TouchableOpacity>
                 </View>

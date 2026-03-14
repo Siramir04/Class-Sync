@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     FlatList,
     SafeAreaView,
+    Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,7 @@ import { Typography } from '../../constants/typography';
 import { Spacing } from '../../constants/spacing';
 import { useAuthStore } from '../../store/authStore';
 import { useRecentPosts } from '../../hooks/usePosts';
+import Card from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import PostTypeSheet from '../../components/sheets/PostTypeSheet';
@@ -24,7 +26,7 @@ import { Post, PostType } from '../../types';
 
 function generateWeekDates(): Date[] {
     const today = startOfToday();
-    return Array.from({ length: 7 }, (_, i) => addDays(today, i - 3));
+    return Array.from({ length: 14 }, (_, i) => addDays(today, i - 3));
 }
 
 export default function ScheduleScreen() {
@@ -55,44 +57,59 @@ export default function ScheduleScreen() {
     dayLectures.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
 
     useEffect(() => {
-        // Auto-scroll to today
+        // Auto-scroll to today/selected on mount
         setTimeout(() => {
-            scrollRef.current?.scrollTo({ x: 3 * 60, animated: true });
-        }, 100);
+            const index = weekDates.findIndex(d => isSameDay(d, selectedDate));
+            if (index !== -1 && scrollRef.current) {
+                scrollRef.current.scrollTo({ x: index * 62 - 20, animated: true });
+            }
+        }, 300);
     }, []);
 
     const renderTimelineRow = ({ item: lecture }: { item: Post }) => {
-        const isCarryover = (lecture as Post & { _isCarryover?: boolean })._isCarryover;
-        const borderColor = isCarryover ? Colors.carryover : Colors.accentBlue;
+        const isCancelled = lecture.lectureStatus === 'cancelled';
+        const borderColor = lecture.isCarryover ? Colors.carryover : Colors.primaryBlue;
 
         return (
             <TouchableOpacity
-                style={styles.timelineRow}
                 onPress={() =>
                     router.push(
                         `/post/${lecture.id}?spaceId=${lecture.spaceId}&courseId=${lecture.courseId}`
                     )
                 }
-                activeOpacity={0.8}
+                activeOpacity={0.7}
             >
-                <View style={[styles.timelineBar, { backgroundColor: borderColor }]} />
-                <View style={styles.timeColumn}>
-                    <Text style={styles.timeText}>{lecture.startTime || '—'}</Text>
-                    <Text style={styles.timeTextEnd}>{lecture.endTime || '—'}</Text>
-                </View>
-                <View style={styles.lectureInfo}>
-                    <Text style={styles.courseName} numberOfLines={1}>
-                        {lecture.courseCode}
-                    </Text>
-                    <Text style={styles.venueName} numberOfLines={1}>
-                        📍 {lecture.venue || 'TBD'}
-                    </Text>
-                </View>
-                {lecture.lectureStatus === 'cancelled' && (
-                    <View style={styles.cancelChip}>
-                        <Text style={styles.cancelChipText}>Cancelled</Text>
+                <Card style={[styles.lectureCard, isCancelled && styles.cancelledCard]}>
+                    <View style={[styles.statusIndicator, { backgroundColor: borderColor }]} />
+                    <View style={styles.lectureContent}>
+                        <View style={styles.lectureMain}>
+                            <View style={styles.timeInfo}>
+                                <Text style={styles.timeText}>{lecture.startTime || '—'}</Text>
+                                <Text style={styles.durationText}>
+                                    {lecture.endTime ? `until ${lecture.endTime}` : ''}
+                                </Text>
+                            </View>
+                            <View style={styles.courseInfo}>
+                                <Text style={styles.courseCode} numberOfLines={1}>
+                                    {lecture.courseCode}
+                                </Text>
+                                <Text style={styles.venueText} numberOfLines={1}>
+                                    {lecture.venue || 'TBD'}
+                                </Text>
+                            </View>
+                        </View>
+                        {isCancelled && (
+                            <View style={styles.cancelBadge}>
+                                <Text style={styles.cancelBadgeText}>CANCELLED</Text>
+                            </View>
+                        )}
+                        {lecture.isCarryover && !isCancelled && (
+                            <View style={styles.carryoverBadge}>
+                                <Text style={styles.carryoverBadgeText}>CARRYOVER</Text>
+                            </View>
+                        )}
                     </View>
-                )}
+                </Card>
             </TouchableOpacity>
         );
     };
@@ -101,75 +118,84 @@ export default function ScheduleScreen() {
         <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Schedule</Text>
+                <View>
+                    <Text style={styles.headerTitle}>Schedule</Text>
+                    <Text style={styles.monthLabel}>{format(selectedDate, 'MMMM yyyy')}</Text>
+                </View>
+                {isMonitorOrAssistant && (
+                    <TouchableOpacity 
+                        style={styles.addIconButton}
+                        onPress={() => setShowPostTypeSheet(true)}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="add" size={26} color={Colors.primaryBlue} />
+                    </TouchableOpacity>
+                )}
             </View>
 
-            {/* 7-Day Date Strip */}
-            <ScrollView
-                ref={scrollRef}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.dateStrip}
-                contentContainerStyle={styles.dateStripContent}
-            >
-                {weekDates.map((date, index) => {
-                    const isSelected = isSameDay(date, selectedDate);
-                    const isToday = isSameDay(date, startOfToday());
-                    return (
-                        <TouchableOpacity
-                            key={index}
-                            style={[styles.dateTile, isSelected && styles.dateTileSelected]}
-                            onPress={() => setSelectedDate(date)}
-                        >
-                            <Text
+            {/* Date Strip */}
+            <View style={styles.dateStripContainer}>
+                <ScrollView
+                    ref={scrollRef}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.dateStripContent}
+                >
+                    {weekDates.map((date, index) => {
+                        const isSelected = isSameDay(date, selectedDate);
+                        const isToday = isSameDay(date, startOfToday());
+                        return (
+                            <TouchableOpacity
+                                key={index}
                                 style={[
+                                    styles.dateTile, 
+                                    isSelected && styles.dateTileSelected,
+                                    isToday && !isSelected && styles.dateTileToday
+                                ]}
+                                onPress={() => setSelectedDate(date)}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={[
                                     styles.dayAbbrev,
                                     isSelected && styles.dateTileTextSelected,
-                                ]}
-                            >
-                                {format(date, 'EEE')}
-                            </Text>
-                            <Text
-                                style={[
+                                    isToday && !isSelected && styles.dayTodayText
+                                ]}>
+                                    {format(date, 'EEE')}
+                                </Text>
+                                <Text style={[
                                     styles.dateNum,
                                     isSelected && styles.dateTileTextSelected,
-                                ]}
-                            >
-                                {format(date, 'd')}
-                            </Text>
-                        </TouchableOpacity>
-                    );
-                })}
-            </ScrollView>
+                                    isToday && !isSelected && styles.dateTodayText
+                                ]}>
+                                    {format(date, 'd')}
+                                </Text>
+                                {isToday && isSelected && <View style={styles.todayDot} />}
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
+            </View>
 
             {/* Timeline List */}
-            {loading ? (
-                <LoadingSpinner />
-            ) : dayLectures.length > 0 ? (
-                <FlatList
-                    data={dayLectures}
-                    renderItem={renderTimelineRow}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.timeline}
-                    showsVerticalScrollIndicator={false}
-                />
-            ) : (
-                <EmptyState
-                    icon="📅"
-                    title={`No classes on ${format(selectedDate, 'EEEE')}`}
-                />
-            )}
-
-            {/* FAB for Monitor */}
-            {isMonitorOrAssistant && (
-                <TouchableOpacity
-                    style={styles.fab}
-                    onPress={() => setShowPostTypeSheet(true)}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="add" size={28} color={Colors.white} />
-                </TouchableOpacity>
-            )}
+            <View style={styles.content}>
+                {loading ? (
+                    <LoadingSpinner />
+                ) : dayLectures.length > 0 ? (
+                    <FlatList
+                        data={dayLectures}
+                        renderItem={renderTimelineRow}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={styles.listPadding}
+                        showsVerticalScrollIndicator={false}
+                    />
+                ) : (
+                    <EmptyState
+                        icon="calendar-outline"
+                        title={isSameDay(selectedDate, startOfToday()) ? "No classes today" : "Free day!"}
+                        subtitle={`You have no scheduled lectures for ${format(selectedDate, 'EEEE, do MMMM')}.`}
+                    />
+                )}
+            </View>
 
             <PostTypeSheet
                 visible={showPostTypeSheet}
@@ -198,118 +224,192 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.background,
     },
     header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         paddingHorizontal: Spacing.screenPadding,
-        paddingTop: Spacing.lg,
-        paddingBottom: Spacing.md,
+        paddingTop: Platform.OS === 'ios' ? 10 : 20,
+        marginBottom: Spacing.lg,
     },
     headerTitle: {
         ...Typography.pageTitle,
         color: Colors.textPrimary,
     },
-    dateStrip: {
-        maxHeight: 80,
+    monthLabel: {
+        ...Typography.label,
+        color: Colors.textSecondary,
+        marginTop: 2,
+    },
+    addIconButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: Colors.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 2,
+            },
+        }),
+    },
+    dateStripContainer: {
+        paddingBottom: Spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border + '20',
     },
     dateStripContent: {
         paddingHorizontal: Spacing.screenPadding,
-        gap: 8,
+        gap: 10,
     },
     dateTile: {
         width: 52,
         height: 68,
-        borderRadius: Spacing.cardRadius,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: Colors.surface,
+        borderWidth: 1,
+        borderColor: Colors.border + '20',
     },
     dateTileSelected: {
-        backgroundColor: Colors.accentBlue,
+        backgroundColor: Colors.primaryBlue,
+        borderColor: Colors.primaryBlue,
+        ...Platform.select({
+            ios: {
+                shadowColor: Colors.primaryBlue,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+            },
+            android: {
+                elevation: 4,
+            },
+        }),
+    },
+    dateTileToday: {
+        borderColor: Colors.primaryBlue + '60',
     },
     dayAbbrev: {
-        ...Typography.label,
+        fontSize: 10,
+        fontFamily: 'DMSans_600SemiBold',
         color: Colors.textSecondary,
+        textTransform: 'uppercase',
         marginBottom: 4,
     },
     dateNum: {
-        ...Typography.sectionHeader,
+        fontSize: 18,
+        fontFamily: 'DMSans_700Bold',
         color: Colors.textPrimary,
     },
     dateTileTextSelected: {
         color: Colors.white,
     },
-    timeline: {
-        padding: Spacing.screenPadding,
+    dayTodayText: {
+        color: Colors.primaryBlue,
     },
-    timelineRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: Colors.surface,
-        borderRadius: Spacing.cardRadius,
-        padding: Spacing.md,
-        marginBottom: Spacing.md,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-        elevation: 1,
+    dateTodayText: {
+        color: Colors.primaryBlue,
     },
-    timelineBar: {
+    todayDot: {
+        position: 'absolute',
+        bottom: 8,
         width: 4,
-        height: '100%',
-        minHeight: 40,
+        height: 4,
         borderRadius: 2,
-        marginRight: Spacing.md,
+        backgroundColor: Colors.white,
     },
-    timeColumn: {
-        width: 60,
-        marginRight: Spacing.md,
-    },
-    timeText: {
-        ...Typography.sectionHeader,
-        color: Colors.textPrimary,
-        fontSize: 13,
-    },
-    timeTextEnd: {
-        ...Typography.label,
-        color: Colors.textSecondary,
-        marginTop: 2,
-    },
-    lectureInfo: {
+    content: {
         flex: 1,
     },
-    courseName: {
-        ...Typography.sectionHeader,
+    listPadding: {
+        padding: Spacing.screenPadding,
+        paddingBottom: 120, // Extra space for tab bar
+    },
+    lectureCard: {
+        flexDirection: 'row',
+        padding: 0,
+        marginBottom: Spacing.md,
+        overflow: 'hidden',
+    },
+    cancelledCard: {
+        opacity: 0.6,
+        backgroundColor: Colors.background,
+        borderStyle: 'dashed',
+        borderWidth: 1,
+        borderColor: Colors.border,
+        elevation: 0,
+        shadowOpacity: 0,
+    },
+    statusIndicator: {
+        width: 6,
+        height: '100%',
+    },
+    lectureContent: {
+        flex: 1,
+        padding: Spacing.md,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    lectureMain: {
+        flex: 1,
+    },
+    timeInfo: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 8,
+        marginBottom: 4,
+    },
+    timeText: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
         color: Colors.textPrimary,
     },
-    venueName: {
-        ...Typography.label,
+    durationText: {
+        fontSize: 12,
+        fontFamily: 'DMSans_400Regular',
         color: Colors.textSecondary,
-        marginTop: 2,
     },
-    cancelChip: {
-        backgroundColor: '#FEE2E2',
+    courseInfo: {
+        gap: 2,
+    },
+    courseCode: {
+        fontSize: 17,
+        fontFamily: 'DMSans_600SemiBold',
+        color: Colors.textPrimary,
+    },
+    venueText: {
+        fontSize: 13,
+        fontFamily: 'DMSans_500Medium',
+        color: Colors.textTertiary,
+    },
+    cancelBadge: {
+        backgroundColor: Colors.error + '15',
         paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: Spacing.pillRadius,
+        paddingVertical: 4,
+        borderRadius: 6,
     },
-    cancelChipText: {
-        ...Typography.label,
+    cancelBadgeText: {
+        fontSize: 10,
+        fontFamily: 'DMSans_700Bold',
         color: Colors.error,
-        fontWeight: '600',
     },
-    fab: {
-        position: 'absolute',
-        bottom: 20,
-        right: 20,
-        width: Spacing.fabSize,
-        height: Spacing.fabSize,
-        borderRadius: Spacing.fabSize / 2,
-        backgroundColor: Colors.accentBlue,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: Colors.accentBlue,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
+    carryoverBadge: {
+        backgroundColor: Colors.carryover + '15',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    carryoverBadgeText: {
+        fontSize: 10,
+        fontFamily: 'DMSans_700Bold',
+        color: Colors.carryover,
     },
 });

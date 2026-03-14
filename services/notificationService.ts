@@ -28,6 +28,7 @@ export async function saveNotificationToFirestore(
         courseId?: string;
         type: PostType | 'course_added' | 'course_auto_added' | 'lecturer_assigned';
         isCarryover: boolean;
+        isImportant?: boolean;
     }
 ): Promise<void> {
     const notifRef = doc(collection(db, 'notifications', uid, 'items'));

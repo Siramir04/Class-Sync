@@ -12,18 +12,18 @@ interface TagProps {
 }
 
 const variantColors: Record<string, { bg: string; text: string }> = {
-    default: { bg: Colors.subtleFill, text: Colors.accentBlue },
-    carryover: { bg: '#F3E8FF', text: Colors.carryover },
-    success: { bg: '#DCFCE7', text: Colors.success },
-    warning: { bg: '#FEF3C7', text: Colors.warning },
-    error: { bg: '#FEE2E2', text: Colors.error },
-    lecture: { bg: Colors.subtleFill, text: Colors.accentBlue },
-    assignment: { bg: '#FEF3C7', text: Colors.warning },
-    test: { bg: '#FEE2E2', text: Colors.error },
-    note: { bg: '#DCFCE7', text: Colors.success },
-    announcement: { bg: Colors.subtleFill, text: Colors.primaryBlue },
-    cancellation: { bg: '#FEE2E2', text: Colors.error },
-    role: { bg: Colors.subtleFill, text: Colors.primaryBlue },
+    default: { bg: '#E5E5EA', text: '#3A3A3C' },
+    carryover: { bg: '#EBEBF5', text: Colors.carryover },
+    success: { bg: '#E8F5E9', text: Colors.success },
+    warning: { bg: '#FFF3E0', text: Colors.warning },
+    error: { bg: '#FFEBEE', text: Colors.error },
+    lecture: { bg: '#E3F2FD', text: Colors.primaryBlue },
+    assignment: { bg: '#FFF3E0', text: Colors.warning },
+    test: { bg: '#FFEBEE', text: Colors.error },
+    note: { bg: '#E8F5E9', text: Colors.success },
+    announcement: { bg: '#F3E5F5', text: '#9C27B0' },
+    cancellation: { bg: '#FFE0E0', text: Colors.error },
+    role: { bg: '#E1F5FE', text: Colors.primaryBlue },
 };
 
 export default function Tag({ label, variant = 'default', style }: TagProps) {
@@ -45,13 +45,14 @@ export function getPostTypeVariant(type: PostType): TagProps['variant'] {
 
 const styles = StyleSheet.create({
     tag: {
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: Spacing.xs,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         borderRadius: Spacing.pillRadius,
         alignSelf: 'flex-start',
     },
     text: {
         ...Typography.label,
-        fontWeight: '600',
+        fontWeight: '700',
+        fontSize: 11,
     },
 });

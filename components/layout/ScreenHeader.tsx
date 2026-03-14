@@ -21,8 +21,8 @@ export default function ScreenHeader({
     return (
         <View style={styles.header}>
             {showBack ? (
-                <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
             ) : (
                 <View style={styles.placeholder} />

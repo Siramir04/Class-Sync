@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, SafeAreaView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../constants/colors';
@@ -112,26 +112,28 @@ export default function AttendanceReportScreen() {
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
-                <View style={styles.headerTitleContainer}>
+                <View style={styles.headerTitleCol}>
                     <Text style={styles.headerTitle}>Attendance Report</Text>
                     <Text style={styles.headerSub}>{courseDetails?.code}</Text>
                 </View>
                 <TouchableOpacity
                     onPress={handleExport}
                     disabled={exporting || studentData.length === 0}
+                    style={styles.headerBtn}
+                    activeOpacity={0.7}
                 >
                     {exporting ? (
                         <ActivityIndicator size="small" color={Colors.primaryBlue} />
                     ) : (
                         <Ionicons
                             name="download-outline"
-                            size={24}
+                            size={22}
                             color={studentData.length === 0 ? Colors.textSecondary : Colors.primaryBlue}
                         />
                     )}
@@ -170,7 +172,7 @@ export default function AttendanceReportScreen() {
                 }
                 contentContainerStyle={styles.listContent}
             />
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -188,22 +190,30 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingTop: 60,
-        paddingBottom: 20,
-        backgroundColor: 'white',
+        paddingHorizontal: 8,
+        height: 56,
+        backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border,
+        borderBottomColor: Colors.border + '15',
     },
-    headerTitleContainer: {
+    headerBtn: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTitleCol: {
+        flex: 1,
         alignItems: 'center',
     },
     headerTitle: {
-        ...Typography.sectionHeader,
+        fontSize: 17,
+        fontFamily: 'DMSans_700Bold',
         color: Colors.textPrimary,
     },
     headerSub: {
-        ...Typography.label,
+        fontSize: 11,
+        fontFamily: 'DMSans_500Medium',
         color: Colors.textSecondary,
     },
     summaryBar: {
@@ -231,7 +241,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.border,
     },
     listContent: {
-        paddingBottom: 40,
+        paddingBottom: 100,
     },
     loadingText: {
         ...Typography.body,

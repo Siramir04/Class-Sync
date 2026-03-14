@@ -27,7 +27,8 @@ export async function createSpace(
     programme: string,
     entryYear: string,
     spaceCode: string,
-    monitorUid: string
+    monitorUid: string,
+    initialCourses: { courseCode: string; courseName: string }[] = []
 ): Promise<string> {
     const spaceRef = doc(collection(db, 'spaces'));
     const spaceData: Omit<Space, 'id'> = {
@@ -36,20 +37,23 @@ export async function createSpace(
         department,
         programme,
         entryYear,
-        spaceCode: spaceCode.toUpperCase(),
+        spaceCode: spaceCode.toUpperCase().trim(),
         monitorUid,
         memberCount: 1,
         createdAt: new Date(),
     };
 
-    await setDoc(spaceRef, {
+    const batch = writeBatch(db);
+
+    // 1. Write space doc
+    batch.set(spaceRef, {
         ...spaceData,
         createdAt: serverTimestamp(),
     });
 
-    // Add creator as monitor member
+    // 2. Add creator as monitor member to space
     const memberRef = doc(db, 'spaces', spaceRef.id, 'members', monitorUid);
-    await setDoc(memberRef, {
+    batch.set(memberRef, {
         uid: monitorUid,
         role: 'monitor' as UserRole,
         joinedAt: serverTimestamp(),
@@ -57,6 +61,28 @@ export async function createSpace(
         accepted: true,
     });
 
+    // 3. Write initial courses and add creator as member to each
+    for (const course of initialCourses) {
+        const courseRef = doc(collection(db, 'spaces', spaceRef.id, 'courses'));
+        batch.set(courseRef, {
+            spaceId: spaceRef.id,
+            courseName: course.courseName.trim(),
+            courseCode: course.courseCode.toUpperCase().trim(),
+            fullCode: `${course.courseCode.toUpperCase().trim()}-${spaceCode.toUpperCase().trim()}`,
+            createdAt: serverTimestamp(),
+        });
+
+        const courseMemberRef = doc(db, 'spaces', spaceRef.id, 'courses', courseRef.id, 'members', monitorUid);
+        batch.set(courseMemberRef, {
+            uid: monitorUid,
+            role: 'monitor' as UserRole,
+            joinedAt: serverTimestamp(),
+            isCarryover: false,
+            accepted: true,
+        });
+    }
+
+    await batch.commit();
     return spaceRef.id;
 }
 
@@ -254,6 +280,30 @@ export async function deleteSpace(spaceId: string): Promise<void> {
     // Delete the space doc
     batch.delete(doc(db, 'spaces', spaceId));
     await batch.commit();
+}
+
+/**
+ * Real-time listener for all members of a space.
+ */
+export function subscribeToSpaceMembers(
+    spaceId: string,
+    callback: (members: CourseMember[]) => void
+): Unsubscribe {
+    const membersRef = collection(db, 'spaces', spaceId, 'members');
+    return onSnapshot(membersRef, (snapshot) => {
+        const members = snapshot.docs.map((d) => {
+            const data = d.data();
+            return {
+                ...data,
+                uid: d.id,
+                isCarryover: Boolean(data.isCarryover),
+                accepted: Boolean(data.accepted),
+                joinedAt: data.joinedAt?.toDate?.() ?? new Date(),
+                acceptDeadline: data.acceptDeadline?.toDate?.(),
+            } as CourseMember;
+        });
+        callback(members);
+    });
 }
 
 /**

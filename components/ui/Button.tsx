@@ -35,35 +35,28 @@ export default function Button({
     const buttonStyles = [
         styles.base,
         styles[variant],
-        fullWidth && styles.fullWidth,
+        !fullWidth && styles.wrap,
         disabled && styles.disabled,
         style,
     ];
 
     const textStyles = [
         styles.text,
-        styles[`${variant}Text` as keyof typeof styles],
+        variant === 'secondary' || variant === 'ghost' ? styles.secondaryText : styles.primaryText,
+        variant === 'danger' && styles.dangerText,
         textStyle,
     ];
-
-    const handlePress = () => {
-        try {
-            onPress();
-        } catch (error) {
-            console.error('Button onPress error:', error);
-        }
-    };
 
     return (
         <TouchableOpacity
             style={buttonStyles}
-            onPress={handlePress}
+            onPress={onPress}
             disabled={disabled || loading}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
         >
             {loading ? (
                 <ActivityIndicator
-                    color={variant === 'primary' || variant === 'danger' ? Colors.white : Colors.accentBlue}
+                    color={variant === 'primary' || variant === 'danger' ? Colors.white : Colors.primaryBlue}
                 />
             ) : (
                 <Text style={textStyles}>{title}</Text>
@@ -74,22 +67,22 @@ export default function Button({
 
 const styles = StyleSheet.create({
     base: {
-        height: Spacing.inputHeight,
+        height: 54, // iOS standard large button height
         borderRadius: Spacing.buttonRadius,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: Spacing.lg,
-    },
-    fullWidth: {
+        paddingHorizontal: Spacing.xl,
         width: '100%',
     },
+    wrap: {
+        width: undefined,
+        alignSelf: 'flex-start',
+    },
     primary: {
-        backgroundColor: Colors.accentBlue,
+        backgroundColor: Colors.primaryBlue,
     },
     secondary: {
         backgroundColor: Colors.subtleFill,
-        borderWidth: 1,
-        borderColor: Colors.border,
     },
     ghost: {
         backgroundColor: 'transparent',
@@ -98,19 +91,17 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.error,
     },
     disabled: {
-        opacity: 0.5,
+        opacity: 0.4,
     },
     text: {
         ...Typography.buttonText,
+        fontWeight: '600',
     },
     primaryText: {
         color: Colors.white,
     },
     secondaryText: {
-        color: Colors.textPrimary,
-    },
-    ghostText: {
-        color: Colors.accentBlue,
+        color: Colors.primaryBlue,
     },
     dangerText: {
         color: Colors.white,

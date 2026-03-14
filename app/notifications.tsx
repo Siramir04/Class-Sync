@@ -6,9 +6,11 @@ import {
     SectionList,
     TouchableOpacity,
     SafeAreaView,
+    Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { isToday, isYesterday } from 'date-fns';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { Typography } from '../constants/typography';
 import { Spacing } from '../constants/spacing';
@@ -18,7 +20,6 @@ import { useAuthStore } from '../store/authStore';
 import NotificationCard from '../components/cards/NotificationCard';
 import EmptyState from '../components/ui/EmptyState';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import ScreenHeader from '../components/layout/ScreenHeader';
 import { AppNotification } from '../types';
 
 export default function NotificationsScreen() {
@@ -43,16 +44,24 @@ export default function NotificationsScreen() {
     if (earlier.length > 0) grouped.push({ title: 'Earlier', data: earlier });
 
     const handleMarkAllRead = async () => {
-        if (!user?.uid) return;
-        await markAllAsRead(user.uid);
-        markAllReadLocal();
+        if (!user?.uid || notifications.every(n => n.isRead)) return;
+        try {
+            await markAllAsRead(user.uid);
+            markAllReadLocal();
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     const handleNotificationPress = async (notification: AppNotification) => {
         if (!user?.uid) return;
         if (!notification.isRead) {
-            await markAsRead(user.uid, notification.id);
-            markRead(notification.id);
+            try {
+                await markAsRead(user.uid, notification.id);
+                markRead(notification.id);
+            } catch (error) {
+                console.error(error);
+            }
         }
         if (notification.postId && notification.spaceId && notification.courseId) {
             router.push(
@@ -61,24 +70,34 @@ export default function NotificationsScreen() {
         }
     };
 
+    const anyUnread = notifications.some(n => !n.isRead);
+
     return (
         <SafeAreaView style={styles.container}>
+            {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Text style={styles.backText}>←</Text>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Notifications</Text>
-                <TouchableOpacity onPress={handleMarkAllRead}>
-                    <Text style={styles.markAllRead}>Mark all as read</Text>
+                <TouchableOpacity 
+                    onPress={handleMarkAllRead} 
+                    disabled={!anyUnread}
+                    style={[styles.markReadBtn, { opacity: anyUnread ? 1 : 0.3 }]}
+                    activeOpacity={0.7}
+                >
+                    <Ionicons name="checkmark-done" size={22} color={Colors.primaryBlue} />
                 </TouchableOpacity>
             </View>
 
             {notifications.length === 0 ? (
-                <EmptyState
-                    icon="🔔"
-                    title="No notifications"
-                    subtitle="You're all caught up!"
-                />
+                <View style={styles.emptyContainer}>
+                    <EmptyState
+                        icon="notifications-outline"
+                        title="Quiet for now"
+                        subtitle="We'll let you know when there's an update in your spaces."
+                    />
+                </View>
             ) : (
                 <SectionList
                     sections={grouped}
@@ -95,6 +114,9 @@ export default function NotificationsScreen() {
                     )}
                     keyExtractor={(item) => item.id}
                     showsVerticalScrollIndicator={false}
+                    stickySectionHeadersEnabled={false}
+                    contentContainerStyle={styles.listPadding}
+                    ItemSeparatorComponent={() => <View style={styles.separator} />}
                 />
             )}
         </SafeAreaView>
@@ -110,37 +132,53 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: Spacing.screenPadding,
-        paddingTop: Spacing.md,
-        paddingBottom: Spacing.md,
+        paddingHorizontal: 16,
+        paddingTop: Platform.OS === 'ios' ? 10 : 20,
+        paddingBottom: 16,
+        backgroundColor: Colors.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border + '15',
     },
     backBtn: {
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    backText: {
-        fontSize: 24,
-        color: Colors.textPrimary,
+    markReadBtn: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerTitle: {
-        ...Typography.pageTitle,
+        ...Typography.sectionHeader,
         color: Colors.textPrimary,
-    },
-    markAllRead: {
-        ...Typography.label,
-        color: Colors.accentBlue,
     },
     sectionHeader: {
         paddingHorizontal: Spacing.screenPadding,
-        paddingVertical: Spacing.sm,
+        paddingTop: 24,
+        paddingBottom: 8,
         backgroundColor: Colors.background,
     },
     sectionTitle: {
-        ...Typography.label,
-        color: Colors.textSecondary,
+        fontSize: 13,
+        fontFamily: 'DMSans_700Bold',
+        color: Colors.textTertiary,
         textTransform: 'uppercase',
-        letterSpacing: 1,
+        letterSpacing: 1.2,
+    },
+    listPadding: {
+        paddingBottom: 40,
+    },
+    separator: {
+        height: 1,
+        backgroundColor: Colors.border + '15',
+        marginLeft: 72, // Align with content to the right of icon container (44 + 12 + screenPadding) -> screenPadding is 20, icon total is 56. 72 is good margin.
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        paddingBottom: 100,
     },
 });

@@ -14,14 +14,30 @@ export default function Input({
     label,
     error,
     containerStyle,
+    onFocus,
+    onBlur,
     ...rest
 }: InputProps) {
+    const [isFocused, setIsFocused] = React.useState(false);
+
     return (
         <View style={[styles.container, containerStyle]}>
             <Text style={styles.label}>{label}</Text>
             <TextInput
-                style={[styles.input, error && styles.inputError]}
-                placeholderTextColor={Colors.textSecondary}
+                style={[
+                    styles.input, 
+                    isFocused && styles.inputFocused,
+                    error && styles.inputError
+                ]}
+                placeholderTextColor={Colors.textTertiary}
+                onFocus={(e) => {
+                    setIsFocused(true);
+                    onFocus?.(e);
+                }}
+                onBlur={(e) => {
+                    setIsFocused(false);
+                    onBlur?.(e);
+                }}
                 {...rest}
             />
             {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -31,29 +47,35 @@ export default function Input({
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: Spacing.md,
+        marginBottom: Spacing.lg,
     },
     label: {
-        ...Typography.label,
-        color: Colors.textPrimary,
-        marginBottom: Spacing.xs,
+        ...Typography.bodySmall,
+        fontWeight: '600',
+        color: Colors.textSecondary,
+        marginBottom: 8,
+        marginLeft: 4,
     },
     input: {
         height: Spacing.inputHeight,
-        backgroundColor: Colors.subtleFill,
-        borderWidth: 1,
+        backgroundColor: Colors.surface,
+        borderWidth: 1.5,
         borderColor: Colors.border,
-        borderRadius: Spacing.buttonRadius,
+        borderRadius: Spacing.inputRadius,
         paddingHorizontal: Spacing.md,
         ...Typography.body,
         color: Colors.textPrimary,
+    },
+    inputFocused: {
+        borderColor: Colors.primaryBlue,
     },
     inputError: {
         borderColor: Colors.error,
     },
     error: {
-        ...Typography.label,
+        ...Typography.bodySmall,
         color: Colors.error,
-        marginTop: Spacing.xs,
+        marginTop: 6,
+        marginLeft: 4,
     },
 });

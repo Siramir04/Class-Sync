@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSpaceStore } from '../store/spaceStore';
 import { useAuthStore } from '../store/authStore';
-import { subscribeToUserSpaces, getSpaceMembers } from '../services/spaceService';
+import { subscribeToUserSpaces, subscribeToSpaceMembers, getSpaceMembers } from '../services/spaceService';
 import { Space, CourseMember } from '../types';
 
 /**
@@ -44,15 +44,12 @@ export function useSpaceMembers(spaceId: string | null) {
         }
 
         setLoading(true);
-        getSpaceMembers(spaceId)
-            .then((m) => {
-                setMembers(m);
-                setLoading(false);
-            })
-            .catch((err) => {
-                console.error('Error fetching space members:', err);
-                setLoading(false);
-            });
+        const unsubscribe = subscribeToSpaceMembers(spaceId, (m) => {
+            setMembers(m);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
     }, [spaceId]);
 
     return { members, loading };

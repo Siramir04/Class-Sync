@@ -45,9 +45,12 @@ const styles = StyleSheet.create({
     container: {
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     text: {
         color: Colors.white,
         fontFamily: 'DMSans_700Bold',
+        letterSpacing: -0.5,
     },
 });

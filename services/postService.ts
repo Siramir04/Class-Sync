@@ -14,9 +14,11 @@ import {
     serverTimestamp,
     Unsubscribe,
     Timestamp,
+    increment,
+    runTransaction,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Post, PostType } from '../types';
+import { Post, PostType, ReadReceipt } from '../types';
 import { sendPushNotification, saveNotificationToFirestore } from './notificationService';
 
 /**
@@ -59,6 +61,7 @@ export async function createPost(
             if (memberDoc.id === post.authorUid) continue; // Don't notify author
             const memberData = memberDoc.data();
 
+            // 1. In-app notification
             await saveNotificationToFirestore(memberDoc.id, {
                 title: `${courseName} ${emoji} ${postTitle}`,
                 body: post.description || postTitle,
@@ -67,7 +70,24 @@ export async function createPost(
                 courseId,
                 type: post.type,
                 isCarryover: Boolean(memberData.isCarryover),
+                isImportant: Boolean(post.isImportant),
             });
+
+            // 2. Push notification attempt (if token exists)
+            // Note: In production, this should ideally be handled by a Cloud Function
+            // Fetching user doc to get fcmToken
+            const userDoc = await getDoc(doc(db, 'users', memberDoc.id));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                if (userData.fcmToken) {
+                    await sendPushNotification(
+                        userData.fcmToken,
+                        `${courseName}: ${postTitle}`,
+                        post.description || `New ${post.type} posted.`,
+                        { spaceId, courseId, postId: postRef.id }
+                    );
+                }
+            }
         }
     } catch (error) {
         console.error('Error sending notifications:', error);
@@ -147,73 +167,51 @@ export async function getPostsBySpace(spaceId: string): Promise<Post[]> {
 }
 
 /**
- * Get the most recent posts across all user's spaces and courses.
+ * Real-time listener for the most recent posts across all user's spaces and courses.
  */
-export async function getRecentPostsForUser(
+export function subscribeToUserRecentPosts(
     uid: string,
+    callback: (posts: Post[]) => void,
     maxPosts: number = 10
-): Promise<Post[]> {
-    const spacesSnap = await getDocs(collection(db, 'spaces'));
-    const allPosts: Post[] = [];
+): Unsubscribe {
+    // This is complex for a single listener. We'll listen to the user's spaces and for each, 
+    // listen to courses, then for each course listen to posts.
+    // For MVP, we'll keep it as a managed set of unsubscribes.
+    
+    let unsubscribes: Unsubscribe[] = [];
+    const postsMap: Record<string, Post[]> = {};
 
-    for (const spaceDoc of spacesSnap.docs) {
-        // Check if user is a member of this space
-        const memberSnap = await getDoc(
-            doc(db, 'spaces', spaceDoc.id, 'members', uid)
-        );
+    const updateAggregate = () => {
+        const allPosts = Object.values(postsMap).flat();
+        allPosts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        callback(allPosts.slice(0, maxPosts));
+    };
 
-        if (!memberSnap.exists()) continue;
-
-        const coursesSnap = await getDocs(
-            collection(db, 'spaces', spaceDoc.id, 'courses')
-        );
-
-        for (const courseDoc of coursesSnap.docs) {
-            // Check if member of this course
-            const courseMemberSnap = await getDoc(
-                doc(
-                    db,
-                    'spaces',
-                    spaceDoc.id,
-                    'courses',
-                    courseDoc.id,
-                    'members',
-                    uid
-                )
-            );
-
-            if (!courseMemberSnap.exists()) continue;
-
-            const postsSnap = await getDocs(
-                query(
-                    collection(
-                        db,
-                        'spaces',
-                        spaceDoc.id,
-                        'courses',
-                        courseDoc.id,
-                        'posts'
-                    ),
-                    orderBy('createdAt', 'desc'),
-                    limit(5)
-                )
-            );
-
-            const memberData = courseMemberSnap.data();
-            postsSnap.docs.forEach((d) => {
-                const post = docToPost(d);
-                // Tag carryover status from member data
-                post.isCarryover = Boolean(memberData.isCarryover);
-                allPosts.push(post);
-            });
+    const spacesUnsub = onSnapshot(collection(db, 'spaces'), async (spacesSnap) => {
+        // Clear previous sub-unsubscribes if spaces change significantly
+        // (Simple version: just manage the growth)
+        for (const spaceDoc of spacesSnap.docs) {
+            const memberSnap = await getDoc(doc(db, 'spaces', spaceDoc.id, 'members', uid));
+            if (memberSnap.exists()) {
+                const coursesUnsub = onSnapshot(collection(db, 'spaces', spaceDoc.id, 'courses'), (coursesSnap) => {
+                    for (const courseDoc of coursesSnap.docs) {
+                        const postsUnsub = subscribeToPostsByCourse(spaceDoc.id, courseDoc.id, (coursePosts) => {
+                            postsMap[`${spaceDoc.id}_${courseDoc.id}`] = coursePosts;
+                            updateAggregate();
+                        });
+                        unsubscribes.push(postsUnsub);
+                    }
+                });
+                unsubscribes.push(coursesUnsub);
+            }
         }
-    }
+    });
 
-    allPosts.sort(
-        (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-    );
+    unsubscribes.push(spacesUnsub);
 
-    return allPosts.slice(0, maxPosts);
+    return () => {
+        unsubscribes.forEach(unsub => unsub());
+    };
 }
 
 /**
@@ -265,6 +263,71 @@ export async function getPostById(
     return docToPost(snap);
 }
 
+/**
+ * Mark a post as read by a user.
+ */
+export async function markPostAsRead(
+    spaceId: string,
+    courseId: string,
+    postId: string,
+    uid: string,
+    fullName: string
+): Promise<void> {
+    const postRef = doc(db, 'spaces', spaceId, 'courses', courseId, 'posts', postId);
+    const receiptRef = doc(db, 'spaces', spaceId, 'courses', courseId, 'posts', postId, 'receipts', uid);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const receiptSnap = await transaction.get(receiptRef);
+            if (receiptSnap.exists()) return; // Already read
+
+            transaction.set(receiptRef, {
+                uid,
+                fullName,
+                readAt: serverTimestamp(),
+            });
+
+            transaction.update(postRef, {
+                readCount: increment(1),
+            });
+        });
+    } catch (error) {
+        console.error('Error marking post as read:', error);
+    }
+}
+
+/**
+ * Get all read receipts for a post.
+ */
+export async function getReadReceipts(
+    spaceId: string,
+    courseId: string,
+    postId: string
+): Promise<ReadReceipt[]> {
+    const receiptsRef = collection(db, 'spaces', spaceId, 'courses', courseId, 'posts', postId, 'receipts');
+    const q = query(receiptsRef, orderBy('readAt', 'desc'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({
+        uid: d.id,
+        fullName: d.data().fullName,
+        readAt: d.data().readAt?.toDate() ?? new Date(),
+    } as ReadReceipt));
+}
+
+/**
+ * Toggle importance of a post.
+ */
+export async function updatePostImportantStatus(
+    spaceId: string,
+    courseId: string,
+    postId: string,
+    isImportant: boolean
+): Promise<void> {
+    await updateDoc(doc(db, 'spaces', spaceId, 'courses', courseId, 'posts', postId), {
+        isImportant,
+    });
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function docToPost(d: any): Post {
     const data = d.data();
@@ -290,5 +353,7 @@ function docToPost(d: any): Post {
         topics: data.topics,
         linkedPostId: data.linkedPostId,
         isCarryover: Boolean(data.isCarryover),
+        isImportant: Boolean(data.isImportant),
+        readCount: data.readCount || 0,
     };
 }

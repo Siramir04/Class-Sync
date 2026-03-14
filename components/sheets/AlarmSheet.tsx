@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Platform, ScrollView, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, Pressable, Modal, Platform, ScrollView, Alert, Dimensions } from 'react-native';
+import * as LucideIcons from 'lucide-react-native';
 import { format, subMinutes } from 'date-fns';
-import { Colors } from '../../constants/colors';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
 import { Post } from '../../types';
 import { useAlarmStore } from '../../store/alarmStore';
 import * as alarmService from '../../services/alarmService';
 import Button from '../ui/Button';
+
+const { height } = Dimensions.get('window');
 
 interface AlarmSheetProps {
     visible: boolean;
@@ -17,11 +18,10 @@ interface AlarmSheetProps {
 }
 
 const LEAD_TIME_OPTIONS = [
-    { label: '15 min', value: 15 },
-    { label: '30 min', value: 30 },
-    { label: '45 min', value: 45 },
-    { label: '1 hour', value: 60 },
-    { label: '2 hours', value: 120 },
+    { label: '60 minutes before', value: 60 },
+    { label: '45 minutes before', value: 45 },
+    { label: '30 minutes before', value: 30 },
+    { label: '15 minutes before', value: 15 },
 ];
 
 export default function AlarmSheet({ visible, onClose, post }: AlarmSheetProps) {
@@ -31,28 +31,6 @@ export default function AlarmSheet({ visible, onClose, post }: AlarmSheetProps) 
     
     const isSet = isAlarmSet(post.id);
     const eventId = alarms[post.id];
-
-    // Calculate alarm time for display
-    const getAlarmTime = () => {
-        if (!post.lectureDate || !post.startTime) return '';
-        
-        const timeRegex = /(\d{1,2}):(\d{2})\s?(AM|PM)/i;
-        const match = post.startTime.match(timeRegex);
-        if (!match) return '';
-
-        let hours = parseInt(match[1]);
-        const minutes = parseInt(match[2]);
-        const ampm = match[3].toUpperCase();
-
-        if (ampm === 'PM' && hours !== 12) hours += 12;
-        if (ampm === 'AM' && hours === 12) hours = 0;
-        
-        const lectureDateTime = new Date(post.lectureDate);
-        lectureDateTime.setHours(hours, minutes, 0, 0);
-
-        const alarmTime = subMinutes(lectureDateTime, isSet ? 30 : leadMinutes); // Simplified for display if already set
-        return format(alarmTime, 'h:mm a');
-    };
 
     const handleSetAlarm = async () => {
         setLoading(true);
@@ -66,7 +44,6 @@ export default function AlarmSheet({ visible, onClose, post }: AlarmSheetProps) 
                 leadMinutes,
             });
             setAlarm(post.id, id);
-            Alert.alert('Success', `Alarm set for ${getAlarmTime()}`);
             onClose();
         } catch (error: any) {
             Alert.alert('Error', error.message || 'Failed to set alarm');
@@ -81,7 +58,6 @@ export default function AlarmSheet({ visible, onClose, post }: AlarmSheetProps) 
         try {
             await alarmService.removeClassAlarm(eventId);
             removeAlarm(post.id);
-            Alert.alert('Removed', 'Class alarm has been removed');
             onClose();
         } catch (error: any) {
             Alert.alert('Error', 'Failed to remove alarm');
@@ -94,73 +70,67 @@ export default function AlarmSheet({ visible, onClose, post }: AlarmSheetProps) 
         <Modal
             visible={visible}
             transparent
-            animationType="slide"
+            animationType="fade"
             onRequestClose={onClose}
         >
-            <Pressable style={styles.overlay} onPress={onClose}>
-                <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.overlay}>
+                <Pressable style={styles.backdrop} onPress={onClose} />
+                <View style={styles.sheet}>
                     <View style={styles.handle} />
                     
                     <View style={styles.header}>
-                        <Text style={styles.title}>Set Class Alarm</Text>
-                        <Text style={styles.subtitle}>
-                            {post.courseCode} — {post.lectureDate ? format(post.lectureDate, 'MMM d') : ''} at {post.startTime}
-                        </Text>
+                        <Text style={styles.title}>Set lecture alarm</Text>
+                        <Text style={styles.subtitle}>Choose how early to be notified</Text>
                     </View>
 
                     {isSet ? (
-                        <View style={styles.statusContainer}>
-                            <View style={styles.successRow}>
-                                <View style={styles.checkIcon}>
-                                    <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
-                                </View>
-                                <Text style={styles.statusText}>Alarm set for this lecture</Text>
-                            </View>
-                            <Button 
-                                title="Remove Alarm" 
-                                variant="ghost" 
-                                onPress={handleRemoveAlarm}
-                                loading={loading}
-                                textStyle={{ color: Colors.error }}
-                            />
+                        <View style={styles.statusSection}>
+                             <View style={styles.infoRow}>
+                               <LucideIcons.CheckCircle2 size={24} color={Colors.accentBlue} />
+                               <View style={styles.infoText}>
+                                 <Text style={styles.statusTitle}>Alarm is active</Text>
+                                 <Text style={styles.statusSubtitle}>You'll be notified before class starts.</Text>
+                               </View>
+                             </View>
+                             <Button 
+                               title="Remove Alarm"
+                               variant="ghost"
+                               onPress={handleRemoveAlarm}
+                               loading={loading}
+                               style={{ marginTop: 10 }}
+                               textStyle={{ color: Colors.error }}
+                             />
                         </View>
                     ) : (
-                        <View style={styles.content}>
-                            <Text style={styles.label}>Lead time</Text>
-                            <ScrollView 
-                                horizontal 
-                                showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={styles.pillContainer}
-                            >
-                                {LEAD_TIME_OPTIONS.map((option) => (
-                                    <TouchableOpacity
+                        <View style={styles.optionsList}>
+                            {LEAD_TIME_OPTIONS.map((option) => {
+                                const isSelected = leadMinutes === option.value;
+                                return (
+                                    <Pressable 
                                         key={option.value}
-                                        style={[
-                                            styles.pill,
-                                            leadMinutes === option.value && styles.pillSelected
-                                        ]}
                                         onPress={() => setLeadMinutes(option.value)}
+                                        style={styles.optionRow}
                                     >
-                                        <Text style={[
-                                            styles.pillText,
-                                            leadMinutes === option.value && styles.pillTextSelected
-                                        ]}>
+                                        <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
                                             {option.label}
                                         </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-
+                                        {isSelected && (
+                                            <LucideIcons.Check size={20} color={Colors.accentBlue} strokeWidth={3} />
+                                        )}
+                                    </Pressable>
+                                );
+                            })}
+                            
                             <Button 
-                                title="Set Alarm" 
+                                title="Set Alarm"
                                 onPress={handleSetAlarm}
                                 loading={loading}
-                                style={styles.mainButton}
+                                style={styles.submitButton}
                             />
                         </View>
                     )}
-                </Pressable>
-            </Pressable>
+                </View>
+            </View>
         </Modal>
     );
 }
@@ -168,91 +138,102 @@ export default function AlarmSheet({ visible, onClose, post }: AlarmSheetProps) 
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    backdrop: {
+        ...StyleSheet.absoluteFillObject,
     },
     sheet: {
-        backgroundColor: Colors.background,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        backgroundColor: 'white',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        paddingHorizontal: 24,
         paddingTop: 12,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-        paddingHorizontal: Spacing.screenPadding,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 28,
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -10 },
+                shadowOpacity: 0.1,
+                shadowRadius: 20,
+            },
+            android: {
+                elevation: 20,
+            }
+        })
     },
     handle: {
-        width: 36,
+        width: 38,
         height: 5,
-        backgroundColor: Colors.border + '60',
+        backgroundColor: '#E5E5EA',
         borderRadius: 3,
         alignSelf: 'center',
-        marginBottom: 20,
+        marginBottom: 24,
     },
     header: {
         marginBottom: 24,
     },
     title: {
         fontSize: 22,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
-        marginBottom: 4,
+        fontWeight: '800',
+        color: '#000',
+        letterSpacing: -0.5,
+        fontFamily: Typography.family.extraBold,
     },
     subtitle: {
         fontSize: 14,
-        fontFamily: 'DMSans_400Regular',
-        color: Colors.textSecondary,
+        color: Colors.textTertiary,
+        marginTop: 4,
+        fontFamily: Typography.family.regular,
     },
-    content: {
+    statusSection: {
         gap: 16,
     },
-    label: {
-        ...Typography.label,
-        color: Colors.textSecondary,
-        marginBottom: 8,
-    },
-    pillContainer: {
-        gap: 8,
-        paddingBottom: 8,
-    },
-    pill: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 20,
-        backgroundColor: Colors.subtleFill,
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    pillSelected: {
-        backgroundColor: Colors.accentBlue,
-    },
-    pillText: {
-        fontSize: 14,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.textSecondary,
-    },
-    pillTextSelected: {
-        color: Colors.white,
-    },
-    mainButton: {
-        marginTop: 8,
-    },
-    statusContainer: {
-        alignItems: 'center',
-        gap: 20,
-    },
-    successRow: {
+    infoRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.success + '10',
         padding: 16,
-        borderRadius: 12,
-        width: '100%',
+        backgroundColor: 'rgba(0,122,255,0.05)',
+        borderRadius: 16,
     },
-    checkIcon: {
-        marginRight: 12,
+    infoText: {
+        marginLeft: 12,
     },
-    statusText: {
+    statusTitle: {
         fontSize: 16,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.textPrimary,
+        fontWeight: '700',
+        color: '#000',
+        fontFamily: Typography.family.bold,
     },
+    statusSubtitle: {
+        fontSize: 13,
+        color: Colors.textSecondary,
+        marginTop: 1,
+        fontFamily: Typography.family.regular,
+    },
+    optionsList: {
+        gap: 2,
+    },
+    optionRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 14,
+        borderBottomWidth: 0.5,
+        borderBottomColor: Colors.separator,
+    },
+    optionLabel: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: Colors.textSecondary,
+        fontFamily: Typography.family.medium,
+    },
+    optionLabelSelected: {
+        color: '#000',
+        fontWeight: '700',
+    },
+    submitButton: {
+        marginTop: 24,
+    }
 });

@@ -1,32 +1,32 @@
 import React from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    SafeAreaView,
-    Alert,
-    Platform,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Alert,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as LucideIcons from 'lucide-react-native';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
 import { useAuthStore } from '../../store/authStore';
-import Avatar from '../../components/ui/Avatar';
-import Card from '../../components/ui/Card';
+import { Avatar } from '../../components/ui/Avatar';
+import { FormGroup } from '../../components/ui/FormGroup';
+import { FormRow } from '../../components/ui/FormRow';
 import { logoutUser } from '../../services/authService';
-import { format } from 'date-fns';
 
 export default function ProfileScreen() {
     const router = useRouter();
-    const { user } = useAuthStore();
-    const logout = useAuthStore((s) => s.logout);
+    const insets = useSafeAreaInsets();
+    const { user, logout } = useAuthStore();
 
     const handleLogout = async () => {
-        Alert.alert('Sign Out', 'Are you sure you want to sign out of your account?', [
+        Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
             { text: 'Cancel', style: 'cancel' },
             {
                 text: 'Sign Out',
@@ -40,293 +40,199 @@ export default function ProfileScreen() {
         ]);
     };
 
-    const roleLabel =
-        user?.role === 'monitor'
-            ? 'Class Monitor'
-            : user?.role === 'assistant_monitor'
-                ? 'Assistant Monitor'
-                : user?.role === 'lecturer'
-                    ? 'Lecturer'
-                    : 'Student';
-
-    const SettingItem = ({ 
-        icon, 
-        label, 
-        value, 
-        onPress, 
-        color = Colors.textPrimary,
-        showBadge = false
-    }: { 
-        icon: string, 
-        label: string, 
-        value?: string, 
-        onPress: () => void,
-        color?: string,
-        showBadge?: boolean
-    }) => (
-        <TouchableOpacity style={styles.settingItem} onPress={onPress} activeOpacity={0.7}>
-            <View style={[styles.iconBox, { backgroundColor: color === Colors.error ? Colors.error + '10' : Colors.surface }]}>
-                <Ionicons name={icon as any} size={20} color={color === Colors.textPrimary ? Colors.primaryBlue : color} />
-            </View>
-            <Text style={[styles.settingLabel, { color }]}>{label}</Text>
-            {value && <Text style={styles.settingValue}>{value}</Text>}
-            {showBadge && <View style={styles.badge} />}
-            <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
-        </TouchableOpacity>
-    );
+    const fullName = user?.fullName || 'User';
+    const firstName = fullName.split(' ')[0];
+    const lastName = fullName.split(' ')[1] || '';
 
     return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                {/* Profile Hero */}
-                <View style={styles.hero}>
-                    <View style={styles.avatarContainer}>
-                        <Avatar name={user?.fullName || '?'} size={80} />
-                        <TouchableOpacity style={styles.editAvatarBtn} activeOpacity={0.8}>
-                            <Ionicons name="camera" size={16} color={Colors.white} />
-                        </TouchableOpacity>
-                    </View>
-                    <Text style={styles.userName}>{user?.fullName}</Text>
-                    <Text style={styles.userEmail}>{user?.email}</Text>
-                    <View style={styles.roleBadge}>
-                        <Text style={styles.roleText}>{roleLabel}</Text>
-                    </View>
-                </View>
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+           <Text style={styles.title}>Profile</Text>
+           <Pressable style={styles.settingsCircle}>
+             <LucideIcons.Settings size={18} color="#000" />
+           </Pressable>
+        </View>
 
-                {/* Stats / Info Row */}
-                <View style={styles.statsRow}>
-                    <View style={styles.statBox}>
-                        <Text style={styles.statValue}>{user?.university?.split(' ').map(w => w[0]).join('')}</Text>
-                        <Text style={styles.statLabel}>Uni</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statBox}>
-                        <Text style={styles.statValue}>{user?.regNumber ? 'Set' : 'No'}</Text>
-                        <Text style={styles.statLabel}>Reg ID</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statBox}>
-                        <Text style={styles.statValue}>
-                            {user?.createdAt ? format(new Date(user.createdAt), 'yyyy') : '—'}
-                        </Text>
-                        <Text style={styles.statLabel}>Joined</Text>
-                    </View>
-                </View>
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 110 }}
+        >
+          {/* Hero Section */}
+          <View style={styles.hero}>
+            <Avatar 
+              firstName={firstName} 
+              lastName={lastName} 
+              size="xl" 
+            />
+            <View style={styles.heroText}>
+              <Text style={styles.userName}>{fullName}</Text>
+              <Text style={styles.userSub}>{user?.university}</Text>
+              <Text style={styles.userSub}>{user?.regNumber || 'No ID set'}</Text>
+            </View>
+          </View>
 
-                {/* Account Settings */}
-                <Text style={styles.sectionLabel}>ACCOUNT</Text>
-                <Card style={styles.settingsCard}>
-                    <SettingItem 
-                        icon="person-outline" 
-                        label="Personal Information" 
-                        onPress={() => router.push('/settings/edit-profile')} 
-                    />
-                    <View style={styles.rowDivider} />
-                    <SettingItem 
-                        icon="lock-closed-outline" 
-                        label="Security & Password" 
-                        onPress={() => router.push('/settings/change-password')} 
-                    />
-                    <View style={styles.rowDivider} />
-                    <SettingItem 
-                        icon="notifications-outline" 
-                        label="Notifications" 
-                        onPress={() => router.push('/settings/notifications')} 
-                    />
-                </Card>
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Account security</Text>
+            <FormGroup>
+               <FormRow 
+                 label="Security & Privacy"
+                 icon="Shield"
+                 onPress={() => {}}
+               />
+               <FormRow 
+                 label="Change Password"
+                 icon="Lock"
+                 isLast
+                 onPress={() => router.push('/settings/change-password')}
+               />
+            </FormGroup>
+          </View>
 
-                {/* Preferences & Support */}
-                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>PREFERENCES</Text>
-                <Card style={styles.settingsCard}>
-                    <SettingItem 
-                        icon="color-palette-outline" 
-                        label="Appearance" 
-                        value="System"
-                        onPress={() => {}} 
-                    />
-                    <View style={styles.rowDivider} />
-                    <SettingItem 
-                        icon="help-circle-outline" 
-                        label="Help & Support" 
-                        onPress={() => {}} 
-                    />
-                    <View style={styles.rowDivider} />
-                    <SettingItem 
-                        icon="information-circle-outline" 
-                        label="About ClassSync" 
-                        onPress={() => router.push('/settings/about')} 
-                    />
-                </Card>
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>University & programme</Text>
+            <FormGroup>
+               <FormRow 
+                 label="University Details"
+                 icon="Search"
+                 onPress={() => {}}
+               />
+               <FormRow 
+                 label="Programme of Study"
+                 icon="Globe"
+                 isLast
+                 onPress={() => {}}
+               />
+            </FormGroup>
+          </View>
 
-                {/* Logout */}
-                <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
-                    <Ionicons name="log-out-outline" size={20} color={Colors.error} />
-                    <Text style={styles.logoutText}>Sign Out</Text>
-                </TouchableOpacity>
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Preferences</Text>
+            <FormGroup>
+               <FormRow 
+                 label="Notifications"
+                 icon="Bell"
+                 onPress={() => router.push('/settings/notifications')}
+               />
+               <FormRow 
+                 label="Schedule Alarms"
+                 icon="Clock"
+                 isLast
+                 onPress={() => {}}
+               />
+            </FormGroup>
+          </View>
 
-                <Text style={styles.versionText}>ClassSync v2.1.0 (MVP)</Text>
-                
-                <View style={{ height: 120 }} />
-            </ScrollView>
-        </SafeAreaView>
+          <View style={styles.section}>
+            <FormGroup>
+               <FormRow 
+                 label="Help & Support"
+                 icon="HelpCircle"
+                 isLast
+                 onPress={() => {}}
+               />
+            </FormGroup>
+          </View>
+
+          <Pressable 
+            onPress={handleLogout}
+            style={({ pressed }) => [
+               styles.logoutButton,
+               pressed && { opacity: 0.7 }
+            ]}
+          >
+            <Text style={styles.logoutText}>Sign out of ClassSync</Text>
+          </Pressable>
+
+          <Text style={styles.versionText}>Version 2.4.0 (102)</Text>
+        </ScrollView>
+      </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.background,
-    },
-    scrollContent: {
-        paddingTop: Platform.OS === 'ios' ? 20 : 40,
-        paddingBottom: 120,
-    },
-    hero: {
-        alignItems: 'center',
-        paddingHorizontal: Spacing.screenPadding,
-        marginBottom: 24,
-    },
-    avatarContainer: {
-        position: 'relative',
-        marginBottom: 16,
-    },
-    editAvatarBtn: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        backgroundColor: Colors.primaryBlue,
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 3,
-        borderColor: Colors.background,
-    },
-    userName: {
-        fontSize: 24,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
-        marginBottom: 2,
-    },
-    userEmail: {
-        fontSize: 14,
-        fontFamily: 'DMSans_400Regular',
-        color: Colors.textSecondary,
-        marginBottom: 12,
-    },
-    roleBadge: {
-        backgroundColor: Colors.primaryBlue + '12',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 20,
-    },
-    roleText: {
-        fontSize: 12,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.primaryBlue,
-    },
-    statsRow: {
-        flexDirection: 'row',
-        backgroundColor: Colors.surface,
-        marginHorizontal: Spacing.screenPadding,
-        borderRadius: 16,
-        paddingVertical: 16,
-        marginBottom: 32,
-        borderWidth: 1,
-        borderColor: Colors.border + '15',
-    },
-    statBox: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    statValue: {
-        fontSize: 16,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
-    },
-    statLabel: {
-        fontSize: 11,
-        fontFamily: 'DMSans_500Medium',
-        color: Colors.textTertiary,
-        marginTop: 2,
-    },
-    statDivider: {
-        width: 1,
-        height: '60%',
-        backgroundColor: Colors.border + '15',
-        alignSelf: 'center',
-    },
-    sectionLabel: {
-        fontSize: 11,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textTertiary,
-        letterSpacing: 1.2,
-        marginBottom: 10,
-        marginLeft: Spacing.screenPadding + 4,
-    },
-    settingsCard: {
-        marginHorizontal: Spacing.screenPadding,
-        padding: 0,
-        overflow: 'hidden',
-    },
-    settingItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-    },
-    iconBox: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    settingLabel: {
-        flex: 1,
-        fontSize: 15,
-        fontFamily: 'DMSans_500Medium',
-    },
-    settingValue: {
-        fontSize: 14,
-        fontFamily: 'DMSans_400Regular',
-        color: Colors.textSecondary,
-        marginRight: 8,
-    },
-    badge: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: Colors.error,
-        marginRight: 8,
-    },
-    rowDivider: {
-        height: 1,
-        backgroundColor: Colors.border + '10',
-        marginLeft: 60,
-    },
-    logoutBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 16,
-        marginHorizontal: Spacing.screenPadding,
-        marginTop: 32,
-        backgroundColor: Colors.error + '08',
-        borderRadius: 16,
-        gap: 8,
-    },
-    logoutText: {
-        fontSize: 16,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.error,
-    },
-    versionText: {
-        textAlign: 'center',
-        fontSize: 12,
-        fontFamily: 'DMSans_400Regular',
-        color: Colors.textTertiary,
-        marginTop: 24,
-    },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#000',
+    letterSpacing: -1,
+    fontFamily: Typography.family.extraBold,
+  },
+  settingsCircle: {
+    width: 36,
+    height: 36,
+    backgroundColor: 'white',
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.separatorOpaque,
+  },
+  hero: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  heroText: {
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#000',
+    letterSpacing: -0.5,
+    fontFamily: Typography.family.bold,
+  },
+  userSub: {
+    fontSize: 13,
+    color: Colors.textTertiary,
+    marginTop: 2,
+    fontFamily: Typography.family.regular,
+  },
+  section: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: 18,
+    marginBottom: 8,
+    fontFamily: Typography.family.semiBold,
+  },
+  logoutButton: {
+    marginTop: 10,
+    alignSelf: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  logoutText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.error,
+    fontFamily: Typography.family.semiBold,
+  },
+  versionText: {
+    marginTop: 20,
+    fontSize: 11,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    opacity: 0.5,
+    fontFamily: Typography.family.regular,
+  },
 });

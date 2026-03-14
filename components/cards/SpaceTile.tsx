@@ -1,99 +1,102 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
+import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
 
 interface SpaceTileProps {
-    name: string;
-    isCarryover?: boolean;
-    isAddButton?: boolean;
-    onPress?: () => void;
-    style?: any;
+  name: string;
+  isAdd?: boolean;
+  onPress?: () => void;
+  index?: number;
+  style?: ViewStyle;
 }
 
 export default function SpaceTile({
-    name,
-    isCarryover = false,
-    isAddButton = false,
-    onPress,
-    style,
+  name,
+  isAdd = false,
+  onPress,
+  index = 0,
+  style,
 }: SpaceTileProps) {
-    const initials = name
-        .split(' ')
-        .map((w) => w.charAt(0))
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
+  const getBackground = () => {
+    if (isAdd) return 'white';
+    if (index === 0) return Colors.primaryNavy;
+    if (index === 1) return '#0F172A';
+    return Colors.accentBlue;
+  };
 
-    if (isAddButton) {
-        return (
-            <TouchableOpacity style={[styles.container, style]} onPress={onPress} activeOpacity={0.7}>
-                <View style={[styles.circle, styles.addCircle]}>
-                    <Ionicons name="add" size={28} color={Colors.accentBlue} />
-                </View>
-                <Text style={styles.name} numberOfLines={1}>Add</Text>
-            </TouchableOpacity>
-        );
-    }
+  const initials = name
+    .split(' ')
+    .map((word) => word.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
+  if (isAdd) {
     return (
-        <TouchableOpacity style={[styles.container, style]} onPress={onPress} activeOpacity={0.7}>
-            <View style={styles.circleWrapper}>
-                <View style={[styles.circle, isCarryover && styles.carryoverCircle]}>
-                    <Text style={styles.initials}>{initials}</Text>
-                </View>
-                {isCarryover && <View style={styles.carryoverDot} />}
-            </View>
-            <Text style={styles.name} numberOfLines={1}>{name}</Text>
-        </TouchableOpacity>
+      <Pressable 
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.container,
+          styles.addTile,
+          style,
+          pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }
+        ]}
+      >
+        <Text style={styles.addIcon}>+</Text>
+      </Pressable>
     );
+  }
+
+  return (
+    <Pressable 
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.container,
+        { backgroundColor: getBackground() },
+        style,
+        pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] }
+      ]}
+    >
+      <Text style={styles.initials}>{initials}</Text>
+      <Text style={styles.label} numberOfLines={2}>{name}</Text>
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        alignItems: 'center',
-        marginRight: Spacing.md,
-    },
-    circleWrapper: {
-        position: 'relative',
-    },
-    circle: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: Colors.primaryBlue,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: Spacing.xs,
-    },
-    carryoverCircle: {
-        backgroundColor: Colors.carryover,
-    },
-    addCircle: {
-        backgroundColor: Colors.subtleFill,
-    },
-    carryoverDot: {
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: Colors.carryover,
-        borderWidth: 2,
-        borderColor: Colors.background,
-    },
-    initials: {
-        color: Colors.white,
-        fontFamily: 'DMSans_700Bold',
-        fontSize: 18,
-    },
-    name: {
-        ...Typography.label,
-        color: Colors.textSecondary,
-        textAlign: 'center',
-        fontSize: 10,
-    },
+  container: {
+    width: 90,
+    height: 90,
+    borderRadius: 18,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addTile: {
+    backgroundColor: 'white',
+    borderWidth: 1.5,
+    borderColor: Colors.separatorOpaque,
+    borderStyle: 'dashed',
+  },
+  addIcon: {
+    fontSize: 22,
+    color: Colors.textTertiary,
+  },
+  initials: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.9)',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+    fontFamily: Typography.family.bold,
+  },
+  label: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    lineHeight: 9 * 1.2,
+    fontFamily: Typography.family.semiBold,
+  },
 });

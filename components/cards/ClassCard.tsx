@@ -1,120 +1,165 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
-import Tag from '../ui/Tag';
+import * as LucideIcons from 'lucide-react-native';
 
 interface ClassCardProps {
-    spaceName: string;
-    courseCode: string;
-    startTime: string;
-    endTime: string;
-    venue: string;
-    status: 'upcoming' | 'live' | 'cancelled';
-    isCarryover?: boolean;
-    onPress?: () => void;
-    style?: any;
+  courseCode: string;
+  courseName: string;
+  startTime: string;
+  endTime: string;
+  venue: string;
+  isCarryover?: boolean;
+  isAlarmSet?: boolean;
+  alarmTime?: string;
+  onPress?: () => void;
+  onAlarmToggle?: () => void;
+  style?: ViewStyle;
 }
 
 export default function ClassCard({
-    spaceName,
-    courseCode,
-    startTime,
-    endTime,
-    venue,
-    status,
-    isCarryover = false,
-    onPress,
-    style,
+  courseCode,
+  courseName,
+  startTime,
+  endTime,
+  venue,
+  isCarryover = false,
+  isAlarmSet = false,
+  alarmTime,
+  onPress,
+  onAlarmToggle,
+  style,
 }: ClassCardProps) {
-    const statusConfig = {
-        upcoming: { label: 'Upcoming', color: Colors.warning, bg: '#FEF3C7' },
-        live: { label: 'Live', color: Colors.success, bg: '#DCFCE7' },
-        cancelled: { label: 'Cancelled', color: Colors.error, bg: '#FEE2E2' },
-    };
+  const accentColor = isCarryover ? Colors.carryover : Colors.accentBlue;
+  const accentSoft = isCarryover ? Colors.carryoverSoft : Colors.accentBlueSoft;
 
-    const config = statusConfig[status];
-    const borderColor = isCarryover ? Colors.carryover : Colors.accentBlue;
+  return (
+    <Pressable 
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.container,
+        style,
+        pressed && { transform: [{ scale: 0.98 }] }
+      ]}
+    >
+      <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
+      
+      <View style={styles.content}>
+        <Text style={[styles.courseCode, { color: accentColor }]}>{courseCode}</Text>
+        <Text style={styles.courseName} numberOfLines={2}>{courseName}</Text>
 
-    return (
-        <TouchableOpacity
-            style={[styles.card, { borderLeftColor: borderColor }, style]}
-            onPress={onPress}
-            activeOpacity={0.8}
-        >
-            <View style={styles.header}>
-                <Text style={styles.courseCode} numberOfLines={1}>{courseCode}</Text>
-                <View style={[styles.statusChip, { backgroundColor: config.bg }]}>
-                    <Text style={[styles.statusText, { color: config.color }]}>
-                        {config.label}
-                    </Text>
-                </View>
-            </View>
-            <Text style={styles.spaceName} numberOfLines={1}>{spaceName}</Text>
-            <View style={styles.detailRow}>
-                <Text style={styles.time}>{startTime} – {endTime}</Text>
-            </View>
-            <Text style={styles.venue} numberOfLines={1}>📍 {venue}</Text>
-            {isCarryover && (
-                <Tag label="Carryover" variant="carryover" style={styles.carryoverTag} />
-            )}
-        </TouchableOpacity>
-    );
+        <View style={styles.infoRow}>
+          <LucideIcons.Clock size={9} color={Colors.textTertiary} />
+          <Text style={styles.infoText}>{startTime} – {endTime}</Text>
+        </View>
+
+        <View style={[styles.infoRow, { marginTop: 2 }]}>
+          <LucideIcons.MapPin size={9} color={Colors.textTertiary} />
+          <Text style={styles.infoText}>{venue}</Text>
+        </View>
+
+        <View style={styles.alarmSection}>
+          <Pressable 
+            onPress={onAlarmToggle}
+            style={[
+              styles.alarmButton,
+              isAlarmSet ? { 
+                borderColor: Colors.accentBlue, 
+                backgroundColor: Colors.accentBlueSoft 
+              } : { 
+                borderColor: Colors.separatorOpaque, 
+                backgroundColor: Colors.background 
+              },
+              isCarryover && !isAlarmSet && { 
+                borderColor: Colors.carryoverSoft 
+              }
+            ]}
+          >
+            <LucideIcons.Bell 
+              size={10} 
+              color={isAlarmSet ? Colors.accentBlue : isCarryover ? Colors.carryover : Colors.textTertiary} 
+              fill={isAlarmSet ? Colors.accentBlue : 'transparent'}
+            />
+            <Text style={[
+              styles.alarmText, 
+              { color: isAlarmSet ? Colors.accentBlue : isCarryover ? Colors.carryover : Colors.textTertiary }
+            ]}>
+              {isAlarmSet ? (alarmTime || 'Set') : 'Set alarm'}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
-    card: {
-        width: 200,
-        backgroundColor: Colors.surface,
-        borderRadius: Spacing.cardRadius,
-        padding: Spacing.md,
-        marginRight: Spacing.md,
-        borderLeftWidth: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: Spacing.xs,
-    },
-    courseCode: {
-        ...Typography.sectionHeader,
-        color: Colors.textPrimary,
-        flex: 1,
-    },
-    statusChip: {
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: 2,
-        borderRadius: Spacing.pillRadius,
-        marginLeft: Spacing.xs,
-    },
-    statusText: {
-        ...Typography.label,
-        fontWeight: '600',
-    },
-    spaceName: {
-        ...Typography.label,
-        color: Colors.textSecondary,
-        marginBottom: Spacing.sm,
-    },
-    detailRow: {
-        marginBottom: Spacing.xs,
-    },
-    time: {
-        ...Typography.body,
-        color: Colors.textPrimary,
-    },
-    venue: {
-        ...Typography.label,
-        color: Colors.textSecondary,
-    },
-    carryoverTag: {
-        marginTop: Spacing.sm,
-    },
+  container: {
+    width: 160,
+    borderRadius: 16,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: Colors.separatorOpaque,
+    overflow: 'hidden',
+    paddingTop: 13,
+    paddingRight: 13,
+    paddingBottom: 10,
+    paddingLeft: 13,
+  },
+  accentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  content: {
+    paddingLeft: 8,
+  },
+  courseCode: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    marginBottom: 2,
+    fontFamily: Typography.family.bold,
+  },
+  courseName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000',
+    lineHeight: 12 * 1.3,
+    marginBottom: 7,
+    fontFamily: Typography.family.bold,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  infoText: {
+    fontSize: 10,
+    color: Colors.textTertiary,
+    fontFamily: Typography.family.regular,
+  },
+  alarmSection: {
+    marginTop: 9,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.background,
+  },
+  alarmButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 7,
+    borderWidth: 1.5,
+  },
+  alarmText: {
+    fontSize: 9,
+    fontWeight: '600',
+    fontFamily: Typography.family.semiBold,
+  },
 });

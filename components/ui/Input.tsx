@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
 
 interface InputProps extends TextInputProps {
     label: string;
@@ -27,7 +26,8 @@ export default function Input({
                 style={[
                     styles.input, 
                     isFocused && styles.inputFocused,
-                    error && styles.inputError
+                    error && styles.inputError,
+                    rest.multiline && { height: 100, paddingTop: 12, paddingBottom: 12 }
                 ]}
                 placeholderTextColor={Colors.textTertiary}
                 onFocus={(e) => {
@@ -47,35 +47,41 @@ export default function Input({
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: Spacing.lg,
+        marginBottom: 20,
     },
     label: {
-        ...Typography.bodySmall,
-        fontWeight: '600',
-        color: Colors.textSecondary,
+        fontSize: 11,
+        fontWeight: '700',
+        color: Colors.textTertiary,
         marginBottom: 8,
         marginLeft: 4,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        fontFamily: Typography.family.bold,
     },
     input: {
-        height: Spacing.inputHeight,
-        backgroundColor: Colors.surface,
-        borderWidth: 1.5,
-        borderColor: Colors.border,
-        borderRadius: Spacing.inputRadius,
-        paddingHorizontal: Spacing.md,
-        ...Typography.body,
-        color: Colors.textPrimary,
+        height: 52,
+        backgroundColor: '#F9F9FB',
+        borderWidth: 1,
+        borderColor: Colors.separator,
+        borderRadius: 14,
+        paddingHorizontal: 16,
+        fontSize: 15,
+        color: '#000',
+        fontFamily: Typography.family.medium,
     },
     inputFocused: {
-        borderColor: Colors.primaryBlue,
+        borderColor: Colors.accentBlue,
+        backgroundColor: 'white',
     },
     inputError: {
         borderColor: Colors.error,
     },
     error: {
-        ...Typography.bodySmall,
+        fontSize: 12,
         color: Colors.error,
         marginTop: 6,
         marginLeft: 4,
+        fontFamily: Typography.family.regular,
     },
 });

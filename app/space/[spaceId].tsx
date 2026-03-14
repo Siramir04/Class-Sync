@@ -1,50 +1,53 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    FlatList,
-    ScrollView,
-    TouchableOpacity,
-    SafeAreaView,
-    Platform,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  StatusBar,
+  Dimensions,
+  FlatList,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as LucideIcons from 'lucide-react-native';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { Colors } from '../../constants/colors';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
 import { useAuthStore } from '../../store/authStore';
 import { useCourses } from '../../hooks/useCourses';
 import { getPostsBySpace, createPost } from '../../services/postService';
-import { getSpaceById } from '../../services/spaceService';
+import { getSpaceById, subscribeToSpaceMembers } from '../../services/spaceService';
+import { Avatar } from '../../components/ui/Avatar';
 import PostCard from '../../components/cards/PostCard';
-import EmptyState from '../../components/ui/EmptyState';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import PostTypeSheet from '../../components/sheets/PostTypeSheet';
 import CreatePostSheet, { CreatePostData } from '../../components/sheets/CreatePostSheet';
-import { Post, PostType, Space, AttendanceSession } from '../../types';
+import { Post, PostType, Space, AttendanceSession, CourseMember } from '../../types';
 
-const postTypeFilters = ['All', 'Lectures', 'Assignments', 'Tests', 'Notes', 'Announcements'] as const;
+const { width } = Dimensions.get('window');
+
+const postTypeFilters = ['All', 'Lectures', 'Assignments', 'Tests', 'Notes'] as const;
 const postTypeMap: Record<string, PostType | undefined> = {
     All: undefined,
     Lectures: 'lecture',
     Assignments: 'assignment',
     Tests: 'test',
     Notes: 'note',
-    Announcements: 'announcement',
 };
 
 export default function SpaceFeedScreen() {
     const { spaceId } = useLocalSearchParams<{ spaceId: string }>();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const { user } = useAuthStore();
     const { courses } = useCourses(spaceId || null);
 
     const [space, setSpace] = useState<Space | null>(null);
     const [posts, setPosts] = useState<Post[]>([]);
+    const [members, setMembers] = useState<CourseMember[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeCourseId, setActiveCourseId] = useState<string>('All');
     const [activeTypeFilter, setActiveTypeFilter] = useState<string>('All');
@@ -60,30 +63,9 @@ export default function SpaceFeedScreen() {
     useEffect(() => {
         if (!spaceId) return;
         loadData();
+        const unsubMembers = subscribeToSpaceMembers(spaceId, setMembers);
+        return () => unsubMembers();
     }, [spaceId]);
-
-    // Listen for active attendance sessions
-    useEffect(() => {
-        if (!spaceId || courses.length === 0) return;
-
-        const unsubscribes: (() => void)[] = [];
-
-        courses.forEach(course => {
-            const sessionsRef = collection(db, 'spaces', spaceId, 'courses', course.id, 'sessions');
-            const q = query(sessionsRef, where('isActive', '==', true));
-
-            const unsub = onSnapshot(q, (snapshot) => {
-                const liveSessions = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as AttendanceSession));
-                setActiveSessions(prev => {
-                    const filtered = prev.filter(s => s.courseId !== course.id);
-                    return [...filtered, ...liveSessions];
-                });
-            });
-            unsubscribes.push(unsub);
-        });
-
-        return () => unsubscribes.forEach(unsub => unsub());
-    }, [spaceId, courses]);
 
     const loadData = async () => {
         setLoading(true);
@@ -147,393 +129,313 @@ export default function SpaceFeedScreen() {
         }
     };
 
-    if (loading) return <LoadingSpinner fullScreen />;
-
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Nav Header */}
-            <View style={styles.navHeader}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerIconButton} activeOpacity={0.7}>
-                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
-                </TouchableOpacity>
-                <View style={styles.navTitleContainer}>
-                    <Text style={styles.navTitle} numberOfLines={1}>{space?.name}</Text>
-                    <Text style={styles.navSubtitle}>{space?.spaceCode} · {space?.memberCount} members</Text>
-                </View>
-                {isMonitor && (
-                    <TouchableOpacity
-                        style={styles.headerIconButton}
-                        onPress={() => router.push(`/space/manage?spaceId=${spaceId}`)}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons name="settings-outline" size={22} color={Colors.textPrimary} />
-                    </TouchableOpacity>
-                )}
-            </View>
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        
+        {/* Header Section */}
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+           <Pressable onPress={() => router.back()} style={styles.backButton}>
+             <LucideIcons.ChevronLeft size={24} color="#000" />
+           </Pressable>
 
-            {/* Content Switcher / Filters */}
-            <View style={styles.filterContainer}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filterContent}
-                >
-                    <TouchableOpacity
-                        style={[styles.filterPill, activeCourseId === 'All' && styles.filterPillActive]}
-                        onPress={() => setActiveCourseId('All')}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={[styles.filterPillText, activeCourseId === 'All' && styles.filterPillTextActive]}>
-                            All Feed
-                        </Text>
-                    </TouchableOpacity>
-                    {courses.map((course) => (
-                        <TouchableOpacity
-                            key={course.id}
-                            style={[styles.filterPill, activeCourseId === course.id && styles.filterPillActive]}
-                            onPress={() => setActiveCourseId(course.id)}
-                            activeOpacity={0.7}
-                        >
-                            <Text
-                                style={[
-                                    styles.filterPillText,
-                                    activeCourseId === course.id && styles.filterPillTextActive,
-                                ]}
-                            >
-                                {course.courseCode}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
+           <View style={styles.titleContainer}>
+             <Text style={styles.spaceName}>{activeCourseId !== 'All' ? courses.find(c => c.id === activeCourseId)?.courseCode : space?.spaceCode}</Text>
+             <Text style={styles.spaceSubtitle} numberOfLines={1}>
+               {activeCourseId !== 'All' ? courses.find(c => c.id === activeCourseId)?.courseName : space?.name}
+             </Text>
+           </View>
 
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.typeFilterRow}
-                    contentContainerStyle={styles.filterContent}
-                >
-                    {postTypeFilters.map((filter) => (
-                        <TouchableOpacity
-                            key={filter}
-                            style={[styles.typeFilterPill, activeTypeFilter === filter && styles.typeFilterPillActive]}
-                            onPress={() => setActiveTypeFilter(filter)}
-                            activeOpacity={0.7}
-                        >
-                            <Text
-                                style={[
-                                    styles.typeFilterText,
-                                    activeTypeFilter === filter && styles.typeFilterTextActive,
-                                ]}
-                            >
-                                {filter}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
+           <View style={styles.headerActions}>
+             <Pressable style={styles.iconCircle}>
+               <LucideIcons.Cloud size={18} color="#000" />
+             </Pressable>
+             <Pressable 
+               onPress={() => router.push(`/space/manage?spaceId=${spaceId}`)}
+               style={styles.iconCircle}
+             >
+               <LucideIcons.Info size={18} color="#000" />
+             </Pressable>
+           </View>
+        </View>
 
-            {/* Quick Access Row */}
-            <View style={styles.quickAccessRow}>
-                <TouchableOpacity 
-                    style={styles.materialsBtn}
-                    onPress={() => router.push({
-                        pathname: '/course/[courseId]/materials',
-                        params: { 
-                            spaceId: spaceId!, 
-                            courseId: activeCourseId !== 'All' ? activeCourseId : courses[0]?.id || '',
-                            courseCode: activeCourseId !== 'All' ? courses.find(c => c.id === activeCourseId)?.courseCode : courses[0]?.courseCode
-                        }
-                    })}
-                    activeOpacity={0.7}
-                >
-                    <View style={styles.materialsIconBox}>
-                        <Ionicons name="document-attach" size={18} color={Colors.primaryBlue} />
-                    </View>
-                    <Text style={styles.materialsText}>Course Materials</Text>
-                    <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
-                </TouchableOpacity>
-            </View>
+        {/* Course Filters */}
+        <View style={styles.courseFilters}>
+           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+              <Pressable 
+                onPress={() => setActiveCourseId('All')}
+                style={[styles.coursePill, activeCourseId === 'All' && styles.coursePillActive]}
+              >
+                <Text style={[styles.coursePillText, activeCourseId === 'All' && styles.coursePillTextActive]}>General</Text>
+              </Pressable>
+              {courses.map(course => (
+                 <Pressable 
+                   key={course.id}
+                   onPress={() => setActiveCourseId(course.id)}
+                   style={[styles.coursePill, activeCourseId === course.id && styles.coursePillActive]}
+                 >
+                   <Text style={[styles.coursePillText, activeCourseId === course.id && styles.coursePillTextActive]}>{course.courseCode}</Text>
+                 </Pressable>
+              ))}
+           </ScrollView>
+        </View>
 
-            {/* Live Activities / Attendance */}
-            <View style={styles.listContainer}>
-                <FlatList
-                    data={filteredPosts}
-                    renderItem={({ item }) => (
-                        <PostCard
-                            post={item}
-                            isMonitor={isMonitor}
-                            onPress={() =>
-                                router.push(`/post/${item.id}?spaceId=${item.spaceId}&courseId=${item.courseId}`)
-                            }
-                        />
-                    )}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.feedContent}
-                    showsVerticalScrollIndicator={false}
-                    ListHeaderComponent={
-                        activeSessions.length > 0 ? (
-                            <View style={styles.activeSessionsContainer}>
-                                {activeSessions.map(session => (
-                                    <TouchableOpacity
-                                        key={session.id}
-                                        style={styles.sessionBanner}
-                                        onPress={() => router.push(`/attendance/session/${session.id}?courseId=${session.courseId}&spaceId=${spaceId}`)}
-                                        activeOpacity={0.9}
-                                    >
-                                        <View style={styles.sessionPulse}>
-                                            <View style={styles.pulseInner} />
-                                        </View>
-                                        <View style={styles.sessionInfo}>
-                                            <Text style={styles.sessionTitle}>Live Attendance</Text>
-                                            <Text style={styles.sessionSubtitle}>{session.courseCode} · Join session now</Text>
-                                        </View>
-                                        <Ionicons name="qr-code-outline" size={20} color={Colors.white} />
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        ) : null
-                    }
-                    ListEmptyComponent={
-                        <EmptyState 
-                            icon="newspaper-outline" 
-                            title="Nothing here yet" 
-                            subtitle="Be the first to share an update or schedule a lecture." 
-                        />
-                    }
+        {/* Member Strip */}
+        <View style={styles.memberStrip}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.memberStripContent}>
+            {members.map((member, idx) => (
+              <View key={member.uid || idx} style={styles.memberAvatar}>
+                <Avatar 
+                  firstName={member.fullName?.split(' ')[0] || '?'} 
+                  lastName={member.fullName?.split(' ')[1] || ''} 
+                  size="sm" 
                 />
+                <Text style={styles.memberName} numberOfLines={1}>
+                  {member.fullName?.split(' ')[0]}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Type Filters */}
+        <View style={styles.typeFilters}>
+           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+             {postTypeFilters.map(filter => (
+               <Pressable 
+                 key={filter} 
+                 onPress={() => setActiveTypeFilter(filter)}
+                 style={[styles.typePill, activeTypeFilter === filter && styles.typePillActive]}
+               >
+                 <Text style={[styles.typePillText, activeTypeFilter === filter && styles.typePillTextActive]}>{filter}</Text>
+               </Pressable>
+             ))}
+           </ScrollView>
+        </View>
+
+        {/* Post Feed */}
+        <FlatList 
+          data={filteredPosts}
+          keyExtractor={item => item.id}
+          contentContainerStyle={{ 
+            paddingHorizontal: 16, 
+            paddingTop: 10,
+            paddingBottom: 120 // Space for tab bar and FAB
+          }}
+          renderItem={({ item }) => (
+            <PostCard 
+              post={item} 
+              onPress={() => router.push(`/post/${item.id}?spaceId=${spaceId}`)}
+              style={{ marginBottom: 10 }}
+            />
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyFeed}>
+              <LucideIcons.Newspaper size={40} color={Colors.textTertiary} opacity={0.2} />
+              <Text style={styles.emptyFeedText}>No updates found for this filter.</Text>
             </View>
+          }
+        />
 
-            {/* Create Post FAB */}
-            {(isMonitor || isLecturer) && (
-                <TouchableOpacity
-                    style={styles.fab}
-                    onPress={() => setShowPostTypeSheet(true)}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="add" size={30} color={Colors.white} />
-                </TouchableOpacity>
-            )}
+        {/* Create FAB */}
+        {(isMonitor || isLecturer) && (
+          <Pressable 
+            onPress={() => setShowPostTypeSheet(true)}
+            style={({ pressed }) => [
+              styles.fab,
+              pressed && { transform: [{ scale: 0.92 }], opacity: 0.9 }
+            ]}
+          >
+            <LucideIcons.Plus size={28} color="white" />
+          </Pressable>
+        )}
 
-            <PostTypeSheet
-                visible={showPostTypeSheet}
-                onClose={() => setShowPostTypeSheet(false)}
-                onSelect={(type) => {
-                    if (type === 'attendance') {
-                        const course = activeCourseId !== 'All'
-                            ? courses.find(c => c.id === activeCourseId)
-                            : courses[0];
+        <PostTypeSheet
+            visible={showPostTypeSheet}
+            onClose={() => setShowPostTypeSheet(false)}
+            onSelect={(type) => {
+                if (type === 'attendance') {
+                    const course = activeCourseId !== 'All'
+                        ? courses.find(c => c.id === activeCourseId)
+                        : courses[0];
 
-                        if (course) {
-                            router.push(`/attendance/session/new?courseId=${course.id}&spaceId=${spaceId}&courseCode=${course.courseCode}&courseName=${encodeURIComponent(course.courseName)}`);
-                        }
-                    } else {
-                        setSelectedPostType(type);
-                        setShowCreateSheet(true);
+                    if (course) {
+                        router.push(`/attendance/session/new?courseId=${course.id}&spaceId=${spaceId}&courseCode=${course.courseCode}&courseName=${encodeURIComponent(course.courseName)}`);
                     }
-                }}
-            />
+                } else {
+                    setSelectedPostType(type);
+                    setShowCreateSheet(true);
+                }
+            }}
+        />
 
-            <CreatePostSheet
-                visible={showCreateSheet}
-                onClose={() => setShowCreateSheet(false)}
-                postType={selectedPostType}
-                courseCode={activeCourseId !== 'All' ? courses.find(c => c.id === activeCourseId)?.courseCode || '' : courses[0]?.courseCode || ''}
-                onSubmit={handleCreatePost}
-                loading={createLoading}
-            />
-        </SafeAreaView>
+        <CreatePostSheet
+            visible={showCreateSheet}
+            onClose={() => setShowCreateSheet(false)}
+            postType={selectedPostType}
+            courseCode={activeCourseId !== 'All' ? courses.find(c => c.id === activeCourseId)?.courseCode || '' : courses[0]?.courseCode || ''}
+            onSubmit={handleCreatePost}
+            loading={createLoading}
+        />
+      </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.background,
-    },
-    navHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: Spacing.sm,
-        paddingTop: Platform.OS === 'ios' ? 0 : 10,
-        height: 56,
-    },
-    headerIconButton: {
-        width: 44,
-        height: 44,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    navTitleContainer: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    navTitle: {
-        fontSize: 17,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
-    },
-    navSubtitle: {
-        fontSize: 11,
-        fontFamily: 'DMSans_500Medium',
-        color: Colors.textSecondary,
-    },
-    filterContainer: {
-        paddingTop: Spacing.sm,
-        paddingBottom: Spacing.md,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '20',
-    },
-    filterContent: {
-        paddingHorizontal: Spacing.screenPadding,
-        gap: 8,
-    },
-    filterPill: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: Colors.surface,
-        borderWidth: 1,
-        borderColor: Colors.border + '40',
-    },
-    filterPillActive: {
-        backgroundColor: Colors.primaryBlue,
-        borderColor: Colors.primaryBlue,
-    },
-    filterPillText: {
-        fontSize: 13,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.textSecondary,
-    },
-    filterPillTextActive: {
-        color: Colors.white,
-    },
-    typeFilterRow: {
-        marginTop: 10,
-    },
-    typeFilterPill: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    typeFilterPillActive: {
-        backgroundColor: Colors.primaryBlue + '10',
-    },
-    typeFilterText: {
-        fontSize: 12,
-        fontFamily: 'DMSans_500Medium',
-        color: Colors.textTertiary,
-    },
-    typeFilterTextActive: {
-        color: Colors.primaryBlue,
-        fontFamily: 'DMSans_700Bold',
-    },
-    listContainer: {
-        flex: 1,
-    },
-    feedContent: {
-        padding: Spacing.screenPadding,
-        paddingBottom: 100,
-    },
-    activeSessionsContainer: {
-        marginBottom: Spacing.lg,
-        gap: 8,
-    },
-    sessionBanner: {
-        backgroundColor: Colors.error, // Use error (red) for live pulse feel
-        borderRadius: 16,
-        padding: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        ...Platform.select({
-            ios: {
-                shadowColor: Colors.error,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 10,
-            },
-            android: {
-                elevation: 6,
-            },
-        }),
-    },
-    sessionPulse: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    pulseInner: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: Colors.white,
-    },
-    sessionInfo: {
-        flex: 1,
-    },
-    sessionTitle: {
-        fontSize: 14,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.white,
-    },
-    sessionSubtitle: {
-        fontSize: 11,
-        fontFamily: 'DMSans_500Medium',
-        color: 'rgba(255,255,255,0.8)',
-    },
-    quickAccessRow: {
-        paddingHorizontal: Spacing.screenPadding,
-        paddingVertical: 12,
-        backgroundColor: Colors.background,
-    },
-    materialsBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        backgroundColor: Colors.surface,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: Colors.border + '15',
-    },
-    materialsIconBox: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        backgroundColor: Colors.primaryBlue + '10',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 10,
-    },
-    materialsText: {
-        flex: 1,
-        fontSize: 14,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.textPrimary,
-    },
-    fab: {
-        position: 'absolute',
-        bottom: 30,
-        right: 25,
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: Colors.primaryBlue,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 10,
-        ...Platform.select({
-            ios: {
-                shadowColor: Colors.primaryBlue,
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.4,
-                shadowRadius: 10,
-            },
-            android: {
-                elevation: 8,
-            },
-        }),
-    },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  backButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  titleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  spaceName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#000',
+    letterSpacing: -0.3,
+    fontFamily: Typography.family.extraBold,
+  },
+  spaceSubtitle: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    fontFamily: Typography.family.regular,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  iconCircle: {
+    width: 34,
+    height: 34,
+    backgroundColor: 'white',
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.separatorOpaque,
+  },
+  courseFilters: {
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: Colors.separator,
+  },
+  filterContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  coursePill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: Colors.separatorOpaque,
+  },
+  coursePillActive: {
+    backgroundColor: Colors.accentBlue,
+    borderColor: Colors.accentBlue,
+  },
+  coursePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    fontFamily: Typography.family.bold,
+  },
+  coursePillTextActive: {
+    color: 'white',
+  },
+  memberStrip: {
+    paddingVertical: 14,
+    backgroundColor: Colors.background,
+    borderBottomWidth: 0.5,
+    borderBottomColor: Colors.separator,
+  },
+  memberStripContent: {
+    paddingHorizontal: 16,
+    gap: 16,
+  },
+  memberAvatar: {
+    alignItems: 'center',
+    width: 44,
+  },
+  memberName: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: Colors.textTertiary,
+    marginTop: 4,
+    textAlign: 'center',
+    fontFamily: Typography.family.semiBold,
+  },
+  typeFilters: {
+    paddingVertical: 10,
+    backgroundColor: 'white',
+    borderBottomWidth: 0.5,
+    borderBottomColor: Colors.separator,
+  },
+  typePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  typePillActive: {
+    backgroundColor: '#EFF6FF',
+  },
+  typePillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textTertiary,
+    fontFamily: Typography.family.medium,
+  },
+  typePillTextActive: {
+    color: Colors.accentBlue,
+    fontWeight: '700',
+  },
+  emptyFeed: {
+    paddingTop: 80,
+    alignItems: 'center',
+  },
+  emptyFeedText: {
+    fontSize: 13,
+    color: Colors.textTertiary,
+    marginTop: 12,
+    fontFamily: Typography.family.regular,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 25,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: Colors.accentBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.accentBlue,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 8,
+      }
+    })
+  },
 });

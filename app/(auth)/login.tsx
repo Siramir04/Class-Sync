@@ -1,184 +1,189 @@
 import React, { useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Alert,
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/spacing';
-import Input from '../../components/ui/Input';
-import Button from '../../components/ui/Button';
-import { loginUser, resetPassword } from '../../services/authService';
-import { getCurrentUser } from '../../services/authService';
+import { Typography } from '../../constants/typography';
+import { AuthLayout } from '../../components/auth/AuthLayout';
+import { FormGroup } from '../../components/ui/FormGroup';
+import { FormRow } from '../../components/ui/FormRow';
+import { Button } from '../../components/ui/Button';
+import { loginUser, resetPassword, getCurrentUser } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
 
 export default function LoginScreen() {
-    const router = useRouter();
-    const setUser = useAuthStore((s) => s.setUser);
+  const router = useRouter();
+  const setUser = useAuthStore((s) => s.setUser);
 
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-    const handleLogin = async () => {
-        if (!email.trim() || !password) {
-            setError('Please fill in all fields');
-            return;
-        }
+  const handleLogin = async () => {
+    if (!email.trim() || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
 
-        setLoading(true);
-        setError('');
-        try {
-            const firebaseUser = await loginUser(email, password);
-            const userData = await getCurrentUser(firebaseUser.uid);
-            
-            try {
-                setUser(userData);
-                router.replace('/(tabs)');
-            } catch (navError) {
-                console.error('Login navigation error:', navError);
-                Alert.alert('Navigation Error', 'Failed to redirect after login.');
-            }
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Login failed';
-            setError(message);
-        } finally {
-            setLoading(false);
-        }
-    };
+    setLoading(true);
+    setError('');
+    try {
+      const firebaseUser = await loginUser(email, password);
+      const userData = await getCurrentUser(firebaseUser.uid);
+      
+      setUser(userData);
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const handleForgotPassword = async () => {
-        if (!email.trim()) {
-            Alert.alert('Enter Email', 'Please enter your email address first.');
-            return;
-        }
-        try {
-            await resetPassword(email);
-            Alert.alert('Email Sent', 'Check your inbox for a password reset link.');
-        } catch {
-            Alert.alert('Error', 'Could not send reset email. Check your email address.');
-        }
-    };
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert('Enter Email', 'Please enter your email address first.');
+      return;
+    }
+    try {
+      await resetPassword(email);
+      Alert.alert('Email Sent', 'Check your inbox for a password reset link.');
+    } catch {
+      Alert.alert('Error', 'Could not send reset email.');
+    }
+  };
 
-    return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-            >
-                <View style={styles.header}>
-                    <Text style={styles.appName}>ClassSync</Text>
-                    <Text style={styles.subtitle}>Welcome back</Text>
-                </View>
+  return (
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <AuthLayout 
+        title={"Welcome\nback."} 
+        subtitle="Sign in to your account"
+      >
+        <View style={styles.formContainer}>
+          {error ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
-                {error ? (
-                    <Text style={styles.errorText}>{error}</Text>
-                ) : null}
+          <FormGroup>
+            <FormRow 
+              label="Email"
+              icon="Mail"
+              iconBg="#EFF6FF"
+              iconColor={Colors.accentBlue}
+              placeholder="example@univ.edu"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <FormRow 
+              label="Password"
+              icon="Lock"
+              isLast
+              placeholder="Required"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              rightElement={
+                <Pressable onPress={() => setShowPassword(!showPassword)}>
+                  <Text style={styles.eyeIcon}>{showPassword ? 'Hide' : 'Show'}</Text>
+                </Pressable>
+              }
+            />
+          </FormGroup>
 
-                <Input
-                    label="Email"
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Enter your email"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                />
-                <Input
-                    label="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="Enter your password"
-                    secureTextEntry
-                />
+          <Pressable 
+            onPress={handleForgotPassword} 
+            style={styles.forgotLink}
+          >
+            <Text style={styles.forgotText}>Forgot password?</Text>
+          </Pressable>
 
-                <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotLink} activeOpacity={0.7}>
-                    <Text style={styles.forgotText}>Forgot Password?</Text>
-                </TouchableOpacity>
+          <View style={{ paddingHorizontal: 14 }}>
+            <Button 
+              label="Sign In" 
+              onPress={handleLogin} 
+              loading={loading}
+              variant="accentBlue" // Added custom color handling in Button or just use primary
+              style={{ backgroundColor: Colors.accentBlue }}
+            />
+          </View>
 
-                <Button
-                    title="Log In"
-                    onPress={handleLogin}
-                    loading={loading}
-                    style={{ marginTop: Spacing.md }}
-                />
-
-                <TouchableOpacity
-                    onPress={() => router.push('/(auth)/register')}
-                    style={styles.signupLink}
-                    activeOpacity={0.7}
-                >
-                    <Text style={styles.signupText}>
-                        Don't have an account? <Text style={styles.signupBold}>Sign up</Text>
-                    </Text>
-                </TouchableOpacity>
-            </ScrollView>
-        </KeyboardAvoidingView>
-    );
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Don't have an account?</Text>
+            <Pressable onPress={() => router.push('/(auth)/register')}>
+              <Text style={styles.signupText}>Sign up</Text>
+            </Pressable>
+          </View>
+        </View>
+      </AuthLayout>
+    </KeyboardAvoidingView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.background,
-    },
-    scrollContent: {
-        padding: Spacing.screenPadding,
-        paddingTop: 80,
-        paddingBottom: Spacing.xxl,
-    },
-    header: {
-        alignItems: 'center',
-        marginBottom: Spacing.xl,
-    },
-    appName: {
-        fontSize: 28,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.primaryBlue,
-        marginBottom: Spacing.xs,
-    },
-    subtitle: {
-        ...Typography.body,
-        color: Colors.textSecondary,
-    },
-    errorText: {
-        ...Typography.body,
-        color: Colors.error,
-        backgroundColor: '#FEE2E2',
-        padding: Spacing.md,
-        borderRadius: Spacing.buttonRadius,
-        marginBottom: Spacing.md,
-    },
-    forgotLink: {
-        alignSelf: 'flex-end',
-        marginTop: -Spacing.sm,
-        marginBottom: Spacing.sm,
-    },
-    forgotText: {
-        ...Typography.label,
-        color: Colors.accentBlue,
-    },
-    signupLink: {
-        marginTop: Spacing.lg,
-        alignItems: 'center',
-    },
-    signupText: {
-        ...Typography.body,
-        color: Colors.textSecondary,
-    },
-    signupBold: {
-        color: Colors.accentBlue,
-        fontWeight: '600',
-    },
+  formContainer: {
+    paddingTop: 10,
+  },
+  errorBanner: {
+    marginHorizontal: 14,
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: Colors.errorSoft,
+    borderRadius: 12,
+  },
+  errorText: {
+    fontSize: 13,
+    color: Colors.error,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  forgotLink: {
+    alignSelf: 'flex-end',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    marginBottom: 10,
+  },
+  forgotText: {
+    fontSize: 13,
+    color: Colors.accentBlue,
+    fontWeight: '600',
+  },
+  eyeIcon: {
+    fontSize: 12,
+    color: Colors.textTertiary,
+    fontWeight: '600',
+    paddingRight: 4,
+    opacity: 0.5,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 24,
+  },
+  footerText: {
+    fontSize: 13,
+    color: Colors.textTertiary,
+  },
+  signupText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.accentBlue,
+  },
 });

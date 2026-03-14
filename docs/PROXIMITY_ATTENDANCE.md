@@ -1,6 +1,6 @@
 # Proximity Attendance Verification (Phase 3)
 
-ClassSync Phase 3 introduces a secure, proximity-based attendance system designed to prevent student spoofing. It uses a combination of Bluetooth Low Energy (BLE) and WiFi signal matching to ensure students are physically present in the classroom.
+ClassSync Phase 3 introduces a secure, proximity-based attendance system designed to prevent student spoofing. It uses a combination of Bluetooth Low Energy (BLE) and WiFi signal matching to ensure students are physically present in the classroom. **Both Monitor and Student interfaces have been redesigned to meet senior Apple UI/UX standards.**
 
 ## 🛡️ Three-Tier Verification System
 

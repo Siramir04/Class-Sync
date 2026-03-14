@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
+import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
+import * as LucideIcons from 'lucide-react-native';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
 import { ReadReceipt } from '../../types';
 import * as postService from '../../services/postService';
 import ActionSheet from '../ui/ActionSheet';
-import LoadingSpinner from '../ui/LoadingSpinner';
-import Avatar from '../ui/Avatar';
+import { Avatar } from '../ui/Avatar';
 import { format } from 'date-fns';
 
 interface ReadReceiptsSheetProps {
@@ -51,14 +49,14 @@ export default function ReadReceiptsSheet({
 
     const renderItem = ({ item }: { item: ReadReceipt }) => (
         <View style={styles.receiptItem}>
-            <Avatar name={item.fullName} size={36} />
+            <Avatar firstName={item.fullName.split(' ')[0]} lastName={item.fullName.split(' ')[1] || ''} size="md" />
             <View style={styles.receiptInfo}>
                 <Text style={styles.memberName}>{item.fullName}</Text>
                 <Text style={styles.readAt}>
                     Read {format(item.readAt, 'MMM d, h:mm a')}
                 </Text>
             </View>
-            <Ionicons name="checkmark-done" size={16} color={Colors.accentBlue} />
+            <LucideIcons.CheckCircle2 size={16} color={Colors.accentBlue} />
         </View>
     );
 
@@ -73,23 +71,26 @@ export default function ReadReceiptsSheet({
                     <View style={styles.statDivider} />
                     <View style={styles.statBox}>
                         <Text style={styles.statValue}>{Math.max(0, memberCount - receipts.length)}</Text>
-                        <Text style={styles.statLabel}>UNREAD</Text>
+                        <Text style={styles.statLabel}>PENDING</Text>
                     </View>
                 </View>
 
                 {loading ? (
-                    <LoadingSpinner />
+                    <View style={styles.loadingBox}>
+                      <LucideIcons.Loader2 size={24} color={Colors.accentBlue} style={styles.spin} />
+                    </View>
                 ) : (
                     <FlatList
                         data={receipts}
                         renderItem={renderItem}
                         keyExtractor={(item) => item.uid}
                         contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <Ionicons name="eye-off-outline" size={48} color={Colors.textTertiary} />
+                                <LucideIcons.EyeOff size={44} color={Colors.separatorOpaque} />
                                 <Text style={styles.emptyTitle}>No one hasn't read it yet</Text>
-                                <Text style={styles.emptySubtitle}>Receipts will appear here as members view the post.</Text>
+                                <Text style={styles.emptySubtitle}>Receipts appear as members open the post.</Text>
                             </View>
                         }
                     />
@@ -101,77 +102,91 @@ export default function ReadReceiptsSheet({
 
 const styles = StyleSheet.create({
     container: {
-        height: 400,
+        height: 480,
     },
     statsContainer: {
         flexDirection: 'row',
-        backgroundColor: Colors.subtleFill,
-        borderRadius: 16,
+        backgroundColor: '#F9F9FB',
+        borderRadius: 20,
         padding: 16,
-        margin: Spacing.screenPadding,
-        marginBottom: 8,
+        marginHorizontal: 24,
+        marginBottom: 20,
     },
     statBox: {
         flex: 1,
         alignItems: 'center',
     },
     statValue: {
-        fontSize: 20,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#000',
+        fontFamily: Typography.family.extraBold,
     },
     statLabel: {
         fontSize: 10,
-        fontFamily: 'DMSans_700Bold',
+        fontWeight: '700',
         color: Colors.textTertiary,
         marginTop: 2,
+        fontFamily: Typography.family.bold,
     },
     statDivider: {
         width: 1,
-        backgroundColor: Colors.border + '20',
+        backgroundColor: Colors.separator,
         marginHorizontal: 16,
     },
     listContent: {
-        paddingHorizontal: Spacing.screenPadding,
-        paddingBottom: 20,
+        paddingHorizontal: 24,
+        paddingBottom: 40,
     },
     receiptItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '10',
+        paddingVertical: 14,
+        borderBottomWidth: 0.5,
+        borderBottomColor: Colors.separator,
     },
     receiptInfo: {
         flex: 1,
-        marginLeft: 12,
+        marginLeft: 14,
     },
     memberName: {
         fontSize: 15,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.textPrimary,
+        fontWeight: '600',
+        color: '#000',
+        fontFamily: Typography.family.semiBold,
     },
     readAt: {
         fontSize: 12,
-        fontFamily: 'DMSans_400Regular',
         color: Colors.textTertiary,
         marginTop: 2,
+        fontFamily: Typography.family.regular,
+    },
+    loadingBox: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    spin: {
+      // Logic for spinning would usually be an animated component, but for a placeholder:
     },
     emptyContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 60,
+        paddingVertical: 80,
     },
     emptyTitle: {
-        ...Typography.subHeader,
-        color: Colors.textPrimary,
+        fontSize: 17,
+        fontWeight: '700',
+        color: '#000',
         marginTop: 16,
+        fontFamily: Typography.family.bold,
     },
     emptySubtitle: {
-        ...Typography.bodySmall,
-        color: Colors.textSecondary,
+        fontSize: 13,
+        color: Colors.textTertiary,
         textAlign: 'center',
-        marginTop: 8,
+        marginTop: 6,
         paddingHorizontal: 40,
+        fontFamily: Typography.family.regular,
     },
 });

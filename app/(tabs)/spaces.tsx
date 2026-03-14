@@ -1,287 +1,298 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    FlatList,
-    TouchableOpacity,
-    SafeAreaView,
-    Platform,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  TextInput,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as LucideIcons from 'lucide-react-native';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
 import { useSpaces } from '../../hooks/useSpace';
 import { useSpaceStore } from '../../store/spaceStore';
-import Card from '../../components/ui/Card';
-import Tag from '../../components/ui/Tag';
-import EmptyState from '../../components/ui/EmptyState';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { Space } from '../../types';
 
 export default function SpacesScreen() {
-    const router = useRouter();
-    const { spaces, loading } = useSpaces();
-    const { carryoverCourses } = useSpaceStore();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { spaces, loading } = useSpaces();
+  const { carryoverCourses } = useSpaceStore();
+  const [searchQuery, setSearchQuery] = useState('');
 
-    const renderSpaceCard = ({ item }: { item: Space }) => {
-        const initials = item.name
-            .split(' ')
-            .map((w) => w.charAt(0))
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
+  const filteredSpaces = spaces.filter(s => 
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.spaceCode.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-        return (
-            <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => router.push(`/space/${item.id}`)}
-                style={styles.cardContainer}
-            >
-                <Card style={styles.spaceCard}>
-                    <View style={styles.cardMain}>
-                        <View style={styles.iconContainer}>
-                            <Text style={styles.initials}>{initials}</Text>
-                        </View>
-                        <View style={styles.info}>
-                            <View style={styles.titleRow}>
-                                <Text style={styles.spaceName} numberOfLines={1}>{item.name}</Text>
-                                <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
-                            </View>
-                            <Text style={styles.spaceDept} numberOfLines={1}>
-                                {item.department} · {item.programme}
-                            </Text>
-                            <View style={styles.metaRow}>
-                                <View style={styles.metaBadge}>
-                                    <Text style={styles.metaBadgeText}>{item.spaceCode}</Text>
-                                </View>
-                                <View style={styles.memberInfo}>
-                                    <Ionicons name="people-outline" size={14} color={Colors.textTertiary} />
-                                    <Text style={styles.memberCount}>{item.memberCount} members</Text>
-                                </View>
-                            </View>
-                        </View>
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <View>
+          <Text style={styles.title}>Spaces</Text>
+          <Text style={styles.subtitle}>{spaces.length} active communities</Text>
+        </View>
+
+        <View style={styles.headerActions}>
+           <View style={styles.searchCircle}>
+             <LucideIcons.Search size={18} color="#000" />
+           </View>
+           <Pressable 
+             onPress={() => router.push('/join')}
+             style={styles.joinCircle}
+           >
+             <LucideIcons.Plus size={18} color="white" />
+           </Pressable>
+        </View>
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchWrapper}>
+        <View style={styles.searchBar}>
+          <LucideIcons.Search size={16} color={Colors.textTertiary} style={styles.searchIcon} />
+          <TextInput 
+            placeholder="Search your spaces..."
+            placeholderTextColor={Colors.textTertiary}
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      </View>
+
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 104 }}
+      >
+        <View style={styles.listContainer}>
+          {filteredSpaces.map((space, index) => {
+             const initials = space.name
+               .split(' ')
+               .map((w) => w.charAt(0))
+               .join('')
+               .toUpperCase()
+               .slice(0, 2);
+             
+             return (
+               <Pressable 
+                 key={space.id} 
+                 style={({ pressed }) => [
+                   styles.spaceRow,
+                   pressed && { backgroundColor: 'rgba(0,0,0,0.02)' }
+                 ]}
+                 onPress={() => router.push(`/space/${space.id}`)}
+               >
+                 <View style={[
+                   styles.iconTile, 
+                   { backgroundColor: index % 2 === 0 ? Colors.primaryNavy : Colors.accentBlue }
+                 ]}>
+                   <Text style={styles.tileInitials}>{initials}</Text>
+                 </View>
+
+                 <View style={styles.spaceInfo}>
+                    <Text style={styles.courseCode}>{space.spaceCode}</Text>
+                    <Text style={styles.courseName} numberOfLines={1}>{space.name}</Text>
+                    <View style={styles.memberRow}>
+                       <LucideIcons.Users size={12} color={Colors.textTertiary} />
+                       <Text style={styles.memberCount}>{space.memberCount || 0} members</Text>
                     </View>
-                </Card>
-            </TouchableOpacity>
-        );
-    };
+                 </View>
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.headerTitle}>Spaces</Text>
-                    <Text style={styles.subtitle}>{spaces.length} active communities</Text>
-                </View>
-                <TouchableOpacity 
-                    style={styles.headerButton}
-                    onPress={() => router.push('/join')}
-                    activeOpacity={0.7}
+                 <LucideIcons.ChevronRight size={16} color={Colors.separatorOpaque} />
+               </Pressable>
+             );
+          })}
+
+          {carryoverCourses.length > 0 && (
+            <View style={styles.carryoverSection}>
+              <Text style={styles.sectionLabel}>Carryover courses</Text>
+              {carryoverCourses.map((course) => (
+                <Pressable 
+                  key={course.id} 
+                  style={styles.spaceRow}
+                  onPress={() => router.push(`/space/${course.id}`)}
                 >
-                    <Ionicons name="add" size={26} color={Colors.primaryBlue} />
-                </TouchableOpacity>
+                  <View style={[styles.iconTile, { backgroundColor: Colors.carryover }]}>
+                    <Text style={styles.tileInitials}>
+                      {course.courseName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.spaceInfo}>
+                    <Text style={[styles.courseCode, { color: Colors.carryover }]}>{course.fullCode}</Text>
+                    <Text style={styles.courseName}>{course.courseName}</Text>
+                    <Text style={styles.memberCount}>Personal space</Text>
+                  </View>
+                  <LucideIcons.ChevronRight size={16} color={Colors.separatorOpaque} />
+                </Pressable>
+              ))}
             </View>
+          )}
 
-            {loading ? (
-                <LoadingSpinner />
-            ) : spaces.length > 0 ? (
-                <FlatList
-                    data={spaces}
-                    renderItem={renderSpaceCard}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.list}
-                    showsVerticalScrollIndicator={false}
-                    ListFooterComponent={
-                        carryoverCourses.length > 0 ? (
-                            <View style={styles.carryoverSection}>
-                                <View style={styles.sectionHeader}>
-                                    <Text style={styles.sectionTitle}>Carryover Courses</Text>
-                                </View>
-                                {carryoverCourses.map((course) => (
-                                    <Card key={course.id} style={styles.carryoverCard}>
-                                        <View style={styles.carryoverContent}>
-                                            <View style={styles.carryoverInfo}>
-                                                <Text style={styles.carryoverName}>{course.courseName}</Text>
-                                                <Text style={styles.carryoverCode}>{course.fullCode}</Text>
-                                            </View>
-                                            <Tag label="CARRYOVER" variant="carryover" />
-                                        </View>
-                                    </Card>
-                                ))}
-                            </View>
-                        ) : (
-                                <View style={{ height: 120 }} />
-                        )
-                    }
-                />
-            ) : (
-                <EmptyState
-                    icon="apps-outline"
-                    title="No spaces found"
-                    subtitle="You haven't joined any university spaces yet. Use the '+' button to get started."
-                />
-            )}
-        </SafeAreaView>
-    );
+          {filteredSpaces.length === 0 && !loading && (
+             <View style={styles.emptyState}>
+               <Text style={styles.emptyText}>No spaces found matching "{searchQuery}"</Text>
+             </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.background,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: Spacing.screenPadding,
-        paddingTop: Platform.OS === 'ios' ? 10 : 20,
-        marginBottom: Spacing.lg,
-    },
-    headerTitle: {
-        ...Typography.pageTitle,
-        color: Colors.textPrimary,
-    },
-    subtitle: {
-        ...Typography.label,
-        color: Colors.textSecondary,
-        marginTop: 2,
-    },
-    headerButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: Colors.surface,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 4,
-            },
-            android: {
-                elevation: 2,
-            },
-        }),
-    },
-    list: {
-        paddingHorizontal: Spacing.screenPadding,
-        paddingBottom: 100,
-    },
-    cardContainer: {
-        marginBottom: 12,
-    },
-    spaceCard: {
-        padding: 0,
-        overflow: 'hidden',
-    },
-    cardMain: {
-        flexDirection: 'row',
-        padding: 12,
-    },
-    iconContainer: {
-        width: 60,
-        height: 60,
-        borderRadius: 16,
-        backgroundColor: Colors.primaryBlue,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    initials: {
-        fontSize: 20,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.white,
-    },
-    info: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    titleRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 2,
-    },
-    spaceName: {
-        fontSize: 17,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
-        flex: 1,
-        marginRight: 8,
-    },
-    spaceDept: {
-        fontSize: 13,
-        fontFamily: 'DMSans_400Regular',
-        color: Colors.textSecondary,
-        marginBottom: 8,
-    },
-    metaRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    metaBadge: {
-        backgroundColor: Colors.primaryBlue + '10',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 6,
-    },
-    metaBadgeText: {
-        fontSize: 11,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.primaryBlue,
-    },
-    memberInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    memberCount: {
-        fontSize: 12,
-        fontFamily: 'DMSans_500Medium',
-        color: Colors.textTertiary,
-    },
-    carryoverSection: {
-        marginTop: 24,
-        marginBottom: 40,
-    },
-    sectionHeader: {
-        marginBottom: 12,
-    },
-    sectionTitle: {
-        ...Typography.sectionHeader,
-        color: Colors.textPrimary,
-        fontSize: 18,
-    },
-    carryoverCard: {
-        marginBottom: 10,
-        padding: 12,
-        borderLeftWidth: 4,
-        borderLeftColor: Colors.carryover,
-    },
-    carryoverContent: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    carryoverInfo: {
-        flex: 1,
-    },
-    carryoverName: {
-        fontSize: 16,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.textPrimary,
-        marginBottom: 2,
-    },
-    carryoverCode: {
-        fontSize: 13,
-        fontFamily: 'DMSans_400Regular',
-        color: Colors.textSecondary,
-    },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#000',
+    letterSpacing: -1,
+    fontFamily: Typography.family.extraBold,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: Colors.textTertiary,
+    marginTop: 2,
+    fontFamily: Typography.family.regular,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  searchCircle: {
+    width: 36,
+    height: 36,
+    backgroundColor: 'white',
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.separatorOpaque,
+  },
+  joinCircle: {
+    width: 36,
+    height: 36,
+    backgroundColor: Colors.accentBlue,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchWrapper: {
+    paddingHorizontal: 14,
+    marginBottom: 20,
+  },
+  searchBar: {
+    height: 38,
+    backgroundColor: '#E3E3E8',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#000',
+    fontFamily: Typography.family.regular,
+  },
+  listContainer: {
+    backgroundColor: 'white',
+    borderTopWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderColor: Colors.separator,
+  },
+  spaceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    paddingLeft: 18,
+    borderBottomWidth: 0.5,
+    borderBottomColor: Colors.separator,
+  },
+  iconTile: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tileInitials: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: -0.5,
+    fontFamily: Typography.family.bold,
+  },
+  spaceInfo: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  courseCode: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.accentBlue,
+    marginBottom: 2,
+    fontFamily: Typography.family.bold,
+  },
+  courseName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 4,
+    fontFamily: Typography.family.bold,
+  },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  memberCount: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    fontFamily: Typography.family.regular,
+  },
+  carryoverSection: {
+    marginTop: 20,
+    backgroundColor: Colors.background,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    fontFamily: Typography.family.semiBold,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    fontFamily: Typography.family.regular,
+  },
 });

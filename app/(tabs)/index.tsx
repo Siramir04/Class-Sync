@@ -1,412 +1,313 @@
 import React from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    SafeAreaView,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  StatusBar,
+  Dimensions,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as LucideIcons from 'lucide-react-native';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
 import { Spacing } from '../../constants/spacing';
 import { useAuthStore } from '../../store/authStore';
 import { useRecentPosts } from '../../hooks/usePosts';
 import { useSpaces } from '../../hooks/useSpace';
 import { useNotifications } from '../../hooks/useNotifications';
-import Avatar from '../../components/ui/Avatar';
-import Card from '../../components/ui/Card';
-import EmptyState from '../../components/ui/EmptyState';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { Avatar } from '../../components/ui/Avatar';
 import ClassCard from '../../components/cards/ClassCard';
-import PostCard from '../../components/cards/PostCard';
 import SpaceTile from '../../components/cards/SpaceTile';
+import PostCard from '../../components/cards/PostCard';
 import { getTodayLabel } from '../../utils/formatDate';
-import { useActiveAttendance } from '../../hooks/useAttendance';
-import { useTracker } from '../../hooks/useTracker';
-import AttendanceMarkSheet from '../../components/sheets/AttendanceMarkSheet';
-import DueSoonWidget from '../../components/home/DueSoonWidget';
-import { Animated, Easing } from 'react-native';
-import { useEffect, useRef, useState } from 'react';
-import { AttendanceSession } from '../../types';
+
+const { width } = Dimensions.get('window');
 
 function getGreeting(): string {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 export default function HomeScreen() {
-    const router = useRouter();
-    const { user } = useAuthStore();
-    const { unreadCount } = useNotifications();
-    const { posts: recentPosts, loading: postsLoading } = useRecentPosts(10);
-    const { spaces } = useSpaces();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
+  const { unreadCount } = useNotifications();
+  const { posts: recentPosts, loading: postsLoading } = useRecentPosts(10);
+  const { spaces } = useSpaces();
 
-    const firstName = user?.fullName?.split(' ')[0] || 'there';
+  const firstName = user?.fullName?.split(' ')[0] || 'there';
+  const todayDateStr = new Date().toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    month: 'long', 
+    day: 'numeric' 
+  });
 
-    // Filter today's lectures
-    const today = new Date();
-    const todayLectures = recentPosts.filter(
-        (p) =>
-            p.type === 'lecture' &&
-            p.lectureDate &&
-            new Date(p.lectureDate).toDateString() === today.toDateString()
-    );
+  // Filter today's lectures
+  const today = new Date();
+  const todayLectures = recentPosts.filter(
+    (p) =>
+      p.type === 'lecture' &&
+      p.lectureDate &&
+      new Date(p.lectureDate).toDateString() === today.toDateString()
+  );
 
-    const { activeSessions, loading: attendanceLoading } = useActiveAttendance();
-    const { deadlines, loading: trackerLoading } = useTracker();
-    const [selectedSession, setSelectedSession] = useState<AttendanceSession | null>(null);
-    const pulseAnim = useRef(new Animated.Value(1)).current;
+  const notifications = unreadCount > 0;
 
-    useEffect(() => {
-        if (activeSessions.length > 0) {
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(pulseAnim, {
-                        toValue: 0.85,
-                        duration: 1000,
-                        easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(pulseAnim, {
-                        toValue: 1,
-                        duration: 1000,
-                        easing: Easing.inOut(Easing.ease),
-                        useNativeDriver: true,
-                    }),
-                ])
-            ).start();
-        } else {
-            pulseAnim.setValue(1);
-        }
-    }, [activeSessions]);
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ 
+          paddingTop: insets.top + 12,
+          paddingBottom: 104, // Space for tab bar
+        }}
+      >
+        {/* Header Section */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greetingLabel}>{getGreeting()}</Text>
+            <Text style={styles.userName}>{firstName} 👋</Text>
+            <Text style={styles.dateLabel}>{todayDateStr}</Text>
+          </View>
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView 
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
+          <View style={styles.headerActions}>
+            <Pressable 
+              onPress={() => router.push('/notifications')}
+              style={({ pressed }) => [
+                styles.iconButton,
+                pressed && { opacity: 0.7 }
+              ]}
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <View>
-                        <Text style={styles.dateLabel}>{getTodayLabel()}</Text>
-                        <Text style={styles.greetingText}>
-                            {getGreeting()}, {firstName}
-                        </Text>
-                    </View>
-                    <View style={styles.headerRight}>
-                        <TouchableOpacity
-                            style={styles.iconButton}
-                            onPress={() => router.push('/notifications')}
-                            activeOpacity={0.7}
-                        >
-                            <Ionicons name="notifications" size={24} color={Colors.textPrimary} />
-                            {unreadCount > 0 && <View style={styles.badge} />}
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} activeOpacity={0.7}>
-                            <Avatar name={user?.fullName || '?'} size={40} />
-                        </TouchableOpacity>
-                    </View>
+              <LucideIcons.Bell size={15} color="#000" />
+              {notifications && (
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
                 </View>
+              )}
+            </Pressable>
 
-                {/* Attendance Banner */}
-                {activeSessions.length > 0 && (
-                    <Animated.View style={[styles.bannerContainer, { opacity: pulseAnim }]}>
-                        <TouchableOpacity 
-                            style={styles.attendanceBanner}
-                            onPress={() => setSelectedSession(activeSessions[0])}
-                            activeOpacity={0.9}
-                        >
-                            <View style={styles.bannerIconBox}>
-                                <Ionicons name="location" size={24} color={Colors.white} />
-                            </View>
-                            <View style={styles.bannerContent}>
-                                <View style={styles.bannerBadge}>
-                                    <View style={styles.liveDot} />
-                                    <Text style={styles.liveText}>LIVE SESSION AVAILABLE</Text>
-                                </View>
-                                <Text style={styles.bannerTitle}>{activeSessions[0].courseCode}</Text>
-                                <Text style={styles.bannerSubtitle}>Tap to verify proximity & mark present</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color={Colors.white} />
-                        </TouchableOpacity>
-                    </Animated.View>
-                )}
-                {/* Due Soon Tracker */}
-                <DueSoonWidget deadlines={deadlines} loading={trackerLoading} />
+            <Pressable 
+              onPress={() => router.push('/(tabs)/profile')}
+              style={({ pressed }) => [
+                pressed && { opacity: 0.7 }
+              ]}
+            >
+              <Avatar 
+                firstName={firstName} 
+                lastName={user?.fullName?.split(' ')[1] || ''} 
+                size="sm" 
+              />
+            </Pressable>
+          </View>
+        </View>
 
-                {/* Today's Schedule Section */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Today's Schedule</Text>
-                    </View>
-                    
-                    {todayLectures.length > 0 ? (
-                        <ScrollView 
-                            horizontal 
-                            showsHorizontalScrollIndicator={false} 
-                            contentContainerStyle={styles.horizontalScroll}
-                        >
-                            {todayLectures.map((lecture) => (
-                                <ClassCard
-                                    key={lecture.id}
-                                    spaceName={lecture.courseCode}
-                                    courseCode={lecture.courseCode}
-                                    startTime={lecture.startTime || '—'}
-                                    endTime={lecture.endTime || '—'}
-                                    venue={lecture.venue || 'TBD'}
-                                    status={lecture.lectureStatus === 'cancelled' ? 'cancelled' : 'upcoming'}
-                                    isCarryover={lecture.isCarryover}
-                                    style={styles.classCard}
-                                    onPress={() =>
-                                        router.push(`/post/${lecture.id}?spaceId=${lecture.spaceId}&courseId=${lecture.courseId}`)
-                                    }
-                                />
-                            ))}
-                        </ScrollView>
-                    ) : (
-                        <Card style={styles.emptyCard}>
-                            <Text style={styles.emptyText}>No classes scheduled for today.</Text>
-                        </Card>
-                    )}
-                </View>
+        {/* Today's Classes */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Today's Classes</Text>
+            <Pressable onPress={() => router.push('/(tabs)/schedule')}>
+              <Text style={styles.seeAll}>See all</Text>
+            </Pressable>
+          </View>
 
-                {/* Spaces Quick Access */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>My Spaces</Text>
-                        <TouchableOpacity onPress={() => router.push('/(tabs)/spaces')} activeOpacity={0.7}>
-                            <Text style={styles.seeAll}>See All</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <ScrollView 
-                        horizontal 
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.horizontalScroll}
-                    >
-                        {spaces.map((space) => (
-                            <SpaceTile
-                                key={space.id}
-                                name={space.name}
-                                style={styles.spaceTile}
-                                onPress={() => router.push(`/space/${space.id}`)}
-                            />
-                        ))}
-                        <TouchableOpacity 
-                            style={styles.addSpaceButton}
-                            onPress={() => router.push('/join')}
-                            activeOpacity={0.7}
-                        >
-                            <Ionicons name="add" size={24} color={Colors.primaryBlue} />
-                        </TouchableOpacity>
-                    </ScrollView>
-                </View>
-
-                {/* Recent Updates */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Recent Updates</Text>
-                    </View>
-                    
-                    {postsLoading ? (
-                        <LoadingSpinner />
-                    ) : recentPosts.length > 0 ? (
-                        recentPosts.map((post) => (
-                            <PostCard
-                                key={post.id}
-                                post={post}
-                                isCarryover={post.isCarryover}
-                                style={styles.postCard}
-                                onPress={() =>
-                                    router.push(`/post/${post.id}?spaceId=${post.spaceId}&courseId=${post.courseId}`)
-                                }
-                            />
-                        ))
-                    ) : (
-                        <EmptyState
-                            icon="newspaper-outline"
-                            title="No updates yet"
-                            subtitle="Course updates and announcements will appear here."
-                        />
-                    )}
-                </View>
-
-                <View style={{ height: 120 }} />
-            </ScrollView>
-
-            {selectedSession && (
-                <AttendanceMarkSheet 
-                    visible={!!selectedSession}
-                    onClose={() => setSelectedSession(null)}
-                    session={selectedSession}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalContent}
+          >
+            {todayLectures.length > 0 ? (
+              todayLectures.map((item) => (
+                <ClassCard
+                  key={item.id}
+                  courseCode={item.courseCode}
+                  courseName={item.title}
+                  startTime={item.startTime || '10:00'}
+                  endTime={item.endTime || '12:00'}
+                  venue={item.venue || 'TBD'}
+                  isCarryover={item.isCarryover}
+                  onPress={() => router.push(`/post/${item.id}`)}
                 />
+              ))
+            ) : (
+              <View style={styles.emptyStateContainer}>
+                <Text style={styles.emptyStateText}>No classes scheduled for today.</Text>
+              </View>
             )}
-        </SafeAreaView>
-    );
+          </ScrollView>
+        </View>
+
+        {/* My Spaces */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Spaces</Text>
+            <Pressable onPress={() => router.push('/(tabs)/spaces')}>
+              <Text style={styles.seeAll}>See all</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalContent}
+          >
+            {spaces.map((space, index) => (
+              <SpaceTile
+                key={space.id}
+                name={space.name}
+                index={index}
+                onPress={() => router.push(`/space/${space.id}`)}
+              />
+            ))}
+            <SpaceTile 
+              name="Add Space" 
+              isAdd 
+              onPress={() => router.push('/join')} 
+            />
+          </ScrollView>
+        </View>
+
+        {/* Recent Notices */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Notices</Text>
+            {/* "See all" on notices? Prompt says see all for Recent Notices too. */}
+            <Pressable>
+              <Text style={styles.seeAll}>See all</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.noticesList}>
+            {recentPosts.slice(0, 5).map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                isCarryover={post.isCarryover}
+                onPress={() => router.push(`/post/${post.id}`)}
+                style={{ marginBottom: 8 }}
+              />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.background,
-    },
-    scrollContent: {
-        paddingTop: 10,
-    },
-    bannerContainer: {
-        marginHorizontal: Spacing.screenPadding,
-        marginBottom: Spacing.lg,
-    },
-    attendanceBanner: {
-        backgroundColor: Colors.accentBlue,
-        borderRadius: 16,
-        padding: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        shadowColor: Colors.accentBlue,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    bannerIconBox: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    bannerBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        marginBottom: 2,
-    },
-    liveDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: Colors.success,
-    },
-    liveText: {
-        fontSize: 10,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.white,
-        letterSpacing: 0.5,
-    },
-    bannerContent: {
-        flex: 1,
-    },
-    bannerTitle: {
-        fontSize: 16,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.white,
-    },
-    bannerSubtitle: {
-        fontSize: 13,
-        fontFamily: 'DMSans_400Regular',
-        color: 'rgba(255,255,255,0.8)',
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: Spacing.screenPadding,
-        marginBottom: Spacing.xl,
-    },
-    dateLabel: {
-        ...Typography.label,
-        color: Colors.textSecondary,
-        marginBottom: 4,
-    },
-    greetingText: {
-        ...Typography.pageTitle,
-        color: Colors.textPrimary,
-    },
-    headerRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 16,
-    },
-    iconButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: Colors.surface,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    badge: {
-        position: 'absolute',
-        top: 10,
-        right: 10,
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: Colors.error,
-        borderWidth: 2,
-        borderColor: Colors.surface,
-    },
-    section: {
-        marginBottom: Spacing.xxl,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'baseline',
-        paddingHorizontal: Spacing.screenPadding,
-        marginBottom: Spacing.md,
-    },
-    sectionTitle: {
-        ...Typography.sectionHeader,
-        color: Colors.textPrimary,
-    },
-    seeAll: {
-        ...Typography.bodySmall,
-        color: Colors.primaryBlue,
-        fontWeight: '600',
-    },
-    horizontalScroll: {
-        paddingLeft: Spacing.screenPadding,
-        paddingRight: Spacing.screenPadding,
-        gap: 16,
-    },
-    classCard: {
-        width: 280,
-    },
-    spaceTile: {
-        width: 120,
-    },
-    addSpaceButton: {
-        marginRight: Spacing.screenPadding,
-        width: 60,
-        height: 60,
-        borderRadius: 16,
-        backgroundColor: Colors.surface,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: Colors.border + '40',
-        borderStyle: 'dashed',
-    },
-    emptyCard: {
-        marginHorizontal: Spacing.screenPadding,
-        padding: Spacing.xl,
-        alignItems: 'center',
-    },
-    emptyText: {
-        ...Typography.body,
-        color: Colors.textSecondary,
-    },
-    postCard: {
-        marginHorizontal: Spacing.screenPadding,
-        marginBottom: Spacing.md,
-    },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 14,
+    marginBottom: 16,
+  },
+  greetingLabel: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    marginBottom: 1,
+    fontFamily: Typography.family.regular,
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#000',
+    letterSpacing: -0.5,
+    fontFamily: Typography.family.bold,
+  },
+  dateLabel: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    marginTop: 2,
+    fontFamily: Typography.family.regular,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    backgroundColor: 'white',
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: Colors.separatorOpaque,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    width: 13,
+    height: 13,
+    backgroundColor: Colors.error,
+    borderRadius: 6.5,
+    borderWidth: 2,
+    borderColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    fontSize: 7,
+    fontWeight: '700',
+    color: 'white',
+  },
+  section: {
+    marginTop: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000',
+    fontFamily: Typography.family.bold,
+  },
+  seeAll: {
+    fontSize: 11,
+    color: Colors.accentBlue,
+    fontWeight: '500',
+    fontFamily: Typography.family.medium,
+  },
+  horizontalContent: {
+    paddingHorizontal: 14,
+    gap: 9,
+  },
+  noticesList: {
+    paddingHorizontal: 14,
+  },
+  emptyStateContainer: {
+    width: width - 28,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.separatorOpaque,
+  },
+  emptyStateText: {
+    fontSize: 13,
+    color: Colors.textTertiary,
+    fontFamily: Typography.family.regular,
+  },
 });

@@ -8,16 +8,15 @@ import {
     ScrollView,
     Platform,
     KeyboardAvoidingView,
-    TouchableOpacity,
+    StatusBar,
 } from 'react-native';
-import { Colors } from '../../constants/colors';
+import * as LucideIcons from 'lucide-react-native';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
 import { PostType } from '../../types';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import CustomDateTimePicker from '../ui/DateTimePicker';
-import { Ionicons } from '@expo/vector-icons';
 
 interface CreatePostSheetProps {
     visible: boolean;
@@ -51,14 +50,14 @@ const typeLabels: Record<PostType, string> = {
     attendance: 'Attendance',
 };
 
-const typeIcons: Record<PostType, string> = {
-    lecture: 'book',
-    assignment: 'document-text',
-    test: 'clipboard',
-    note: 'bookmark',
-    announcement: 'megaphone',
-    cancellation: 'close-circle',
-    attendance: 'qr-code',
+const typeIcons: Record<PostType, keyof typeof LucideIcons> = {
+    lecture: 'BookOpen',
+    assignment: 'FileText',
+    test: 'ClipboardCheck',
+    note: 'Bookmark',
+    announcement: 'Megaphone',
+    cancellation: 'XCircle',
+    attendance: 'QrCode',
 };
 
 export default function CreatePostSheet({
@@ -115,103 +114,103 @@ export default function CreatePostSheet({
     const showMarksField = postType === 'assignment' || postType === 'test';
     const showTopicsField = postType === 'test';
 
+    const IconComponent = LucideIcons[typeIcons[postType]] as any;
+
     return (
         <Modal
             visible={visible}
             transparent
-            animationType="slide"
+            animationType="fade"
             onRequestClose={onClose}
         >
-            <Pressable style={styles.overlay} onPress={onClose}>
+            <View style={styles.overlay}>
+                <Pressable style={styles.backdrop} onPress={onClose} />
                 <KeyboardAvoidingView 
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={styles.keyboardSpacer}
                 >
-                    <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+                    <View style={styles.sheet}>
                         <View style={styles.handle} />
                         
                         <View style={styles.header}>
-                            <View style={[styles.iconBox, { backgroundColor: Colors.primaryBlue + '10' }]}>
-                                <Ionicons name={typeIcons[postType] as any} size={24} color={Colors.primaryBlue} />
-                            </View>
-                            <View style={styles.headerText}>
-                                <Text style={styles.title}>New {typeLabels[postType]}</Text>
-                                <Text style={styles.subtitle}>{courseCode}</Text>
-                            </View>
-                            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                                <Ionicons name="close-circle" size={28} color={Colors.border} />
-                            </TouchableOpacity>
+                           <View style={[styles.iconBox, { backgroundColor: 'rgba(0,122,255,0.08)' }]}>
+                               <IconComponent size={24} color={Colors.accentBlue} />
+                           </View>
+                           <View style={styles.headerTitleBox}>
+                             <Text style={styles.title}>New {typeLabels[postType]}</Text>
+                             <Text style={styles.subtitle}>{courseCode}</Text>
+                           </View>
+                           <Pressable onPress={onClose} style={styles.closeBox}>
+                             <LucideIcons.X size={20} color={Colors.textTertiary} />
+                           </Pressable>
                         </View>
 
                         <ScrollView 
                             showsVerticalScrollIndicator={false} 
-                            style={styles.form}
                             contentContainerStyle={styles.scrollContent}
                             keyboardShouldPersistTaps="handled"
                         >
                             <Input
-                                label="TITLE"
+                                label="Title"
                                 value={title}
                                 onChangeText={setTitle}
                                 placeholder={`e.g. ${postType === 'lecture' ? 'Intro to Algorithms' : 'Week 1 Update'}`}
-                                containerStyle={styles.inputContainer}
                             />
                             <Input
-                                label="DESCRIPTION"
+                                label="Description"
                                 value={description}
                                 onChangeText={setDescription}
                                 placeholder="Add more context or instructions..."
                                 multiline
                                 numberOfLines={4}
-                                style={styles.textArea}
-                                containerStyle={styles.inputContainer}
                             />
 
                             {showDateTimeFields && (
                                 <View style={styles.section}>
-                                    <Text style={styles.sectionLabel}>SCHEDULE</Text>
-                                    <CustomDateTimePicker
-                                        label="DATE"
-                                        value={lectureDate}
-                                        mode="date"
-                                        onChange={setLectureDate}
-                                    />
-                                    <View style={styles.timeRow}>
-                                        <View style={{ flex: 1, marginRight: 8 }}>
-                                            <CustomDateTimePicker
-                                                label="START TIME"
-                                                value={startTime}
-                                                mode="time"
-                                                onChange={setStartTime}
-                                            />
-                                        </View>
-                                        <View style={{ flex: 1, marginLeft: 8 }}>
-                                            <CustomDateTimePicker
-                                                label="END TIME"
-                                                value={endTime}
-                                                mode="time"
-                                                onChange={setEndTime}
-                                            />
-                                        </View>
+                                    <Text style={styles.sectionLabel}>Schedule</Text>
+                                    <View style={styles.inputGroup}>
+                                      <CustomDateTimePicker
+                                          label="Date"
+                                          value={lectureDate}
+                                          mode="date"
+                                          onChange={setLectureDate}
+                                      />
+                                      <View style={styles.timeRow}>
+                                          <View style={{ flex: 1 }}>
+                                              <CustomDateTimePicker
+                                                  label="Start"
+                                                  value={startTime}
+                                                  mode="time"
+                                                  onChange={setStartTime}
+                                              />
+                                          </View>
+                                          <View style={{ flex: 1 }}>
+                                              <CustomDateTimePicker
+                                                  label="End"
+                                                  value={endTime}
+                                                  mode="time"
+                                                  onChange={setEndTime}
+                                              />
+                                          </View>
+                                      </View>
                                     </View>
                                 </View>
                             )}
 
                             {showVenueField && (
                                 <Input
-                                    label="VENUE"
+                                    label="Venue"
                                     value={venue}
                                     onChangeText={setVenue}
                                     placeholder="e.g. LT 1, Engineering Block"
-                                    containerStyle={styles.inputContainer}
                                 />
                             )}
 
                             {showDueDateField && (
                                 <View style={styles.section}>
-                                    <Text style={styles.sectionLabel}>DEADLINE</Text>
+                                    <Text style={styles.sectionLabel}>Deadline</Text>
                                     <CustomDateTimePicker
-                                        label="DUE DATE"
+                                        label="Due Date"
                                         value={dueDate}
                                         mode="date"
                                         onChange={setDueDate}
@@ -219,61 +218,61 @@ export default function CreatePostSheet({
                                 </View>
                             )}
 
-                            <View style={styles.row}>
-                                {showMarksField && (
-                                    <View style={{ flex: 1, marginRight: showTopicsField ? 8 : 0 }}>
-                                        <Input
-                                            label="MARKS"
-                                            value={marks}
-                                            onChangeText={setMarks}
-                                            placeholder="100"
-                                            keyboardType="numeric"
-                                            containerStyle={styles.inputContainer}
-                                        />
-                                    </View>
-                                )}
-                                {showTopicsField && (
-                                    <View style={{ flex: 2, marginLeft: 8 }}>
-                                        <Input
-                                            label="TOPICS"
-                                            value={topics}
-                                            onChangeText={setTopics}
-                                            placeholder="e.g. Unit 1 & 2"
-                                            containerStyle={styles.inputContainer}
-                                        />
-                                    </View>
-                                )}
-                            </View>
+                            {(showMarksField || showTopicsField) && (
+                              <View style={styles.section}>
+                                <Text style={styles.sectionLabel}>Assessment Info</Text>
+                                <View style={styles.row}>
+                                    {showMarksField && (
+                                        <View style={{ flex: 1, marginRight: showTopicsField ? 12 : 0 }}>
+                                            <Input
+                                                label="Marks"
+                                                value={marks}
+                                                onChangeText={setMarks}
+                                                placeholder="100"
+                                                keyboardType="numeric"
+                                            />
+                                        </View>
+                                    )}
+                                    {showTopicsField && (
+                                        <View style={{ flex: 2 }}>
+                                            <Input
+                                                label="Topics"
+                                                value={topics}
+                                                onChangeText={setTopics}
+                                                placeholder="e.g. Unit 1 & 2"
+                                            />
+                                        </View>
+                                    )}
+                                </View>
+                              </View>
+                            )}
 
                             {(postType === 'announcement' || postType === 'test' || postType === 'assignment') && (
-                                <TouchableOpacity 
-                                    style={styles.importantToggle} 
+                                <Pressable 
+                                    style={styles.toggleRow} 
                                     onPress={() => setIsImportant(!isImportant)}
-                                    activeOpacity={0.7}
                                 >
-                                    <View style={styles.importantToggleText}>
-                                        <Text style={styles.importantToggleTitle}>Mark as Important</Text>
-                                        <Text style={styles.importantToggleSubtitle}>High priority notification & read receipts</Text>
+                                    <View style={styles.toggleText}>
+                                        <Text style={styles.toggleTitle}>Mark as Important</Text>
+                                        <Text style={styles.toggleSubtitle}>Triggers high-priority priority alert</Text>
                                     </View>
-                                    <View style={[styles.switch, isImportant && styles.switchActive]}>
-                                        <View style={[styles.switchHandle, isImportant && styles.switchHandleActive]} />
+                                    <View style={[styles.switch, isImportant && styles.switchOn]}>
+                                        <View style={[styles.switchThumb, isImportant && styles.switchThumbOn]} />
                                     </View>
-                                </TouchableOpacity>
+                                </Pressable>
                             )}
 
                             <Button
-                                title={`Share ${typeLabels[postType]}`}
+                                title={`Publish ${typeLabels[postType]}`}
                                 onPress={handleSubmit}
                                 loading={loading}
                                 disabled={!title.trim()}
                                 style={styles.submitBtn}
                             />
-                            
-                            <View style={{ height: 20 }} />
                         </ScrollView>
-                    </Pressable>
+                    </View>
                 </KeyboardAvoidingView>
-            </Pressable>
+            </View>
         </Modal>
     );
 }
@@ -281,148 +280,153 @@ export default function CreatePostSheet({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    backdrop: {
+        ...StyleSheet.absoluteFillObject,
     },
     keyboardSpacer: {
         width: '100%',
     },
     sheet: {
-        backgroundColor: Colors.background,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        backgroundColor: 'white',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
         paddingTop: 12,
-        maxHeight: '90%',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: -4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 10,
-            },
-            android: {
-                elevation: 20,
-            },
-        }),
+        maxHeight: '92%',
     },
     handle: {
-        width: 36,
+        width: 38,
         height: 5,
-        backgroundColor: Colors.border + '60',
+        backgroundColor: '#E5E5EA',
         borderRadius: 3,
         alignSelf: 'center',
-        marginBottom: 16,
+        marginBottom: 20,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: Spacing.screenPadding,
-        marginBottom: 20,
+        paddingHorizontal: 24,
+        marginBottom: 24,
     },
     iconBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
+        width: 44,
+        height: 44,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
     },
-    headerText: {
+    headerTitleBox: {
         flex: 1,
     },
     title: {
         fontSize: 20,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
+        fontWeight: '800',
+        color: '#000',
+        fontFamily: Typography.family.extraBold,
     },
     subtitle: {
-        fontSize: 13,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.primaryBlue,
-        marginTop: 2,
+        fontSize: 12,
+        color: Colors.accentBlue,
+        fontWeight: '700',
+        marginTop: 1,
+        fontFamily: Typography.family.bold,
     },
-    closeBtn: {
-        padding: 4,
-    },
-    form: {
-        flex: 1,
+    closeBox: {
+        width: 32,
+        height: 32,
+        backgroundColor: '#F2F2F7',
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     scrollContent: {
-        paddingHorizontal: Spacing.screenPadding,
-    },
-    inputContainer: {
-        marginBottom: 20,
-    },
-    textArea: {
-        height: 100,
-        textAlignVertical: 'top',
-        paddingTop: 12,
+        paddingHorizontal: 24,
+        paddingBottom: Platform.OS === 'ios' ? 44 : 32,
     },
     section: {
         marginBottom: 24,
     },
     sectionLabel: {
         fontSize: 11,
-        fontFamily: 'DMSans_700Bold',
+        fontWeight: '700',
         color: Colors.textTertiary,
-        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
         marginBottom: 12,
         marginLeft: 4,
+        fontFamily: Typography.family.bold,
+    },
+    inputGroup: {
+        backgroundColor: '#F9F9FB',
+        borderRadius: 20,
+        padding: 16,
+        gap: 16,
     },
     timeRow: {
         flexDirection: 'row',
-        alignItems: 'center',
+        gap: 12,
     },
     row: {
         flexDirection: 'row',
     },
-    submitBtn: {
-        height: 56,
-        borderRadius: 16,
-        marginTop: 12,
-        marginBottom: 20,
-    },
-    importantToggle: {
+    toggleRow: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        backgroundColor: Colors.surface,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: Colors.border + '15',
-        marginBottom: 20,
+        backgroundColor: '#F9F9FB',
+        borderRadius: 20,
+        marginBottom: 24,
     },
-    importantToggleText: {
+    toggleText: {
         flex: 1,
     },
-    importantToggleTitle: {
+    toggleTitle: {
         fontSize: 15,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.textPrimary,
+        fontWeight: '700',
+        color: '#000',
+        fontFamily: Typography.family.bold,
     },
-    importantToggleSubtitle: {
+    toggleSubtitle: {
         fontSize: 12,
-        fontFamily: 'DMSans_400Regular',
         color: Colors.textTertiary,
         marginTop: 2,
+        fontFamily: Typography.family.regular,
     },
     switch: {
-        width: 44,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: Colors.border + '30',
+        width: 46,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: '#E5E5EA',
         padding: 2,
     },
-    switchActive: {
+    switchOn: {
         backgroundColor: Colors.accentBlue,
     },
-    switchHandle: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        backgroundColor: Colors.white,
+    switchThumb: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: 'white',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 2,
+            },
+            android: {
+                elevation: 2,
+            }
+        })
     },
-    switchHandleActive: {
+    switchThumbOn: {
         transform: [{ translateX: 20 }],
+    },
+    submitBtn: {
+        height: 56,
+        marginTop: 10,
     },
 });

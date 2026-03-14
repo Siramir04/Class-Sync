@@ -1,288 +1,277 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
+import * as LucideIcons from 'lucide-react-native';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
-import Tag, { getPostTypeVariant } from '../ui/Tag';
-import { Post, PostType } from '../../types';
+import { Tag, TagType } from '../ui/Tag';
+import { Post } from '../../types';
 import { formatRelativeTime } from '../../utils/formatDate';
 import { useAlarmStore } from '../../store/alarmStore';
 import AlarmSheet from '../sheets/AlarmSheet';
-import { useRouter } from 'expo-router';
 
 interface PostCardProps {
-    post: Post;
-    isCarryover?: boolean;
-    isMonitor?: boolean;
-    onPress?: () => void;
-    style?: any;
+  post: Post;
+  isCarryover?: boolean;
+  onPress?: () => void;
+  style?: ViewStyle;
 }
 
-const typeIcons: Record<PostType, string> = {
-    lecture: 'book-outline',
-    assignment: 'document-text-outline',
-    test: 'clipboard-outline',
-    note: 'pin-outline',
-    announcement: 'megaphone-outline',
-    cancellation: 'close-circle-outline',
-    attendance: 'time-outline',
-};
+export default function PostCard({
+  post,
+  isCarryover = false,
+  onPress,
+  style,
+}: PostCardProps) {
+  const [alarmSheetVisible, setAlarmSheetVisible] = useState(false);
+  const { isAlarmSet } = useAlarmStore();
+  
+  const hasAlarm = isAlarmSet(post.id);
+  const isCancelled = post.lectureStatus === 'cancelled' || post.type === 'cancellation';
+  const isLecture = post.type === 'lecture';
+  const isTask = post.type === 'assignment' || post.type === 'test';
 
-const typeLabels: Record<PostType, string> = {
-    lecture: 'Lecture',
-    assignment: 'Assignment',
-    test: 'Test',
-    note: 'Note',
-    announcement: 'Announcement',
-    cancellation: 'Cancellation',
-    attendance: 'Attendance',
-};
+  const getDueStatus = () => {
+    if (!post.dueDate) return null;
+    const now = new Date();
+    const due = new Date(post.dueDate);
+    const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-export default function PostCard({ post, isCarryover = false, isMonitor = false, onPress, style }: PostCardProps) {
-    const router = useRouter();
-    const isCancelled = post.type === 'cancellation' || post.lectureStatus === 'cancelled';
-    const { isAlarmSet } = useAlarmStore();
-    const [alarmSheetVisible, setAlarmSheetVisible] = React.useState(false);
+    if (diffDays < 0) return { label: 'Overdue', bg: Colors.error, text: 'white' };
+    if (diffDays <= 1) return { label: 'Due Tomorrow', bg: Colors.errorSoft, text: Colors.error };
+    if (diffDays <= 4) return { label: `Due in ${diffDays}d`, bg: Colors.warningSoft, text: Colors.warning };
+    return { label: `Due in ${diffDays}d`, bg: Colors.successSoft, text: Colors.success };
+  };
 
-    const isAlarmEnabled = post.type === 'lecture' && !isCancelled;
-    const hasAlarm = isAlarmSet(post.id);
+  const dueStatus = getDueStatus();
 
-    return (
-        <>
-            <TouchableOpacity
-                style={[styles.card, isCancelled && styles.cancelledCard, style]}
-                onPress={onPress}
-                activeOpacity={0.8}
-            >
-                {isCancelled && (
-                    <View style={styles.cancelledStamp}>
-                        <Text style={styles.cancelledStampText}>CANCELLED</Text>
-                    </View>
-                )}
-                <View style={styles.header}>
-                    <View style={styles.tagRow}>
-                        <Tag label={post.courseCode} variant={getPostTypeVariant(post.type)} />
-                        {isCarryover && <Tag label="Carryover" variant="carryover" style={styles.tagMargin} />}
-                    </View>
-                    <View style={styles.headerRight}>
-                        {post.isImportant && (
-                            <View style={styles.importantBadge}>
-                                <Ionicons name="alert-circle" size={10} color={Colors.white} />
-                                <Text style={styles.importantText}>IMPORTANT</Text>
-                            </View>
-                        )}
-                        <Text style={styles.time}>{formatRelativeTime(post.createdAt)}</Text>
-                        {isMonitor && (
-                            <TouchableOpacity 
-                                onPress={(e) => {
-                                    e.stopPropagation();
-                                    // In a real app, this would open an ActionSheet or Menu
-                                    if (post.type === 'lecture' && !isCancelled) {
-                                        router.push({
-                                            pathname: '/attendance/new',
-                                            params: { 
-                                                spaceId: post.spaceId, 
-                                                courseId: post.courseId,
-                                                courseCode: post.courseCode,
-                                                lectureId: post.id 
-                                            }
-                                        });
-                                    }
-                                }}
-                                style={styles.menuButton}
-                            >
-                                <Ionicons name="ellipsis-horizontal" size={18} color={Colors.textTertiary} />
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                </View>
+  return (
+    <>
+      <Pressable 
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.container,
+          isCarryover && styles.carryoverBorder,
+          style,
+          pressed && { transform: [{ scale: 0.98 }] }
+        ]}
+      >
+        {post.isImportant && (
+          <View style={styles.importantBanner}>
+            <LucideIcons.Info size={11} color={Colors.error} />
+            <Text style={styles.importantText}>IMPORTANT</Text>
+          </View>
+        )}
 
-                <View style={styles.titleRow}>
-                    <Ionicons
-                        name={typeIcons[post.type] as keyof typeof Ionicons.glyphMap}
-                        size={18}
-                        color={Colors.textSecondary}
-                        style={styles.icon}
-                    />
-                    <Text style={styles.title} numberOfLines={1}>{post.title}</Text>
-                </View>
+        {isCancelled && isLecture && (
+          <View style={styles.cancelledBanner}>
+            <LucideIcons.XCircle size={11} color={Colors.error} />
+            <Text style={styles.cancelledLabel}>Cancelled</Text>
+          </View>
+        )}
 
-                {post.description ? (
-                    <Text style={styles.description} numberOfLines={2}>
-                        {post.description}
-                    </Text>
-                ) : null}
+        <View style={styles.topRow}>
+          <Tag label={post.type} type={post.type as TagType} />
+          {isCarryover && (
+            <Tag label="Carryover" type="carryover" style={{ marginLeft: 5 }} />
+          )}
+          <View style={{ flex: 1 }} />
+          <Text style={styles.timeText}>{formatRelativeTime(post.createdAt)}</Text>
+        </View>
 
-                <View style={styles.footer}>
-                    <View style={styles.footerLeft}>
-                        <Text style={styles.author} numberOfLines={1}>
-                            {post.authorName}
-                        </Text>
-                        <Tag label={post.authorRole === 'monitor' ? 'Monitor' : post.authorRole === 'lecturer' ? 'Lecturer' : post.authorRole} variant="role" />
-                    </View>
-                    
-                    <View style={styles.footerRight}>
-                        {post.readCount !== undefined && post.readCount > 0 && (
-                            <View style={styles.readCountContainer}>
-                                <Ionicons name="eye-outline" size={14} color={Colors.textTertiary} />
-                                <Text style={styles.readCountText}>{post.readCount}</Text>
-                            </View>
-                        )}
-                        {isAlarmEnabled && (
-                            <TouchableOpacity 
-                                onPress={(e) => {
-                                    e.stopPropagation();
-                                    setAlarmSheetVisible(true);
-                                }}
-                                style={styles.alarmButton}
-                                activeOpacity={0.6}
-                            >
-                                <Ionicons 
-                                    name={hasAlarm ? "notifications" : "notifications-outline"} 
-                                    size={18} 
-                                    color={hasAlarm ? Colors.accentBlue : Colors.textTertiary} 
-                                />
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                </View>
-            </TouchableOpacity>
+        <Text 
+          style={[
+            styles.title, 
+            isCancelled && { textDecorationLine: 'line-through', color: Colors.textTertiary }
+          ]}
+          numberOfLines={1}
+        >
+          {post.title}
+        </Text>
 
-            {isAlarmEnabled && (
-                <AlarmSheet 
-                    visible={alarmSheetVisible}
-                    onClose={() => setAlarmSheetVisible(false)}
-                    post={post}
+        {post.description && (
+          <Text style={styles.description} numberOfLines={2}>
+            {post.description}
+          </Text>
+        )}
+
+        <View style={styles.bottomRow}>
+          <View style={styles.authorSection}>
+            <Text style={styles.authorName} numberOfLines={1}>{post.authorName}</Text>
+            <Tag 
+              label={post.authorRole || 'Student'} 
+              type={post.authorRole === 'monitor' ? 'monitor' : post.authorRole === 'lecturer' ? 'lecturer' : 'lecture'} 
+            />
+          </View>
+
+          <View style={{ marginLeft: 'auto' }}>
+            {isLecture && !isCancelled && (
+              <Pressable 
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setAlarmSheetVisible(true);
+                }}
+                style={[
+                  styles.alarmButton,
+                  hasAlarm ? { 
+                    borderColor: Colors.accentBlue, 
+                    backgroundColor: Colors.accentBlueSoft 
+                  } : { 
+                    borderColor: Colors.separatorOpaque, 
+                    backgroundColor: Colors.background 
+                  }
+                ]}
+              >
+                <LucideIcons.Bell 
+                  size={11} 
+                  color={hasAlarm ? Colors.accentBlue : Colors.textTertiary} 
+                  fill={hasAlarm ? Colors.accentBlue : 'transparent'}
                 />
+                <Text style={[
+                  styles.alarmText, 
+                  { color: hasAlarm ? Colors.accentBlue : Colors.textTertiary }
+                ]}>
+                  {hasAlarm ? 'Alarm' : 'Set alarm'}
+                </Text>
+              </Pressable>
             )}
-        </>
-    );
+
+            {isTask && dueStatus && (
+              <View style={[styles.dueBadge, { backgroundColor: dueStatus.bg }]}>
+                <Text style={[styles.dueBadgeText, { color: dueStatus.text }]}>
+                  {dueStatus.label}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Pressable>
+
+      {isLecture && (
+        <AlarmSheet 
+          visible={alarmSheetVisible}
+          onClose={() => setAlarmSheetVisible(false)}
+          post={post}
+        />
+      )}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
-    card: {
-        backgroundColor: Colors.surface,
-        borderRadius: Spacing.cardRadius,
-        padding: Spacing.md,
-        marginBottom: Spacing.md,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 2,
-        overflow: 'hidden',
-    },
-    cancelledCard: {
-        opacity: 0.85,
-    },
-    cancelledStamp: {
-        position: 'absolute',
-        top: 20,
-        right: -30,
-        backgroundColor: Colors.error,
-        paddingHorizontal: 40,
-        paddingVertical: 4,
-        transform: [{ rotate: '35deg' }],
-        zIndex: 10,
-    },
-    cancelledStampText: {
-        color: Colors.white,
-        fontWeight: '800',
-        fontSize: 10,
-        letterSpacing: 1,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: Spacing.sm,
-    },
-    headerRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    menuButton: {
-        padding: 4,
-        marginRight: -4,
-    },
-    tagRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    tagMargin: {
-        marginLeft: Spacing.xs,
-    },
-    time: {
-        ...Typography.label,
-        color: Colors.textSecondary,
-    },
-    titleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: Spacing.xs,
-    },
-    icon: {
-        marginRight: Spacing.sm,
-    },
-    title: {
-        ...Typography.sectionHeader,
-        color: Colors.textPrimary,
-        flex: 1,
-    },
-    description: {
-        ...Typography.body,
-        color: Colors.textSecondary,
-        marginBottom: Spacing.sm,
-    },
-    footer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    footerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-        gap: 8,
-    },
-    author: {
-        ...Typography.label,
-        color: Colors.textSecondary,
-        maxWidth: '60%',
-    },
-    footerRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    importantBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: Colors.error,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-        gap: 2,
-    },
-    importantText: {
-        color: Colors.white,
-        fontSize: 8,
-        fontFamily: 'DMSans_700Bold',
-        letterSpacing: 0.5,
-    },
-    readCountContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    readCountText: {
-        fontSize: 12,
-        fontFamily: 'DMSans_500Medium',
-        color: Colors.textTertiary,
-    },
-    alarmButton: {
-        padding: 4,
-    },
+  container: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: Colors.separatorOpaque,
+    padding: 12,
+    overflow: 'hidden',
+  },
+  carryoverBorder: {
+    borderColor: Colors.carryoverSoft,
+  },
+  importantBanner: {
+    backgroundColor: Colors.errorSoft,
+    marginHorizontal: -12,
+    marginTop: -12,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  importantText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.error,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    fontFamily: Typography.family.bold,
+  },
+  cancelledBanner: {
+    backgroundColor: Colors.errorSoft,
+    borderRadius: 7,
+    paddingVertical: 4,
+    paddingHorizontal: 9,
+    marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+  },
+  cancelledLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.error,
+    textTransform: 'uppercase',
+    fontFamily: Typography.family.bold,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  timeText: {
+    fontSize: 9,
+    color: Colors.textTertiary,
+    fontFamily: Typography.family.regular,
+  },
+  title: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 2,
+    lineHeight: 13 * 1.3,
+    fontFamily: Typography.family.bold,
+  },
+  description: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    lineHeight: 11 * 1.4,
+    fontFamily: Typography.family.regular,
+  },
+  bottomRow: {
+    marginTop: 9,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.background,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  authorSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flex: 1,
+  },
+  authorName: {
+    fontSize: 10,
+    color: Colors.textTertiary,
+    maxWidth: '50%',
+    fontFamily: Typography.family.regular,
+  },
+  alarmButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 9,
+    borderWidth: 1.5,
+  },
+  alarmText: {
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: Typography.family.semiBold,
+  },
+  dueBadge: {
+    borderRadius: 7,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+  },
+  dueBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    fontFamily: Typography.family.bold,
+  },
 });

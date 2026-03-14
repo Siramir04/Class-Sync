@@ -7,11 +7,10 @@ import {
     Pressable,
     Platform,
     Dimensions,
-    TouchableOpacity,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
-import { Spacing } from '../../constants/spacing';
+import * as LucideIcons from 'lucide-react-native';
+import { Colors } from '../../constants/Colors';
+import { Typography } from '../../constants/typography';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -27,25 +26,26 @@ export default function ActionSheet({ visible, onClose, title, children }: Actio
         <Modal
             visible={visible}
             transparent
-            animationType="slide"
+            animationType="fade"
             onRequestClose={onClose}
         >
-            <Pressable style={styles.overlay} onPress={onClose}>
-                <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.overlay}>
+                <Pressable style={styles.backdrop} onPress={onClose} />
+                <View style={styles.sheet}>
                     <View style={styles.handle} />
                     
                     {title && (
                         <View style={styles.header}>
                             <Text style={styles.title}>{title}</Text>
-                            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                                <Ionicons name="close" size={24} color={Colors.textSecondary} />
-                            </TouchableOpacity>
+                            <Pressable onPress={onClose} style={styles.closeBtn}>
+                                <LucideIcons.X size={20} color={Colors.textTertiary} />
+                            </Pressable>
                         </View>
                     )}
                     
                     {children}
-                </Pressable>
-            </Pressable>
+                </View>
+            </View>
         </Modal>
     );
 }
@@ -53,41 +53,50 @@ export default function ActionSheet({ visible, onClose, title, children }: Actio
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    backdrop: {
+        ...StyleSheet.absoluteFillObject,
     },
     sheet: {
-        backgroundColor: Colors.background,
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
+        backgroundColor: 'white',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
         paddingTop: 12,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-        maxHeight: SCREEN_HEIGHT * 0.8,
+        paddingBottom: Platform.OS === 'ios' ? 44 : 32,
+        maxHeight: SCREEN_HEIGHT * 0.85,
     },
     handle: {
-        width: 40,
+        width: 38,
         height: 5,
-        backgroundColor: Colors.border + '60',
+        backgroundColor: '#E5E5EA',
         borderRadius: 3,
         alignSelf: 'center',
-        marginBottom: 16,
+        marginBottom: 20,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: Spacing.screenPadding,
+        paddingHorizontal: 24,
         paddingBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '10',
+        borderBottomWidth: 0.5,
+        borderBottomColor: Colors.separator,
         marginBottom: 16,
     },
     title: {
         fontSize: 18,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
+        fontWeight: '800',
+        color: '#000',
+        fontFamily: Typography.family.extraBold,
     },
     closeBtn: {
-        padding: 4,
+        width: 32,
+        height: 32,
+        backgroundColor: '#F2F2F7',
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });

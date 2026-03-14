@@ -1,28 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    SafeAreaView,
-    Alert,
-    Platform,
-    ActivityIndicator,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Alert,
+  Platform,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as LucideIcons from 'lucide-react-native';
+import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
 import * as attendanceService from '../../services/attendanceService';
 import { proximityService } from '../../services/proximityService';
-import { AttendanceSession, AttendanceRecord, VerificationMethod } from '../../types';
+import { AttendanceSession, AttendanceRecord } from '../../types';
 import Button from '../../components/ui/Button';
-import Avatar from '../../components/ui/Avatar';
+import { Avatar } from '../../components/ui/Avatar';
 import { formatRelativeTime } from '../../utils/formatDate';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+
+const { width } = Dimensions.get('window');
 
 export default function LiveAttendanceScreen() {
     const { sessionId, spaceId, courseId } = useLocalSearchParams<{
@@ -31,6 +33,7 @@ export default function LiveAttendanceScreen() {
         courseId: string;
     }>();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
 
     const [session, setSession] = useState<AttendanceSession | null>(null);
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -43,7 +46,6 @@ export default function LiveAttendanceScreen() {
     useEffect(() => {
         if (!sessionId || !spaceId || !courseId) return;
 
-        // Subscribe to session doc
         const sessionRef = doc(db, `spaces/${spaceId}/courses/${courseId}/attendance`, sessionId);
         const unsubSession = onSnapshot(sessionRef, (doc) => {
             if (doc.exists()) {
@@ -53,7 +55,6 @@ export default function LiveAttendanceScreen() {
             }
         });
 
-        // Subscribe to records
         const unsubRecords = attendanceService.subscribeToRecords(
             spaceId,
             courseId,
@@ -67,10 +68,8 @@ export default function LiveAttendanceScreen() {
         };
     }, [sessionId, spaceId, courseId]);
 
-    // Phase 3: BLE Broadcasting logic
     useEffect(() => {
         if (!session || !session.isOpen || !session.proximityEnabled) return;
-
         let activeUUID = session.serviceUUID;
 
         const startBroadcast = async () => {
@@ -124,7 +123,7 @@ export default function LiveAttendanceScreen() {
     const handleManualVerify = (uid: string, name: string) => {
         Alert.alert(
             'Manual Verification',
-            `Verify ${name}'s attendance manually? This will mark them as present and remove the flag.`,
+            `Verify ${name}'s attendance manually?`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -168,438 +167,392 @@ export default function LiveAttendanceScreen() {
         );
     };
 
-    if (loading) return (
-        <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primaryBlue} />
-        </View>
-    );
-
-    if (!session) return null;
+    if (!session && !loading) return null;
 
     const isExpired = timeLeft === '00:00';
     const timeColor = parseInt(timeLeft.split(':')[0]) < 1 ? Colors.error : 
                       parseInt(timeLeft.split(':')[0]) < 3 ? Colors.warning : Colors.success;
 
+    const bleCount = records.filter(r => r.verificationMethod === 'ble').length;
+    const wifiCount = records.filter(r => r.verificationMethod === 'wifi').length;
+    const codeCount = records.filter(r => r.verificationMethod === 'code').length;
+
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-                    <Ionicons name="close" size={24} color={Colors.textPrimary} />
-                </TouchableOpacity>
-                <View style={styles.headerTitleContainer}>
-                    <Text style={styles.headerTitle}>{session.courseCode}</Text>
-                    <Text style={styles.headerSubtitle}>{session.lectureName}</Text>
-                </View>
-                <View style={styles.broadcastIndicator}>
-                    {isBroadcasting ? (
-                        <>
-                            <View style={styles.pulseDot} />
-                            <Ionicons name="bluetooth" size={16} color={Colors.success} />
-                            <Text style={[styles.broadcastText, { color: Colors.success }]}>Broadcasting</Text>
-                        </>
-                    ) : btError ? (
-                        <>
-                            <View style={[styles.pulseDot, { backgroundColor: Colors.warning }]} />
-                            <Text style={[styles.broadcastText, { color: Colors.warning }]}>Code only</Text>
-                        </>
-                    ) : null}
-                </View>
-            </View>
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+           <Pressable onPress={() => router.back()} style={styles.headerButton}>
+             <LucideIcons.X size={24} color="#000" />
+           </Pressable>
+           <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>{session?.courseCode}</Text>
+              <Text style={styles.headerSubtitle}>{session?.lectureName}</Text>
+           </View>
+           <View style={styles.broadcastBox}>
+              <View style={[styles.pulseDot, { backgroundColor: isBroadcasting ? Colors.success : Colors.warning }]} />
+              <Text style={[styles.broadcastText, { color: isBroadcasting ? Colors.success : Colors.warning }]}>
+                {isBroadcasting ? 'Live' : 'Code'}
+              </Text>
+           </View>
+        </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                {/* Code Display */}
-                <View style={styles.codeContainer}>
-                    <Text style={styles.codeLabel}>ATTENDANCE CODE</Text>
-                    <Text style={[styles.codeText, isExpired && styles.expiredCode]}>
-                      {session.code.split('').join(' ')}
-                    </Text>
-                    
-                    <View style={[styles.timerPill, { borderColor: timeColor + '30' }]}>
-                        <Ionicons name="time-outline" size={16} color={timeColor} />
-                        <Text style={[styles.timerText, { color: timeColor }]}>
-                            {isExpired ? 'CODE EXPIRED' : `Expires in ${timeLeft}`}
-                        </Text>
-                    </View>
-
-                    {isExpired && (
-                      <TouchableOpacity style={styles.refreshButton}>
-                        <Ionicons name="refresh" size={16} color={Colors.primaryBlue} />
-                        <Text style={styles.refreshText}>Generate New Code</Text>
-                      </TouchableOpacity>
-                    )}
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        >
+          {/* Main Code View */}
+          <View style={styles.hero}>
+             <View style={styles.codeCard}>
+                <Text style={styles.cardLabel}>SESSION CODE</Text>
+                <Text style={[styles.codeValue, isExpired && styles.codeExpired]}>
+                  {session?.code.split('').join(' ')}
+                </Text>
+                <View style={[styles.timerPill, { backgroundColor: timeColor + '10' }]}>
+                   <LucideIcons.Clock size={14} color={timeColor} />
+                   <Text style={[styles.timerValue, { color: timeColor }]}>
+                     {isExpired ? 'EXPIRED' : `${timeLeft} remaining`}
+                   </Text>
                 </View>
+             </View>
+          </View>
 
-                {/* Stats Section */}
-                <View style={styles.statsContainer}>
-                    <View style={styles.statsRow}>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statValue}>{records.length}</Text>
-                            <Text style={styles.statLabel}>of {session.totalMembers} present</Text>
-                        </View>
-                    </View>
-                    
-                    <View style={styles.verificationSummary}>
-                        <View style={styles.summaryItem}>
-                            <View style={[styles.summaryDot, { backgroundColor: Colors.success }]} />
-                            <Text style={styles.summaryText}>{records.filter(r => r.verificationMethod === 'ble').length} BLE</Text>
-                        </View>
-                        <View style={styles.summaryItem}>
-                            <View style={[styles.summaryDot, { backgroundColor: '#EAB308' }]} />
-                            <Text style={styles.summaryText}>{records.filter(r => r.verificationMethod === 'wifi').length} WiFi</Text>
-                        </View>
-                        <View style={styles.summaryItem}>
-                            <View style={[styles.summaryDot, { backgroundColor: Colors.warning }]} />
-                            <Text style={styles.summaryText}>{records.filter(r => r.verificationMethod === 'code').length} Code only</Text>
-                        </View>
-                    </View>
+          {/* Stats Bar */}
+          <View style={styles.statsStrip}>
+             <View style={styles.statBox}>
+               <Text style={styles.statNumber}>{records.length}</Text>
+               <Text style={styles.statLabel}>Present</Text>
+             </View>
+             <View style={styles.statDivider} />
+             <View style={styles.statBox}>
+               <Text style={styles.statNumber}>{(session?.totalMembers || 0) - records.length}</Text>
+               <Text style={styles.statLabel}>Pending</Text>
+             </View>
+             <View style={styles.statDivider} />
+             <View style={styles.statBox}>
+               <Text style={styles.statNumber}>{Math.round((records.length / (session?.totalMembers || 1)) * 100)}%</Text>
+               <Text style={styles.statLabel}>Attendance</Text>
+             </View>
+          </View>
+
+          {/* Verification Methods */}
+          <View style={styles.methodStrip}>
+             <View style={styles.methodItem}>
+                <LucideIcons.Bluetooth size={12} color={Colors.success} />
+                <Text style={styles.methodText}>{bleCount} BLE</Text>
+             </View>
+             <View style={styles.methodItem}>
+                <LucideIcons.Wifi size={12} color="#EAB308" />
+                <Text style={styles.methodText}>{wifiCount} WiFi</Text>
+             </View>
+             <View style={styles.methodItem}>
+                <LucideIcons.Type size={12} color={Colors.warning} />
+                <Text style={styles.methodText}>{codeCount} Code</Text>
+             </View>
+          </View>
+
+          {/* Records List */}
+          <View style={styles.listSection}>
+             <Text style={styles.sectionTitle}>Recent activity</Text>
+             {records.length === 0 ? (
+                <View style={styles.emptyView}>
+                  <LucideIcons.Users size={40} color={Colors.separatorOpaque} />
+                  <Text style={styles.emptyText}>Waiting for students...</Text>
                 </View>
-
-                {/* Live List */}
-                <View style={styles.listSection}>
-                    <Text style={styles.sectionTitle}>Recently Marked</Text>
-                    {records.length === 0 ? (
-                        <View style={styles.emptyList}>
-                            <Text style={styles.emptyText}>Waiting for students to join...</Text>
-                        </View>
-                    ) : (
-                        records.map((record) => (
-                            <TouchableOpacity 
-                                key={record.uid} 
-                                style={[styles.recordRow, record.isFlagged && styles.flaggedRow]}
-                                onPress={() => record.isFlagged && handleManualVerify(record.uid, record.fullName)}
-                                disabled={!record.isFlagged}
-                            >
-                                <Avatar name={record.fullName} size={40} />
-                                <View style={styles.recordInfo}>
-                                    <View style={styles.nameRow}>
-                                      <Text style={styles.recordName}>{record.fullName}</Text>
-                                      {record.isCarryover && (
-                                        <View style={styles.carryoverBadge}>
-                                          <Text style={styles.carryoverText}>CO</Text>
-                                        </View>
-                                      )}
-                                    </View>
-                                    <View style={styles.recordDetailsRow}>
-                                        <Text style={styles.recordTime}>
-                                            {formatRelativeTime(record.markedAt instanceof Date ? record.markedAt : (record.markedAt as any).toDate())}
-                                        </Text>
-                                        {record.isFlagged && (
-                                            <Text style={styles.tapToVerify}> • Tap to verify</Text>
-                                        )}
-                                    </View>
-                                </View>
-                                
-                                <View style={styles.badgeContainer}>
-                                    {record.verificationMethod === 'ble' && (
-                                        <View style={[styles.vBadge, styles.bleBadge]}>
-                                            <Ionicons name="bluetooth" size={10} color={Colors.success} />
-                                            <Text style={styles.bleBadgeText}>BLE</Text>
-                                        </View>
-                                    )}
-                                    {record.verificationMethod === 'wifi' && (
-                                        <View style={[styles.vBadge, styles.wifiBadge]}>
-                                            <Ionicons name="wifi" size={10} color="#854D0E" />
-                                            <Text style={styles.wifiBadgeText}>WiFi</Text>
-                                        </View>
-                                    )}
-                                    {record.verificationMethod === 'code' && (
-                                        <View style={[styles.vBadge, styles.codeBadge]}>
-                                            <Ionicons name="alert-circle" size={10} color={Colors.warning} />
-                                            <Text style={styles.codeBadgeText}>Code only</Text>
-                                        </View>
-                                    )}
-                                    {record.verificationMethod === 'manual' && (
-                                         <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
-                                    )}
-                                </View>
-                            </TouchableOpacity>
-                        ))
-                    )}
+             ) : (
+                <View style={styles.recordsGroup}>
+                  {records.map((record, index) => {
+                    const isLast = index === records.length - 1;
+                    return (
+                      <Pressable 
+                        key={record.uid} 
+                        style={({ pressed }) => [
+                           styles.recordRow,
+                           pressed && record.isFlagged && { opacity: 0.7 },
+                           record.isFlagged && styles.recordRowFlagged
+                        ]}
+                        onPress={() => record.isFlagged && handleManualVerify(record.uid, record.fullName)}
+                      >
+                         <Avatar firstName={record.fullName.split(' ')[0]} lastName={record.fullName.split(' ')[1] || ''} size="md" />
+                         <View style={styles.recordContent}>
+                            <View style={styles.nameRow}>
+                               <Text style={styles.recordName}>{record.fullName}</Text>
+                               {record.isCarryover && (
+                                 <View style={styles.coBadge}><Text style={styles.coText}>CO</Text></View>
+                               )}
+                            </View>
+                            <Text style={styles.recordTime}>
+                               {formatRelativeTime(record.markedAt instanceof Date ? record.markedAt : (record.markedAt as any).toDate())}
+                               {record.isFlagged && ' · Flagged for review'}
+                            </Text>
+                         </View>
+                         <View style={styles.recordTrailing}>
+                            {record.verificationMethod === 'ble' && <LucideIcons.Bluetooth size={16} color={Colors.success} />}
+                            {record.verificationMethod === 'wifi' && <LucideIcons.Wifi size={16} color="#EAB308" />}
+                            {record.verificationMethod === 'code' && <LucideIcons.AlertTriangle size={16} color={Colors.warning} />}
+                            {record.verificationMethod === 'manual' && <LucideIcons.CheckCircle2 size={16} color={Colors.success} />}
+                         </View>
+                      </Pressable>
+                    );
+                  })}
                 </View>
-            </ScrollView>
+             )}
+          </View>
+        </ScrollView>
 
-            <View style={styles.footer}>
-                <Button 
-                    title="Close Attendance Session" 
-                    variant="danger" 
-                    onPress={handleCloseSession}
-                    loading={closing}
-                />
-            </View>
-        </SafeAreaView>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+           <Button 
+             title="End Attendance Session" 
+             variant="danger" 
+             onPress={handleCloseSession}
+             loading={closing}
+             style={{ height: 54 }}
+           />
+        </View>
+      </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.background,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 8,
-        height: 56,
-        backgroundColor: Colors.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '15',
-    },
-    headerButton: {
-        width: 44,
-        height: 44,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    headerTitleContainer: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 17,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
-    },
-    headerSubtitle: {
-        fontSize: 12,
-        fontFamily: 'DMSans_400Regular',
-        color: Colors.textSecondary,
-    },
-    broadcastIndicator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingRight: 12,
-        gap: 6,
-    },
-    broadcastText: {
-        fontSize: 11,
-        fontFamily: 'DMSans_700Bold',
-    },
-    pulseDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: Colors.success,
-    },
-    scrollContent: {
-        paddingBottom: 100,
-    },
-    codeContainer: {
-        backgroundColor: Colors.surface,
-        margin: Spacing.screenPadding,
-        padding: 24,
-        borderRadius: 24,
-        alignItems: 'center',
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: Colors.separator,
+  },
+  headerBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#000',
+    fontFamily: Typography.family.extraBold,
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    fontFamily: Typography.family.regular,
+  },
+  broadcastBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 100,
+    gap: 6,
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  broadcastText: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: Typography.family.bold,
+  },
+  hero: {
+    padding: 22,
+  },
+  codeCard: {
+    backgroundColor: '#000',
+    borderRadius: 28,
+    paddingVertical: 40,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 12,
-        elevation: 3,
-    },
-    codeLabel: {
-        ...Typography.label,
-        color: Colors.textTertiary,
-        marginBottom: 16,
-    },
-    codeText: {
-        fontSize: 48,
-        fontFamily: 'monospace',
-        fontWeight: 'bold',
-        color: Colors.accentBlue,
-        letterSpacing: 8,
-        marginBottom: 20,
-    },
-    expiredCode: {
-        color: Colors.textTertiary,
-        textDecorationLine: 'line-through',
-    },
-    timerPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 100,
-        borderWidth: 1,
-        gap: 6,
-    },
-    timerText: {
-        fontSize: 13,
-        fontFamily: 'DMSans_700Bold',
-    },
-    refreshButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 20,
-        gap: 6,
-    },
-    refreshText: {
-        fontSize: 14,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.primaryBlue,
-    },
-    statsContainer: {
-        backgroundColor: Colors.surface,
-        marginHorizontal: Spacing.screenPadding,
-        paddingBottom: 20,
-        borderRadius: 24,
-        marginTop: -12,
-        marginBottom: 24,
-    },
-    verificationSummary: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 16,
-        marginTop: 8,
-    },
-    summaryItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    summaryDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-    },
-    summaryText: {
-        fontSize: 12,
-        fontFamily: 'DMSans_500Medium',
-        color: Colors.textSecondary,
-    },
-    statsRow: {
-        alignItems: 'center',
-        marginBottom: 24,
-    },
-    statItem: {
-        alignItems: 'center',
-    },
-    statValue: {
-        fontSize: 48,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
-    },
-    statLabel: {
-        fontSize: 15,
-        fontFamily: 'DMSans_400Regular',
-        color: Colors.textSecondary,
-        marginTop: -4,
-    },
-    listSection: {
-        paddingHorizontal: Spacing.screenPadding,
-    },
-    sectionTitle: {
-        ...Typography.subHeader,
-        color: Colors.textSecondary,
-        marginBottom: 16,
-    },
-    recordRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: Colors.surface,
-        padding: 12,
-        borderRadius: 16,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    flaggedRow: {
-        backgroundColor: Colors.warningSoft,
-        borderColor: Colors.warning + '20',
-    },
-    recordDetailsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    tapToVerify: {
-        fontSize: 12,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.warning,
-    },
-    badgeContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    vBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        gap: 4,
-    },
-    bleBadge: {
-        backgroundColor: '#DCFCE7',
-    },
-    bleBadgeText: {
-        fontSize: 10,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.success,
-    },
-    wifiBadge: {
-        backgroundColor: '#FEF9C3',
-    },
-    wifiBadgeText: {
-        fontSize: 10,
-        fontFamily: 'DMSans_700Bold',
-        color: '#854D0E',
-    },
-    codeBadge: {
-        backgroundColor: '#FEF3C7',
-    },
-    codeBadgeText: {
-        fontSize: 10,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.warning,
-    },
-    recordInfo: {
-        flex: 1,
-        marginLeft: 12,
-    },
-    nameRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    recordName: {
-        fontSize: 15,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.textPrimary,
-    },
-    recordTime: {
-        fontSize: 12,
-        fontFamily: 'DMSans_400Regular',
-        color: Colors.textTertiary,
-    },
-    carryoverBadge: {
-      backgroundColor: Colors.carryover + '15',
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    carryoverText: {
-      fontSize: 10,
-      fontFamily: 'DMSans_700Bold',
-      color: Colors.carryover,
-    },
-    emptyList: {
-        alignItems: 'center',
-        paddingVertical: 40,
-    },
-    emptyText: {
-        fontSize: 14,
-        fontFamily: 'DMSans_400Regular',
-        color: Colors.textTertiary,
-        fontStyle: 'italic',
-    },
-    footer: {
-        padding: Spacing.screenPadding,
-        backgroundColor: Colors.surface,
-        borderTopWidth: 1,
-        borderTopColor: Colors.border + '15',
-    },
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.2,
+        shadowRadius: 24,
+      },
+      android: {
+        elevation: 12,
+      }
+    })
+  },
+  cardLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 2,
+    marginBottom: 16,
+    fontFamily: Typography.family.extraBold,
+  },
+  codeValue: {
+    fontSize: 56,
+    fontWeight: '900',
+    color: 'white',
+    letterSpacing: 8,
+    fontFamily: Typography.family.extraBold,
+    marginBottom: 24,
+  },
+  codeExpired: {
+    color: 'rgba(255,255,255,0.2)',
+    textDecorationLine: 'line-through',
+  },
+  timerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 100,
+    gap: 6,
+  },
+  timerValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: Typography.family.bold,
+  },
+  statsStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 22,
+    marginBottom: 12,
+  },
+  statBox: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#000',
+    fontFamily: Typography.family.extraBold,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: Colors.textTertiary,
+    marginTop: 2,
+    fontFamily: Typography.family.regular,
+  },
+  statDivider: {
+    width: 1,
+    height: '60%',
+    backgroundColor: Colors.separator,
+    alignSelf: 'center',
+  },
+  methodStrip: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 32,
+  },
+  methodItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9F9FB',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    gap: 6,
+  },
+  methodText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    fontFamily: Typography.family.semiBold,
+  },
+  listSection: {
+    paddingHorizontal: 22,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 16,
+    fontFamily: Typography.family.bold,
+  },
+  recordsGroup: {
+    backgroundColor: '#F9F9FB',
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  recordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: Colors.separator,
+  },
+  recordRowFlagged: {
+    backgroundColor: 'rgba(255,149,0,0.05)',
+  },
+  recordContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  recordName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000',
+    fontFamily: Typography.family.semiBold,
+  },
+  coBadge: {
+    backgroundColor: Colors.carryoverSoft,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  coText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.carryover,
+  },
+  recordTime: {
+    fontSize: 12,
+    color: Colors.textTertiary,
+    marginTop: 1,
+    fontFamily: Typography.family.regular,
+  },
+  recordTrailing: {
+    width: 24,
+    alignItems: 'center',
+  },
+  emptyView: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.textTertiary,
+    fontFamily: Typography.family.regular,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    backgroundColor: 'white',
+    paddingHorizontal: 22,
+    paddingTop: 16,
+    borderTopWidth: 0.5,
+    borderTopColor: Colors.separator,
+  }
 });

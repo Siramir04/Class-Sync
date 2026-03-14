@@ -1,14 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
+import { useAuthStore } from '../store/authStore';
+import { User } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useCarryoverAutoAccept } from '../hooks/useCarryoverAutoAccept';
 import { Colors } from '../constants/colors';
 import CourseAcceptSheet from '../components/sheets/CourseAcceptSheet';
+import { registerBackgroundTasks } from '../services/backgroundTask';
 
 export default function RootLayout() {
     const { isAuthenticated, isLoading } = useAuth();
@@ -33,6 +39,38 @@ export default function RootLayout() {
         DMSans_600SemiBold,
         DMSans_700Bold,
     });
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                try {
+                    const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+                    if (userDoc.exists()) {
+                        useAuthStore.getState().setUser({ 
+                            uid: firebaseUser.uid, 
+                            ...userDoc.data(),
+                            createdAt: userDoc.data().createdAt?.toDate?.() || new Date()
+                        } as User);
+                    } else {
+                        // User exists in Auth but not in Firestore - handle or clear
+                        useAuthStore.getState().setUser(null);
+                    }
+                } catch (error) {
+                    console.error('Error fetching user data:', error);
+                    useAuthStore.getState().setUser(null);
+                }
+            } else {
+                useAuthStore.getState().clearUser();
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Phase 3 — Background Proximity Scanning
+    useEffect(() => {
+        registerBackgroundTasks();
+    }, []);
 
     useEffect(() => {
         if (isLoading || !fontsLoaded) return;

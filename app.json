@@ -39,7 +39,8 @@
         {
           "cameraPermission": "ClassSync uses your camera to scan QR codes for attendance marking."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "router": {},

@@ -10,6 +10,7 @@ interface SpaceTileProps {
     isCarryover?: boolean;
     isAddButton?: boolean;
     onPress?: () => void;
+    style?: any;
 }
 
 export default function SpaceTile({
@@ -17,6 +18,7 @@ export default function SpaceTile({
     isCarryover = false,
     isAddButton = false,
     onPress,
+    style,
 }: SpaceTileProps) {
     const initials = name
         .split(' ')
@@ -27,7 +29,7 @@ export default function SpaceTile({
 
     if (isAddButton) {
         return (
-            <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+            <TouchableOpacity style={[styles.container, style]} onPress={onPress} activeOpacity={0.7}>
                 <View style={[styles.circle, styles.addCircle]}>
                     <Ionicons name="add" size={28} color={Colors.accentBlue} />
                 </View>
@@ -37,7 +39,7 @@ export default function SpaceTile({
     }
 
     return (
-        <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+        <TouchableOpacity style={[styles.container, style]} onPress={onPress} activeOpacity={0.7}>
             <View style={styles.circleWrapper}>
                 <View style={[styles.circle, isCarryover && styles.carryoverCircle]}>
                     <Text style={styles.initials}>{initials}</Text>
@@ -53,7 +55,6 @@ const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
         marginRight: Spacing.md,
-        width: 64,
     },
     circleWrapper: {
         position: 'relative',

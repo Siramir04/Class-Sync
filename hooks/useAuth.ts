@@ -7,26 +7,8 @@ import { onAuthChanged, getCurrentUser, logoutUser } from '../services/authServi
  * Hook to listen to Firebase auth state and sync with Zustand store.
  */
 export function useAuth() {
-    const { user, isAuthenticated, isLoading, setUser, setLoading, logout } =
+    const { user, isAuthenticated, isLoading, logout } =
         useAuthStore();
-
-    useEffect(() => {
-        const unsubscribe = onAuthChanged(async (firebaseUser: FirebaseUser | null) => {
-            if (firebaseUser) {
-                try {
-                    const userData = await getCurrentUser(firebaseUser.uid);
-                    setUser(userData);
-                } catch (error) {
-                    console.error('Error fetching user data:', error);
-                    setUser(null);
-                }
-            } else {
-                setUser(null);
-            }
-        });
-
-        return () => unsubscribe();
-    }, []);
 
     const handleLogout = async () => {
         try {

@@ -14,6 +14,7 @@ interface ClassCardProps {
     status: 'upcoming' | 'live' | 'cancelled';
     isCarryover?: boolean;
     onPress?: () => void;
+    style?: any;
 }
 
 export default function ClassCard({
@@ -25,6 +26,7 @@ export default function ClassCard({
     status,
     isCarryover = false,
     onPress,
+    style,
 }: ClassCardProps) {
     const statusConfig = {
         upcoming: { label: 'Upcoming', color: Colors.warning, bg: '#FEF3C7' },
@@ -37,7 +39,7 @@ export default function ClassCard({
 
     return (
         <TouchableOpacity
-            style={[styles.card, { borderLeftColor: borderColor }]}
+            style={[styles.card, { borderLeftColor: borderColor }, style]}
             onPress={onPress}
             activeOpacity={0.8}
         >

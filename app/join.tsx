@@ -18,7 +18,7 @@ import { Spacing } from '../constants/spacing';
 import { useAuthStore } from '../store/authStore';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import Divider from '../components/ui/Divider';
+import Card from '../components/ui/Card';
 import { joinSpaceByCode, createSpace } from '../services/spaceService';
 import { joinCourseByCode } from '../services/courseService';
 import { generateSpaceCode } from '../services/codeService';
@@ -59,18 +59,15 @@ export default function JoinScreen() {
         setJoinLoading(true);
         setJoinError('');
         try {
-            // Try space code first
             if (code.startsWith('SP-')) {
                 await joinSpaceByCode(code.trim(), user.uid, user.role);
                 Alert.alert('Success', 'You joined the space!');
                 router.replace('/(tabs)/spaces');
             } else if (code.startsWith('CR-')) {
-                // Course code (carryover)
                 await joinCourseByCode(code.trim(), user.uid, user.role);
                 Alert.alert('Success', 'Course join request sent!');
                 router.replace('/(tabs)/spaces');
             } else {
-                // Try both
                 try {
                     await joinSpaceByCode(code.trim(), user.uid, user.role);
                     Alert.alert('Success', 'You joined the space!');
@@ -117,7 +114,8 @@ export default function JoinScreen() {
                 programme.trim(),
                 level.trim(),
                 spaceCode,
-                user.uid
+                user.uid,
+                validCourses
             );
             Alert.alert('Success', `Space created! Code: ${spaceCode}`);
             router.replace(`/space/${spaceId}`);
@@ -150,139 +148,173 @@ export default function JoinScreen() {
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
+                {/* Custom Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                        <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                    <TouchableOpacity onPress={() => router.back()} style={styles.headerIconButton} activeOpacity={0.7}>
+                        <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>
-                        {mode === 'join' ? 'Join Space' : 'Create Space'}
+                        {mode === 'join' ? 'Join Community' : 'Create New Space'}
                     </Text>
-                    <View style={{ width: 40 }} />
+                    <View style={{ width: 44 }} />
                 </View>
 
-                {/* Mode Toggle */}
-                <View style={styles.modeToggle}>
-                    <TouchableOpacity
-                        style={[styles.modeBtn, mode === 'join' && styles.modeBtnActive]}
-                        onPress={() => setMode('join')}
-                    >
-                        <Text style={[styles.modeBtnText, mode === 'join' && styles.modeBtnTextActive]}>
-                            Join
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.modeBtn, mode === 'create' && styles.modeBtnActive]}
-                        onPress={() => setMode('create')}
-                    >
-                        <Text style={[styles.modeBtnText, mode === 'create' && styles.modeBtnTextActive]}>
-                            Create
-                        </Text>
-                    </TouchableOpacity>
+                {/* Segmented Control */}
+                <View style={styles.segmentContainer}>
+                    <View style={styles.segmentedControl}>
+                            <TouchableOpacity
+                                style={[styles.segment, mode === 'join' && styles.segmentActive]}
+                                onPress={() => setMode('join')}
+                                activeOpacity={0.7}
+                            >
+                            <Text style={[styles.segmentText, mode === 'join' && styles.segmentTextActive]}>
+                                Join
+                            </Text>
+                        </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.segment, mode === 'create' && styles.segmentActive]}
+                                onPress={() => setMode('create')}
+                                activeOpacity={0.7}
+                            >
+                            <Text style={[styles.segmentText, mode === 'create' && styles.segmentTextActive]}>
+                                Create
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <ScrollView
-                    contentContainerStyle={styles.content}
+                    contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
                     {mode === 'join' ? (
-                        <>
-                            <Text style={styles.instruction}>
-                                Enter a space code (SP-XXXX) or a course code (CR-XXXX) to join.
-                            </Text>
+                        <View style={styles.joinContainer}>
+                            <View style={styles.infoCard}>
+                                <Ionicons name="information-circle-outline" size={20} color={Colors.primaryBlue} />
+                                <Text style={styles.infoText}>
+                                    Communities are private. Ask your Class Monitor or Course Rep for the unique space or course code.
+                                </Text>
+                            </View>
+
                             <Input
-                                label="Code"
+                                label="ENTER CODE"
                                 value={code}
                                 onChangeText={(v) => {
                                     setCode(v.toUpperCase());
                                     setJoinError('');
                                 }}
-                                placeholder="e.g. SP-7K2M or CR-4P9Q"
+                                placeholder="e.g. SP-7K2M"
                                 autoCapitalize="characters"
                                 error={joinError}
+                                containerStyle={styles.inputContainer}
                             />
-                            <Button title="Join" onPress={handleJoin} loading={joinLoading} />
-                        </>
+                            
+                            <Button 
+                                title="Join Community" 
+                                onPress={handleJoin} 
+                                loading={joinLoading} 
+                                style={styles.primaryBtn}
+                            />
+                            
+                            <View style={styles.helpBox}>
+                                <Text style={styles.helpTitle}>What are codes?</Text>
+                                <Text style={styles.helpText}>• SP-XXXX: Joins a full class space{'\n'}• CR-XXXX: Joins a specific carryover course</Text>
+                            </View>
+                        </View>
                     ) : (
-                        <>
-                            <Input
-                                label="Space Name"
-                                value={spaceName}
-                                onChangeText={setSpaceName}
-                                placeholder="e.g. CS 300L Class 2024"
-                                error={createErrors.spaceName}
-                            />
-                            <Input
-                                label="Programme"
-                                value={programme}
-                                onChangeText={setProgramme}
-                                placeholder="e.g. Computer Science"
-                                error={createErrors.programme}
-                            />
-                            <Input
-                                label="Department"
-                                value={department}
-                                onChangeText={setDepartment}
-                                placeholder="e.g. Computer Science"
-                                error={createErrors.department}
-                            />
-                            <Input
-                                label="Level"
-                                value={level}
-                                onChangeText={setLevel}
-                                placeholder="e.g. 300"
-                                keyboardType="number-pad"
-                                error={createErrors.level}
-                            />
-
-                            <Divider />
-
-                            <Text style={styles.sectionTitle}>Courses</Text>
-                            {createErrors.courses && (
-                                <Text style={styles.courseError}>{createErrors.courses}</Text>
-                            )}
-                            {courseCodes.map((course, index) => (
-                                <View key={index} style={styles.courseRow}>
-                                    <View style={styles.courseInputs}>
+                        <View style={styles.createContainer}>
+                            <Text style={styles.sectionLabel}>SPACE INFORMATION</Text>
+                            <Card style={styles.formCard}>
+                                <Input
+                                    label="SPACE NAME"
+                                    value={spaceName}
+                                    onChangeText={setSpaceName}
+                                    placeholder="e.g. Computer Science 300L"
+                                    error={createErrors.spaceName}
+                                />
+                                <Input
+                                    label="DEPARTMENT"
+                                    value={department}
+                                    onChangeText={setDepartment}
+                                    placeholder="e.g. Numerical Analysis"
+                                    error={createErrors.department}
+                                />
+                                <View style={styles.row}>
+                                    <View style={{ flex: 2, marginRight: 12 }}>
                                         <Input
-                                            label="Course Code"
-                                            value={course.courseCode}
-                                            onChangeText={(v) => updateCourse(index, 'courseCode', v.toUpperCase())}
-                                            placeholder="e.g. CSC301"
-                                        />
-                                        <Input
-                                            label="Course Name"
-                                            value={course.courseName}
-                                            onChangeText={(v) => updateCourse(index, 'courseName', v)}
-                                            placeholder="e.g. Data Structures"
+                                            label="PROGRAMME"
+                                            value={programme}
+                                            onChangeText={setProgramme}
+                                            placeholder="e.g. B.Sc."
+                                            error={createErrors.programme}
                                         />
                                     </View>
-                                    {courseCodes.length > 1 && (
-                                        <TouchableOpacity
-                                            onPress={() => removeCourse(index)}
-                                            style={styles.removeBtn}
-                                        >
-                                            <Ionicons name="close-circle" size={22} color={Colors.error} />
-                                        </TouchableOpacity>
-                                    )}
+                                    <View style={{ flex: 1 }}>
+                                        <Input
+                                            label="LEVEL"
+                                            value={level}
+                                            onChangeText={setLevel}
+                                            placeholder="300"
+                                            keyboardType="number-pad"
+                                            error={createErrors.level}
+                                        />
+                                    </View>
                                 </View>
+                            </Card>
+
+                            <Text style={[styles.sectionLabel, { marginTop: 24 }]}>COURSES</Text>
+                            {createErrors.courses && (
+                                <Text style={styles.errorText}>{createErrors.courses}</Text>
+                            )}
+                            
+                            {courseCodes.map((course, index) => (
+                                <Card key={index} style={styles.courseCard}>
+                                    <View style={styles.courseHeader}>
+                                        <Text style={styles.courseIndex}>Course #{index + 1}</Text>
+                                        {courseCodes.length > 1 && (
+                                            <TouchableOpacity onPress={() => removeCourse(index)} activeOpacity={0.7}>
+                                                <Ionicons name="trash-outline" size={18} color={Colors.error} />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                    <View style={styles.row}>
+                                        <View style={{ flex: 1, marginRight: 12 }}>
+                                            <Input
+                                                label="CODE"
+                                                value={course.courseCode}
+                                                onChangeText={(v) => updateCourse(index, 'courseCode', v.toUpperCase())}
+                                                placeholder="CSC301"
+                                                containerStyle={{ marginBottom: 0 }}
+                                            />
+                                        </View>
+                                        <View style={{ flex: 2 }}>
+                                            <Input
+                                                label="COURSE NAME"
+                                                value={course.courseName}
+                                                onChangeText={(v) => updateCourse(index, 'courseName', v)}
+                                                placeholder="Data Structures"
+                                                containerStyle={{ marginBottom: 0 }}
+                                            />
+                                        </View>
+                                    </View>
+                                </Card>
                             ))}
 
-                            <TouchableOpacity style={styles.addCourseBtn} onPress={addCourse}>
-                                <Ionicons name="add-circle-outline" size={20} color={Colors.accentBlue} />
-                                <Text style={styles.addCourseText}>Add another course</Text>
+                            <TouchableOpacity style={styles.addBtn} onPress={addCourse} activeOpacity={0.7}>
+                                <Ionicons name="add-circle" size={24} color={Colors.primaryBlue} />
+                                <Text style={styles.addBtnText}>Add Another Course</Text>
                             </TouchableOpacity>
 
                             <Button
-                                title="Create Space"
+                                title="Create Community Space"
                                 onPress={handleCreate}
                                 loading={createLoading}
-                                style={{ marginTop: Spacing.lg }}
+                                style={styles.createBtn}
                             />
-                        </>
+                        </View>
                     )}
-
-                    <View style={{ height: Spacing.xxl }} />
+                    <View style={{ height: 40 }} />
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -298,83 +330,183 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: Spacing.screenPadding,
-        paddingTop: Spacing.md,
-        paddingBottom: Spacing.sm,
+        paddingHorizontal: 8,
+        height: 56,
     },
-    backBtn: {
-        width: 40,
-        height: 40,
+    headerIconButton: {
+        width: 44,
+        height: 44,
         justifyContent: 'center',
         alignItems: 'center',
     },
     headerTitle: {
-        ...Typography.pageTitle,
+        fontSize: 17,
+        fontFamily: 'DMSans_700Bold',
         color: Colors.textPrimary,
     },
-    modeToggle: {
+    segmentContainer: {
+        paddingHorizontal: Spacing.screenPadding,
+        paddingVertical: 12,
+    },
+    segmentedControl: {
         flexDirection: 'row',
-        marginHorizontal: Spacing.screenPadding,
-        backgroundColor: Colors.subtleFill,
-        borderRadius: Spacing.pillRadius,
+        backgroundColor: Colors.surface,
         padding: 4,
-        marginBottom: Spacing.lg,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: Colors.border + '30',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 2,
+            },
+        }),
     },
-    modeBtn: {
+    segment: {
         flex: 1,
-        paddingVertical: Spacing.sm,
+        paddingVertical: 10,
         alignItems: 'center',
-        borderRadius: Spacing.pillRadius,
+        borderRadius: 8,
     },
-    modeBtnActive: {
-        backgroundColor: Colors.accentBlue,
+    segmentActive: {
+        backgroundColor: Colors.primaryBlue,
+        ...Platform.select({
+            ios: {
+                shadowColor: Colors.primaryBlue,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 4,
+            },
+        }),
     },
-    modeBtnText: {
-        ...Typography.buttonText,
+    segmentText: {
+        fontSize: 14,
+        fontFamily: 'DMSans_600SemiBold',
         color: Colors.textSecondary,
     },
-    modeBtnTextActive: {
+    segmentTextActive: {
         color: Colors.white,
     },
-    content: {
+    scrollContent: {
         paddingHorizontal: Spacing.screenPadding,
+        paddingTop: 12,
     },
-    instruction: {
-        ...Typography.body,
-        color: Colors.textSecondary,
-        marginBottom: Spacing.lg,
-    },
-    sectionTitle: {
-        ...Typography.sectionHeader,
-        color: Colors.textPrimary,
-        marginBottom: Spacing.md,
-    },
-    courseError: {
-        ...Typography.label,
-        color: Colors.error,
-        marginBottom: Spacing.sm,
-    },
-    courseRow: {
-        marginBottom: Spacing.md,
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-    },
-    courseInputs: {
+    joinContainer: {
         flex: 1,
     },
-    removeBtn: {
-        marginTop: 28,
-        marginLeft: 8,
-        padding: 4,
+    infoCard: {
+        flexDirection: 'row',
+        backgroundColor: Colors.primaryBlue + '08',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 24,
+        alignItems: 'flex-start',
+        borderWidth: 1,
+        borderColor: Colors.primaryBlue + '20',
     },
-    addCourseBtn: {
+    infoText: {
+        flex: 1,
+        marginLeft: 12,
+        fontSize: 14,
+        fontFamily: 'DMSans_500Medium',
+        color: Colors.primaryBlue,
+        lineHeight: 20,
+    },
+    inputContainer: {
+        marginBottom: 24,
+    },
+    primaryBtn: {
+        height: 56,
+        borderRadius: 16,
+    },
+    helpBox: {
+        marginTop: 32,
+        padding: 20,
+        borderRadius: 20,
+        backgroundColor: Colors.surface,
+        borderWidth: 1,
+        borderColor: Colors.border + '20',
+    },
+    helpTitle: {
+        fontSize: 15,
+        fontFamily: 'DMSans_700Bold',
+        color: Colors.textPrimary,
+        marginBottom: 8,
+    },
+    helpText: {
+        fontSize: 13,
+        fontFamily: 'DMSans_400Regular',
+        color: Colors.textSecondary,
+        lineHeight: 20,
+    },
+    createContainer: {},
+    sectionLabel: {
+        fontSize: 11,
+        fontFamily: 'DMSans_700Bold',
+        color: Colors.textTertiary,
+        letterSpacing: 1.2,
+        marginBottom: 12,
+        marginLeft: 4,
+    },
+    formCard: {
+        padding: 16,
+        marginBottom: 8,
+    },
+    row: {
+        flexDirection: 'row',
+    },
+    errorText: {
+        fontSize: 12,
+        fontFamily: 'DMSans_500Medium',
+        color: Colors.error,
+        marginBottom: 12,
+        marginLeft: 4,
+    },
+    courseCard: {
+        padding: 16,
+        marginBottom: 12,
+        backgroundColor: Colors.surface,
+    },
+    courseHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    courseIndex: {
+        fontSize: 13,
+        fontFamily: 'DMSans_700Bold',
+        color: Colors.primaryBlue,
+    },
+    addBtn: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
         gap: 8,
-        paddingVertical: Spacing.md,
+        backgroundColor: Colors.primaryBlue + '05',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderColor: Colors.primaryBlue + '30',
+        marginTop: 8,
     },
-    addCourseText: {
-        ...Typography.buttonText,
-        color: Colors.accentBlue,
+    addBtnText: {
+        fontSize: 15,
+        fontFamily: 'DMSans_700Bold',
+        color: Colors.primaryBlue,
+    },
+    createBtn: {
+        marginTop: 32,
+        height: 56,
+        borderRadius: 16,
     },
 });

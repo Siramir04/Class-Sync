@@ -15,7 +15,7 @@ import { Typography } from '../../constants/typography';
 import { Spacing } from '../../constants/spacing';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
-import { registerUser } from '../../services/authService';
+import { registerUser, getCurrentUser } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
 import { UserRole } from '../../types';
 
@@ -55,14 +55,19 @@ export default function RegisterScreen() {
         if (!validate()) return;
         setLoading(true);
         try {
-            const user = await registerUser(email, password, fullName, university, role);
+            const firebaseUser = await registerUser(fullName, email, university, role, password);
+            const userData = await getCurrentUser(firebaseUser.uid);
             
-            try {
-                setUser(user);
-                router.replace('/(tabs)');
-            } catch (navError) {
-                console.error('Registration navigation error:', navError);
-                Alert.alert('Navigation Error', 'Failed to redirect after registration.');
+            if (userData) {
+                try {
+                    setUser(userData);
+                    router.replace('/(tabs)');
+                } catch (navError) {
+                    console.error('Registration navigation error:', navError);
+                    Alert.alert('Navigation Error', 'Failed to redirect after registration.');
+                }
+            } else {
+                throw new Error('Failed to create user profile');
             }
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Registration failed';
@@ -125,6 +130,7 @@ export default function RegisterScreen() {
                                     role === r.value && styles.rolePillActive,
                                 ]}
                                 onPress={() => setRole(r.value)}
+                                activeOpacity={0.8}
                             >
                                 <Text
                                     style={[
@@ -166,6 +172,7 @@ export default function RegisterScreen() {
                 <TouchableOpacity
                     onPress={() => router.push('/(auth)/login')}
                     style={styles.loginLink}
+                    activeOpacity={0.7}
                 >
                     <Text style={styles.loginLinkText}>
                         Already have an account? <Text style={styles.loginLinkBold}>Log in</Text>

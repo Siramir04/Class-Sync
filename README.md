@@ -4,12 +4,15 @@ ClassSync is a modern, real-time class management and notification mobile applic
 
 ## 🚀 Features
 
+- **Proximity Attendance Verification**: Automatic, fraud-proof attendance using Bluetooth (BLE) and WiFi proximity.
 - **Real-time Notifications**: Get instant push alerts for lecture changes, assignments, tests, and announcements.
 - **Unified Class Spaces**: Join a "Space" dedicated to your specific level or department.
 - **Dynamic Schedule**: A 7-day visual timeline showing all your upcoming lectures and events.
 - **Carryover Support**: Unique ability to join individual courses from different levels without joining the entire level's space.
 - **Post Filtering**: Easily filter through assignments, notes, tests, and announcements within a course or space.
 - **Role Management**: Class Monitors can create and manage posts, while students stay informed and organized.
+
+For more technical details on attendance verification, see [Proximity Attendance Docs](./docs/PROXIMITY_ATTENDANCE.md).
 
 ## 🛠 Tech Stack
 

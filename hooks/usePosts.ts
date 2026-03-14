@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { subscribeToPostsByCourse, getRecentPostsForUser } from '../services/postService';
+import { subscribeToPostsByCourse, subscribeToUserRecentPosts } from '../services/postService';
 import { Post } from '../types';
 import { useAuthStore } from '../store/authStore';
 
@@ -29,7 +29,7 @@ export function usePosts(spaceId: string | null, courseId: string | null) {
 }
 
 /**
- * Hook to fetch the user's most recent posts.
+ * Hook to subscribe to the user's most recent posts in real-time.
  */
 export function useRecentPosts(maxPosts: number = 10) {
     const { user } = useAuthStore();
@@ -43,26 +43,13 @@ export function useRecentPosts(maxPosts: number = 10) {
         }
 
         setLoading(true);
-        getRecentPostsForUser(user.uid, maxPosts)
-            .then((fetchedPosts) => {
-                setPosts(fetchedPosts);
-                setLoading(false);
-            })
-            .catch((err) => {
-                console.error('Error fetching recent posts:', err);
-                setLoading(false);
-            });
+        const unsubscribe = subscribeToUserRecentPosts(user.uid, (fetchedPosts) => {
+            setPosts(fetchedPosts);
+            setLoading(false);
+        }, maxPosts);
+
+        return () => unsubscribe();
     }, [user?.uid, maxPosts]);
 
-    return {
-        posts, loading, refresh: () => {
-            if (user?.uid) {
-                setLoading(true);
-                getRecentPostsForUser(user.uid, maxPosts).then((p) => {
-                    setPosts(p);
-                    setLoading(false);
-                });
-            }
-        }
-    };
+    return { posts, loading };
 }

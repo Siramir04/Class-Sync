@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -7,27 +7,25 @@ import {
     ScrollView,
     TouchableOpacity,
     SafeAreaView,
+    Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Spacing } from '../../constants/spacing';
 import { useAuthStore } from '../../store/authStore';
 import { useCourses } from '../../hooks/useCourses';
-import { getPostsBySpace } from '../../services/postService';
+import { getPostsBySpace, createPost } from '../../services/postService';
 import { getSpaceById } from '../../services/spaceService';
 import PostCard from '../../components/cards/PostCard';
-import Tag from '../../components/ui/Tag';
 import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import PostTypeSheet from '../../components/sheets/PostTypeSheet';
 import CreatePostSheet, { CreatePostData } from '../../components/sheets/CreatePostSheet';
-import { Post, PostType, Space } from '../../types';
-import { createPost } from '../../services/postService';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../config/firebase';
-import { AttendanceSession } from '../../types/attendance';
+import { Post, PostType, Space, AttendanceSession } from '../../types';
 
 const postTypeFilters = ['All', 'Lectures', 'Assignments', 'Tests', 'Notes', 'Announcements'] as const;
 const postTypeMap: Record<string, PostType | undefined> = {
@@ -48,7 +46,7 @@ export default function SpaceFeedScreen() {
     const [space, setSpace] = useState<Space | null>(null);
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeCourse, setActiveCourse] = useState<string>('All');
+    const [activeCourseId, setActiveCourseId] = useState<string>('All');
     const [activeTypeFilter, setActiveTypeFilter] = useState<string>('All');
     const [showPostTypeSheet, setShowPostTypeSheet] = useState(false);
     const [showCreateSheet, setShowCreateSheet] = useState(false);
@@ -103,22 +101,18 @@ export default function SpaceFeedScreen() {
         }
     };
 
-    // Filter posts
-    const filteredPosts = posts.filter((post) => {
-        const courseMatch =
-            activeCourse === 'All' ||
-            courses.find((c) => c.courseName === activeCourse)?.id === post.courseId;
-        const typeMatch =
-            activeTypeFilter === 'All' || post.type === postTypeMap[activeTypeFilter];
-        return courseMatch && typeMatch;
-    });
-
-    const showFab = isMonitor || (isLecturer && activeCourse !== 'All');
+    const filteredPosts = useMemo(() => {
+        return posts.filter((post) => {
+            const courseMatch = activeCourseId === 'All' || post.courseId === activeCourseId;
+            const typeMatch = activeTypeFilter === 'All' || post.type === postTypeMap[activeTypeFilter];
+            return courseMatch && typeMatch;
+        });
+    }, [posts, activeCourseId, activeTypeFilter]);
 
     const handleCreatePost = async (data: CreatePostData) => {
         if (!spaceId || !user) return;
-        const selectedCourse = activeCourse !== 'All'
-            ? courses.find((c) => c.courseName === activeCourse)
+        const selectedCourse = activeCourseId !== 'All' 
+            ? courses.find(c => c.id === activeCourseId) 
             : courses[0];
 
         if (!selectedCourse) return;
@@ -157,131 +151,166 @@ export default function SpaceFeedScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+            {/* Nav Header */}
+            <View style={styles.navHeader}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.headerIconButton} activeOpacity={0.7}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
-                <View style={styles.headerContent}>
-                    <Text style={styles.spaceName} numberOfLines={1}>{space?.name}</Text>
-                    <Text style={styles.spaceCode}>{space?.spaceCode} · {space?.memberCount} members</Text>
+                <View style={styles.navTitleContainer}>
+                    <Text style={styles.navTitle} numberOfLines={1}>{space?.name}</Text>
+                    <Text style={styles.navSubtitle}>{space?.spaceCode} · {space?.memberCount} members</Text>
                 </View>
                 {isMonitor && (
                     <TouchableOpacity
+                        style={styles.headerIconButton}
                         onPress={() => router.push(`/space/manage?spaceId=${spaceId}`)}
+                        activeOpacity={0.7}
                     >
-                        <Ionicons name="ellipsis-vertical" size={22} color={Colors.textSecondary} />
+                        <Ionicons name="settings-outline" size={22} color={Colors.textPrimary} />
                     </TouchableOpacity>
                 )}
             </View>
 
-            {/* Course Filter Row */}
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterRow}
-                contentContainerStyle={styles.filterContent}
-            >
-                <TouchableOpacity
-                    style={[styles.filterPill, activeCourse === 'All' && styles.filterPillActive]}
-                    onPress={() => setActiveCourse('All')}
+            {/* Content Switcher / Filters */}
+            <View style={styles.filterContainer}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filterContent}
                 >
-                    <Text style={[styles.filterPillText, activeCourse === 'All' && styles.filterPillTextActive]}>
-                        All
-                    </Text>
-                </TouchableOpacity>
-                {courses.map((course) => (
                     <TouchableOpacity
-                        key={course.id}
-                        style={[styles.filterPill, activeCourse === course.courseName && styles.filterPillActive]}
-                        onPress={() => setActiveCourse(course.courseName)}
+                        style={[styles.filterPill, activeCourseId === 'All' && styles.filterPillActive]}
+                        onPress={() => setActiveCourseId('All')}
+                        activeOpacity={0.8}
                     >
-                        <Text
-                            style={[
-                                styles.filterPillText,
-                                activeCourse === course.courseName && styles.filterPillTextActive,
-                            ]}
-                        >
-                            {course.courseCode}
+                        <Text style={[styles.filterPillText, activeCourseId === 'All' && styles.filterPillTextActive]}>
+                            All Feed
                         </Text>
                     </TouchableOpacity>
-                ))}
-            </ScrollView>
-
-            {/* Type Filter Row */}
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.typeFilterRow}
-                contentContainerStyle={styles.filterContent}
-            >
-                {postTypeFilters.map((filter) => (
-                    <TouchableOpacity
-                        key={filter}
-                        style={[styles.typeFilterPill, activeTypeFilter === filter && styles.filterPillActive]}
-                        onPress={() => setActiveTypeFilter(filter)}
-                    >
-                        <Text
-                            style={[
-                                styles.typeFilterPillText,
-                                activeTypeFilter === filter && styles.filterPillTextActive,
-                            ]}
-                        >
-                            {filter}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </ScrollView>
-
-            {/* Active Sessions Banner */}
-            {activeSessions.length > 0 && (
-                <View style={styles.activeSessionsContainer}>
-                    {activeSessions.map(session => (
+                    {courses.map((course) => (
                         <TouchableOpacity
-                            key={session.id}
-                            style={styles.sessionBanner}
-                            onPress={() => router.push(`/attendance/session/${session.id}?courseId=${session.courseId}&spaceId=${spaceId}`)}
+                            key={course.id}
+                            style={[styles.filterPill, activeCourseId === course.id && styles.filterPillActive]}
+                            onPress={() => setActiveCourseId(course.id)}
+                            activeOpacity={0.7}
                         >
-                            <View style={styles.sessionIcon}>
-                                <Ionicons name="qr-code" size={20} color={Colors.white} />
-                            </View>
-                            <View style={styles.sessionInfo}>
-                                <Text style={styles.sessionTitle}>Live Attendance: {session.courseCode}</Text>
-                                <Text style={styles.sessionSubtitle}>Started by {session.initiatedByName} · Tap to join</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={18} color={Colors.white + '80'} />
+                            <Text
+                                style={[
+                                    styles.filterPillText,
+                                    activeCourseId === course.id && styles.filterPillTextActive,
+                                ]}
+                            >
+                                {course.courseCode}
+                            </Text>
                         </TouchableOpacity>
                     ))}
-                </View>
-            )}
+                </ScrollView>
 
-            {/* Activity Feed */}
-            <FlatList
-                data={filteredPosts}
-                renderItem={({ item }) => (
-                    <PostCard
-                        post={item}
-                        onPress={() =>
-                            router.push(`/post/${item.id}?spaceId=${item.spaceId}&courseId=${item.courseId}`)
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.typeFilterRow}
+                    contentContainerStyle={styles.filterContent}
+                >
+                    {postTypeFilters.map((filter) => (
+                        <TouchableOpacity
+                            key={filter}
+                            style={[styles.typeFilterPill, activeTypeFilter === filter && styles.typeFilterPillActive]}
+                            onPress={() => setActiveTypeFilter(filter)}
+                            activeOpacity={0.7}
+                        >
+                            <Text
+                                style={[
+                                    styles.typeFilterText,
+                                    activeTypeFilter === filter && styles.typeFilterTextActive,
+                                ]}
+                            >
+                                {filter}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+
+            {/* Quick Access Row */}
+            <View style={styles.quickAccessRow}>
+                <TouchableOpacity 
+                    style={styles.materialsBtn}
+                    onPress={() => router.push({
+                        pathname: '/course/[courseId]/materials',
+                        params: { 
+                            spaceId: spaceId!, 
+                            courseId: activeCourseId !== 'All' ? activeCourseId : courses[0]?.id || '',
+                            courseCode: activeCourseId !== 'All' ? courses.find(c => c.id === activeCourseId)?.courseCode : courses[0]?.courseCode
                         }
-                    />
-                )}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.feedContent}
-                showsVerticalScrollIndicator={false}
-                ListEmptyComponent={
-                    <EmptyState icon="📝" title="No posts yet" subtitle="Activity will appear here" />
-                }
-            />
+                    })}
+                    activeOpacity={0.7}
+                >
+                    <View style={styles.materialsIconBox}>
+                        <Ionicons name="document-attach" size={18} color={Colors.primaryBlue} />
+                    </View>
+                    <Text style={styles.materialsText}>Course Materials</Text>
+                    <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
+                </TouchableOpacity>
+            </View>
 
-            {/* FAB */}
-            {showFab && (
+            {/* Live Activities / Attendance */}
+            <View style={styles.listContainer}>
+                <FlatList
+                    data={filteredPosts}
+                    renderItem={({ item }) => (
+                        <PostCard
+                            post={item}
+                            isMonitor={isMonitor}
+                            onPress={() =>
+                                router.push(`/post/${item.id}?spaceId=${item.spaceId}&courseId=${item.courseId}`)
+                            }
+                        />
+                    )}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.feedContent}
+                    showsVerticalScrollIndicator={false}
+                    ListHeaderComponent={
+                        activeSessions.length > 0 ? (
+                            <View style={styles.activeSessionsContainer}>
+                                {activeSessions.map(session => (
+                                    <TouchableOpacity
+                                        key={session.id}
+                                        style={styles.sessionBanner}
+                                        onPress={() => router.push(`/attendance/session/${session.id}?courseId=${session.courseId}&spaceId=${spaceId}`)}
+                                        activeOpacity={0.9}
+                                    >
+                                        <View style={styles.sessionPulse}>
+                                            <View style={styles.pulseInner} />
+                                        </View>
+                                        <View style={styles.sessionInfo}>
+                                            <Text style={styles.sessionTitle}>Live Attendance</Text>
+                                            <Text style={styles.sessionSubtitle}>{session.courseCode} · Join session now</Text>
+                                        </View>
+                                        <Ionicons name="qr-code-outline" size={20} color={Colors.white} />
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        ) : null
+                    }
+                    ListEmptyComponent={
+                        <EmptyState 
+                            icon="newspaper-outline" 
+                            title="Nothing here yet" 
+                            subtitle="Be the first to share an update or schedule a lecture." 
+                        />
+                    }
+                />
+            </View>
+
+            {/* Create Post FAB */}
+            {(isMonitor || isLecturer) && (
                 <TouchableOpacity
                     style={styles.fab}
                     onPress={() => setShowPostTypeSheet(true)}
                     activeOpacity={0.8}
                 >
-                    <Ionicons name="add" size={28} color={Colors.white} />
+                    <Ionicons name="add" size={30} color={Colors.white} />
                 </TouchableOpacity>
             )}
 
@@ -290,10 +319,8 @@ export default function SpaceFeedScreen() {
                 onClose={() => setShowPostTypeSheet(false)}
                 onSelect={(type) => {
                     if (type === 'attendance') {
-                        // Find the first course to start attendance if 'All' is selected, 
-                        // or use the active course.
-                        const course = activeCourse !== 'All'
-                            ? courses.find(c => c.courseCode === activeCourse)
+                        const course = activeCourseId !== 'All'
+                            ? courses.find(c => c.id === activeCourseId)
                             : courses[0];
 
                         if (course) {
@@ -310,7 +337,7 @@ export default function SpaceFeedScreen() {
                 visible={showCreateSheet}
                 onClose={() => setShowCreateSheet(false)}
                 postType={selectedPostType}
-                courseCode={activeCourse !== 'All' ? activeCourse : courses[0]?.courseCode || ''}
+                courseCode={activeCourseId !== 'All' ? courses.find(c => c.id === activeCourseId)?.courseCode || '' : courses[0]?.courseCode || ''}
                 onSubmit={handleCreatePost}
                 loading={createLoading}
             />
@@ -323,133 +350,190 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: Colors.background,
     },
-    header: {
+    navHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: Spacing.screenPadding,
-        paddingTop: Spacing.md,
-        paddingBottom: Spacing.sm,
+        paddingHorizontal: Spacing.sm,
+        paddingTop: Platform.OS === 'ios' ? 0 : 10,
+        height: 56,
     },
-    backBtn: {
-        width: 40,
-        height: 40,
+    headerIconButton: {
+        width: 44,
+        height: 44,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    headerContent: {
+    navTitleContainer: {
         flex: 1,
-        marginLeft: Spacing.sm,
+        alignItems: 'center',
     },
-    spaceName: {
-        fontSize: 18,
+    navTitle: {
+        fontSize: 17,
         fontFamily: 'DMSans_700Bold',
         color: Colors.textPrimary,
     },
-    spaceCode: {
-        ...Typography.label,
+    navSubtitle: {
+        fontSize: 11,
+        fontFamily: 'DMSans_500Medium',
         color: Colors.textSecondary,
-        marginTop: 2,
     },
-    filterRow: {
-        maxHeight: 44,
-        marginTop: Spacing.sm,
-    },
-    typeFilterRow: {
-        maxHeight: 36,
-        marginTop: Spacing.xs,
+    filterContainer: {
+        paddingTop: Spacing.sm,
+        paddingBottom: Spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border + '20',
     },
     filterContent: {
         paddingHorizontal: Spacing.screenPadding,
         gap: 8,
     },
     filterPill: {
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
-        borderRadius: Spacing.pillRadius,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
         backgroundColor: Colors.surface,
         borderWidth: 1,
         borderColor: Colors.border + '40',
     },
     filterPillActive: {
-        backgroundColor: Colors.accentBlue,
-        borderColor: Colors.accentBlue,
+        backgroundColor: Colors.primaryBlue,
+        borderColor: Colors.primaryBlue,
     },
     filterPillText: {
-        ...Typography.label,
+        fontSize: 13,
+        fontFamily: 'DMSans_600SemiBold',
         color: Colors.textSecondary,
     },
     filterPillTextActive: {
         color: Colors.white,
     },
-    typeFilterPill: {
-        paddingHorizontal: Spacing.md,
-        paddingVertical: 6,
-        borderRadius: Spacing.pillRadius,
-        backgroundColor: Colors.surface,
+    typeFilterRow: {
+        marginTop: 10,
     },
-    typeFilterPillText: {
-        ...Typography.label,
-        color: Colors.textSecondary,
-        fontSize: 11,
+    typeFilterPill: {
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    typeFilterPillActive: {
+        backgroundColor: Colors.primaryBlue + '10',
+    },
+    typeFilterText: {
+        fontSize: 12,
+        fontFamily: 'DMSans_500Medium',
+        color: Colors.textTertiary,
+    },
+    typeFilterTextActive: {
+        color: Colors.primaryBlue,
+        fontFamily: 'DMSans_700Bold',
+    },
+    listContainer: {
+        flex: 1,
     },
     feedContent: {
         padding: Spacing.screenPadding,
         paddingBottom: 100,
     },
     activeSessionsContainer: {
-        paddingHorizontal: Spacing.screenPadding,
-        marginTop: Spacing.md,
+        marginBottom: Spacing.lg,
         gap: 8,
     },
     sessionBanner: {
-        backgroundColor: Colors.primaryBlue,
-        borderRadius: 12,
-        padding: 12,
+        backgroundColor: Colors.error, // Use error (red) for live pulse feel
+        borderRadius: 16,
+        padding: 16,
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: Colors.primaryBlue,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 4,
+        ...Platform.select({
+            ios: {
+                shadowColor: Colors.error,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 10,
+            },
+            android: {
+                elevation: 6,
+            },
+        }),
     },
-    sessionIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: 'rgba(255,255,255,0.2)',
+    sessionPulse: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: 'rgba(255,255,255,0.4)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
+    },
+    pulseInner: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: Colors.white,
     },
     sessionInfo: {
         flex: 1,
     },
     sessionTitle: {
-        ...Typography.buttonText,
         fontSize: 14,
+        fontFamily: 'DMSans_700Bold',
         color: Colors.white,
     },
     sessionSubtitle: {
-        ...Typography.label,
         fontSize: 11,
+        fontFamily: 'DMSans_500Medium',
         color: 'rgba(255,255,255,0.8)',
-        marginTop: 2,
+    },
+    quickAccessRow: {
+        paddingHorizontal: Spacing.screenPadding,
+        paddingVertical: 12,
+        backgroundColor: Colors.background,
+    },
+    materialsBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: Colors.surface,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: Colors.border + '15',
+    },
+    materialsIconBox: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: Colors.primaryBlue + '10',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10,
+    },
+    materialsText: {
+        flex: 1,
+        fontSize: 14,
+        fontFamily: 'DMSans_600SemiBold',
+        color: Colors.textPrimary,
     },
     fab: {
         position: 'absolute',
-        bottom: 20,
-        right: 20,
-        width: Spacing.fabSize,
-        height: Spacing.fabSize,
-        borderRadius: Spacing.fabSize / 2,
-        backgroundColor: Colors.accentBlue,
+        bottom: 30,
+        right: 25,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: Colors.primaryBlue,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: Colors.accentBlue,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
+        zIndex: 10,
+        ...Platform.select({
+            ios: {
+                shadowColor: Colors.primaryBlue,
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.4,
+                shadowRadius: 10,
+            },
+            android: {
+                elevation: 8,
+            },
+        }),
     },
 });

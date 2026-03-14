@@ -15,30 +15,28 @@ import { User, UserRole } from '../types';
  * Register a new user with email/password and create their Firestore profile.
  */
 export async function registerUser(
-    email: string,
-    password: string,
     fullName: string,
+    email: string,
     university: string,
-    role: UserRole
-): Promise<User> {
+    role: UserRole,
+    password: string
+): Promise<FirebaseUser> {
+    // 1. Create Firebase Auth user
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     const uid = credential.user.uid;
 
-    const userData: User = {
+    // 2. Write user doc to Firestore IMMEDIATELY
+    await setDoc(doc(db, 'users', uid), {
         uid,
         fullName,
         email,
         university,
         role,
-        createdAt: new Date(),
-    };
-
-    await setDoc(doc(db, 'users', uid), {
-        ...userData,
         createdAt: serverTimestamp(),
+        fcmToken: null,
     });
 
-    return userData;
+    return credential.user;
 }
 
 /**

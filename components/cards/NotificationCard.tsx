@@ -12,33 +12,20 @@ interface NotificationCardProps {
     onPress?: () => void;
 }
 
-const typeColors: Record<string, string> = {
-    lecture: Colors.accentBlue,
-    assignment: Colors.warning,
-    test: Colors.error,
-    note: Colors.success,
-    announcement: Colors.primaryBlue,
-    cancellation: Colors.error,
-    course_added: Colors.accentBlue,
-    course_auto_added: Colors.carryover,
-    lecturer_assigned: Colors.success,
-};
-
-const typeIcons: Record<string, string> = {
-    lecture: 'book',
-    assignment: 'document-text',
-    test: 'clipboard',
-    note: 'pushpin',
-    announcement: 'megaphone',
-    cancellation: 'close-circle',
-    course_added: 'add-circle',
-    course_auto_added: 'refresh-circle',
-    lecturer_assigned: 'person-add',
+const typeConfig: Record<string, { color: string; icon: string }> = {
+    lecture: { color: Colors.primaryBlue, icon: 'book' },
+    assignment: { color: Colors.warning, icon: 'document-text' },
+    test: { color: Colors.error, icon: 'clipboard' },
+    note: { color: Colors.success, icon: 'bookmark' },
+    announcement: { color: Colors.accentBlue, icon: 'megaphone' },
+    cancellation: { color: Colors.error, icon: 'close-circle' },
+    course_added: { color: Colors.primaryBlue, icon: 'add-circle' },
+    course_auto_added: { color: Colors.carryover, icon: 'refresh-circle' },
+    lecturer_assigned: { color: Colors.success, icon: 'person-add' },
 };
 
 export default function NotificationCard({ notification, onPress }: NotificationCardProps) {
-    const color = typeColors[notification.type] || Colors.accentBlue;
-    const iconName = typeIcons[notification.type] || 'notifications';
+    const config = typeConfig[notification.type] || { color: Colors.primaryBlue, icon: 'notifications' };
 
     return (
         <TouchableOpacity
@@ -47,17 +34,32 @@ export default function NotificationCard({ notification, onPress }: Notification
                 !notification.isRead && styles.unread,
             ]}
             onPress={onPress}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
         >
-            <View style={styles.row}>
-                {notification.isCarryover && <View style={styles.carryoverDot} />}
-                <View style={[styles.iconCircle, { backgroundColor: color + '20' }]}>
-                    <Ionicons name={iconName as keyof typeof Ionicons.glyphMap} size={20} color={color} />
+            <View style={styles.container}>
+                <View style={[styles.iconContainer, { backgroundColor: config.color + '15' }]}>
+                    <Ionicons name={config.icon as any} size={20} color={config.color} />
                 </View>
                 <View style={styles.content}>
-                    <Text style={styles.title} numberOfLines={2}>{notification.title}</Text>
-                    <Text style={styles.body} numberOfLines={1}>{notification.body}</Text>
-                    <Text style={styles.time}>{formatRelativeTime(notification.createdAt)}</Text>
+                    <View style={styles.headerRow}>
+                        <Text style={styles.title} numberOfLines={1}>
+                            {notification.title}
+                        </Text>
+                        {!notification.isRead && <View style={styles.unreadDot} />}
+                    </View>
+                    <Text style={styles.body} numberOfLines={2}>
+                        {notification.body}
+                    </Text>
+                    <View style={styles.footer}>
+                        <Text style={styles.time}>
+                            {formatRelativeTime(notification.createdAt)}
+                        </Text>
+                        {notification.isCarryover && (
+                            <View style={styles.carryoverBadge}>
+                                <Text style={styles.carryoverText}>CARRYOVER</Text>
+                            </View>
+                        )}
+                    </View>
                 </View>
             </View>
         </TouchableOpacity>
@@ -67,48 +69,73 @@ export default function NotificationCard({ notification, onPress }: Notification
 const styles = StyleSheet.create({
     card: {
         paddingHorizontal: Spacing.screenPadding,
-        paddingVertical: Spacing.md,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '40',
+        paddingVertical: 14,
+        backgroundColor: Colors.background,
     },
     unread: {
-        backgroundColor: Colors.subtleFill,
+        backgroundColor: Colors.primaryBlue + '05',
     },
-    row: {
+    container: {
         flexDirection: 'row',
         alignItems: 'flex-start',
     },
-    carryoverDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: Colors.carryover,
-        marginRight: Spacing.xs,
-        marginTop: 8,
-    },
-    iconCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+    iconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: Spacing.md,
+        marginRight: 12,
+        marginTop: 2,
     },
     content: {
         flex: 1,
     },
-    title: {
-        ...Typography.sectionHeader,
-        color: Colors.textPrimary,
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 2,
     },
+    title: {
+        fontSize: 16,
+        fontFamily: 'DMSans_700Bold',
+        color: Colors.textPrimary,
+        flex: 1,
+        marginRight: 8,
+    },
+    unreadDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: Colors.primaryBlue,
+    },
     body: {
-        ...Typography.body,
+        fontSize: 14,
+        fontFamily: 'DMSans_400Regular',
         color: Colors.textSecondary,
-        marginBottom: Spacing.xs,
+        lineHeight: 18,
+        marginBottom: 8,
+    },
+    footer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     time: {
-        ...Typography.label,
-        color: Colors.textSecondary,
+        fontSize: 11,
+        fontFamily: 'DMSans_500Medium',
+        color: Colors.textTertiary,
+    },
+    carryoverBadge: {
+        backgroundColor: Colors.carryover + '15',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    carryoverText: {
+        fontSize: 9,
+        fontFamily: 'DMSans_700Bold',
+        color: Colors.carryover,
     },
 });

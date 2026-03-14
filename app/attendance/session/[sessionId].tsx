@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, FlatList, ActivityIndicator, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../constants/colors';
@@ -181,11 +181,13 @@ export default function SessionScreen() {
         return (
             <View style={styles.container}>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()}>
-                        <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                    <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backBtn}>
+                        <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Scan Attendance</Text>
-                    <View style={{ width: 24 }} />
+                    <View style={styles.headerTitleContainer}>
+                        <Text style={styles.headerTitle}>Scan Attendance</Text>
+                    </View>
+                    <View style={{ width: 44 }} />
                 </View>
 
                 {hasAlreadyScanned ? (
@@ -196,6 +198,7 @@ export default function SessionScreen() {
                         <TouchableOpacity
                             style={styles.backButton}
                             onPress={() => router.back()}
+                            activeOpacity={0.7}
                         >
                             <Text style={styles.backButtonText}>Back to Course</Text>
                         </TouchableOpacity>
@@ -208,6 +211,7 @@ export default function SessionScreen() {
                         <TouchableOpacity
                             style={styles.backButton}
                             onPress={() => router.back()}
+                            activeOpacity={0.7}
                         >
                             <Text style={styles.backButtonText}>Go Back</Text>
                         </TouchableOpacity>
@@ -231,11 +235,11 @@ export default function SessionScreen() {
         <View style={styles.container}>
             {/* Top Bar */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backBtn}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Attendance — {session.courseCode}</Text>
-                <TouchableOpacity onPress={handleEndSession}>
+                <TouchableOpacity onPress={handleEndSession} activeOpacity={0.7} style={styles.endBtn}>
                     <Text style={styles.endText}>End</Text>
                 </TouchableOpacity>
             </View>
@@ -263,7 +267,7 @@ export default function SessionScreen() {
                         <Text style={styles.counterValue}>{session.presentCount || 0}</Text>
                     </View>
 
-                    <TouchableOpacity style={styles.listLink} onPress={fetchRecords}>
+                    <TouchableOpacity style={styles.listLink} onPress={fetchRecords} activeOpacity={0.7}>
                         <Text style={styles.listLinkText}>View live list</Text>
                         <Ionicons name="chevron-forward" size={16} color={Colors.primaryBlue} />
                     </TouchableOpacity>
@@ -275,6 +279,7 @@ export default function SessionScreen() {
                     onPress={handleEndSession}
                     disabled={!session.isActive}
                     style={[styles.endButton, !session.isActive && { opacity: 0.5 }]}
+                    activeOpacity={0.7}
                 >
                     <Text style={styles.endButtonText}>
                         {session.isActive ? 'End Session' : 'Session Ended'}
@@ -293,7 +298,7 @@ export default function SessionScreen() {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Present Students ({records.length})</Text>
-                            <TouchableOpacity onPress={() => setShowLiveList(false)}>
+                            <TouchableOpacity onPress={() => setShowLiveList(false)} activeOpacity={0.7} style={styles.closeBtn}>
                                 <Ionicons name="close" size={24} color={Colors.textPrimary} />
                             </TouchableOpacity>
                         </View>
@@ -333,16 +338,23 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    header: {
-        flexDirection: 'row',
+    backBtn: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingTop: 60,
-        paddingBottom: 20,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.border,
+    },
+    endBtn: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    closeBtn: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerTitle: {
         ...Typography.sectionHeader,
@@ -412,6 +424,20 @@ const styles = StyleSheet.create({
         fontSize: 24,
         color: Colors.primaryBlue,
     },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingTop: Platform.OS === 'ios' ? 0 : 10,
+        height: 56,
+        backgroundColor: Colors.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border + '15',
+    },
+    headerTitleContainer: {
+        flex: 1,
+        alignItems: 'center',
+    },
     listLink: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -462,7 +488,7 @@ const styles = StyleSheet.create({
         color: Colors.textPrimary,
     },
     listContent: {
-        paddingBottom: 40,
+        paddingBottom: 100,
     },
     recordRow: {
         flexDirection: 'row',

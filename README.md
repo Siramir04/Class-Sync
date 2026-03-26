@@ -1,26 +1,31 @@
-# ClassSync
+# ClassSync 🚀
 
 ClassSync is a modern, real-time class management and notification mobile application built with React Native and Expo. It helps university students stay on top of their academic schedules, receive instant updates from class monitors, and manage carryover courses seamlessly.
 
-## 🚀 Features
+## 🌟 Key Features (v2.5+)
 
-- **Premium UI Overhaul (v2.4)**: Pixel-perfect redesign following Apple's Human Interface Guidelines.
-- **Proximity Attendance Verification**: Automatic, fraud-proof attendance using Bluetooth (BLE) and WiFi proximity.
-- **Real-time Notifications**: Get instant push alerts for lecture changes, assignments, tests, and announcements with special high-priority support for important notices.
-- **Unified Class Spaces**: Join a "Space" dedicated to your specific level or department.
-- **Dynamic Schedule**: A custom 7-day visual timeline showing all your upcoming lectures and events.
+- **Premium iOS UI/UX**: Pixel-perfect redesign following Apple's Human Interface Guidelines. Fluid animations and intuitive layouts.
+- **Advanced Identity System**: Unified `username`-based student profiles for easier space joining and attendance tracking.
+- **Robust RBAC (Role-Based Access Control)**: Tieredly manage spaces with Monitors, Assistant Monitors, Lecturers, and Students.
+- **Hybrid Proximity Attendance**: Dynamic QR codes refreshing every 60s, Bluetooth BLE scanning, and 6-digit backup codes.
+- **Excel Attendance Reports**: Monitors can instantly export high-quality, aggregated student attendance data to Excel/XLSX.
+- **Real-time Notifications**: Instant push alerts for lecture changes, assignments, tests, and announcements with special high-priority support.
+- **Dynamic Timeline**: A custom 7-day visual timeline showing all your upcoming lectures and events.
 - **Carryover Support**: Unique ability to join individual courses from different levels without joining the entire level's space.
-- **Role Management**: Monitors can create and manage posts, track read receipts, and manage attendance from a centralized command center.
 
-For more technical details on attendance verification, see [Proximity Attendance Docs](./docs/PROXIMITY_ATTENDANCE.md).
+## 📖 Documentation
+
+- [**IDENTITY & RBAC Docs**](./docs/IDENTITY_AND_RBAC.md): Deep dive into permissions and roles.
+- [**PROXIMITY ATTENDANCE Docs**](./docs/PROXIMITY_ATTENDANCE.md): Details on the anti-fraud attendance verification.
 
 ## 🛠 Tech Stack
 
-- **Frontend**: React Native, Expo, TypeScript
+- **Frontend**: React Native, Expo (SDK 54), TypeScript
 - **State Management**: Zustand
 - **Navigation**: Expo Router (File-based)
-- **Backend**: Firebase (Authentication, Firestore)
-- **Styling**: Vanilla React Native StyleSheet with custom design tokens
+- **Backend**: Firebase (Auth, Firestore, Storage)
+- **Attendance Logic**: BLE Advertisers & Scanning, JWT-based Dynamic QR
+- **Utilities**: `xlsx` (Excel Export), `expo-sharing`, `date-fns`
 
 ## 📦 Installation & Setup
 
@@ -36,7 +41,7 @@ For more technical details on attendance verification, see [Proximity Attendance
    ```
 
 3. **Firebase Configuration**:
-   The app is currently configured with a Firebase instance. To use your own:
+   The app is currently configured with a demo Firebase instance. To use your own:
    - Create a project on [Firebase Console](https://console.firebase.google.com/).
    - Enable Authentication and Firestore.
    - Update `config/firebase.ts` with your credentials.
@@ -47,9 +52,9 @@ For more technical details on attendance verification, see [Proximity Attendance
    ```
    Scan the QR code with the **Expo Go** app on your physical device.
 
-## 📱 Screenshots & Media
+## 📱 Project Maintenance
 
-Access project walkthroughs and design documents in the [walkthrough.md](./walkthrough.md) (if available in your local environment) or check the project documentation artifacts.
+This project follows strict iOS-native design guidelines. All styles use the centralized `constants/colors.ts` and `constants/typography.ts`.
 
 ## 📄 License
 

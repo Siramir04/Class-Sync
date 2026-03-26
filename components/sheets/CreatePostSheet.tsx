@@ -11,7 +11,7 @@ import {
     StatusBar,
 } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { PostType } from '../../types';
 import Input from '../ui/Input';

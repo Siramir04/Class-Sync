@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Tag, TagType } from '../ui/Tag';
 import { Post } from '../../types';
@@ -55,6 +55,13 @@ export default function PostCard({
           pressed && { transform: [{ scale: 0.98 }] }
         ]}
       >
+        {post.isPinned && (
+          <View style={styles.pinnedBanner}>
+            <LucideIcons.Pin size={11} color={Colors.accentBlue} />
+            <Text style={styles.pinnedText}>PINNED</Text>
+          </View>
+        )}
+
         {post.isImportant && (
           <View style={styles.importantBanner}>
             <LucideIcons.Info size={11} color={Colors.error} />
@@ -97,10 +104,20 @@ export default function PostCard({
         <View style={styles.bottomRow}>
           <View style={styles.authorSection}>
             <Text style={styles.authorName} numberOfLines={1}>{post.authorName}</Text>
-            <Tag 
-              label={post.authorRole || 'Student'} 
-              type={post.authorRole === 'monitor' ? 'monitor' : post.authorRole === 'lecturer' ? 'lecturer' : 'lecture'} 
-            />
+            {post.authorRole && post.authorRole !== 'student' && (
+              <View style={[
+                styles.roleBadge,
+                post.authorRole === 'monitor' && { backgroundColor: '#1A3C6E' },
+                post.authorRole === 'assistant_monitor' && { backgroundColor: '#64748B' },
+                post.authorRole === 'lecturer' && { backgroundColor: Colors.success }
+              ]}>
+                <Text style={styles.roleBadgeText}>
+                  {post.authorRole === 'monitor' ? 'Monitor' : 
+                   post.authorRole === 'assistant_monitor' ? 'Asst. Monitor' : 
+                   post.authorRole === 'lecturer' ? 'Lecturer' : ''}
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={{ marginLeft: 'auto' }}>
@@ -188,6 +205,25 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     fontFamily: Typography.family.bold,
   },
+  pinnedBanner: {
+    backgroundColor: Colors.accentBlueSoft,
+    marginHorizontal: -12,
+    marginTop: -12,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  pinnedText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.accentBlue,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    fontFamily: Typography.family.bold,
+  },
   cancelledBanner: {
     backgroundColor: Colors.errorSoft,
     borderRadius: 7,
@@ -249,6 +285,18 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     maxWidth: '50%',
     fontFamily: Typography.family.regular,
+  },
+  roleBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  roleBadgeText: {
+    fontSize: 8,
+    color: 'white',
+    fontWeight: '700',
+    fontFamily: Typography.family.bold,
+    textTransform: 'uppercase',
   },
   alarmButton: {
     flexDirection: 'row',

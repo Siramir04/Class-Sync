@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors } from '../constants/Colors';
+import { Colors } from '../constants/colors';
 import { Typography } from '../constants/typography';
 import * as LucideIcons from 'lucide-react-native';
 

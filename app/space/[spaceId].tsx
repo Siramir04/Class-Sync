@@ -15,12 +15,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { useAuthStore } from '../../store/authStore';
 import { useCourses } from '../../hooks/useCourses';
 import { getPostsBySpace, createPost } from '../../services/postService';
 import { getSpaceById, subscribeToSpaceMembers } from '../../services/spaceService';
+import { useSpaceRole } from '../../hooks/useSpaceRole';
 import { Avatar } from '../../components/ui/Avatar';
 import PostCard from '../../components/cards/PostCard';
 import PostTypeSheet from '../../components/sheets/PostTypeSheet';
@@ -57,8 +58,13 @@ export default function SpaceFeedScreen() {
     const [createLoading, setCreateLoading] = useState(false);
     const [activeSessions, setActiveSessions] = useState<AttendanceSession[]>([]);
 
-    const isMonitor = user?.uid === space?.monitorUid || user?.uid === space?.assistantMonitorUid;
-    const isLecturer = user?.role === 'lecturer';
+    const { 
+        role, 
+        isMonitor, 
+        isAssistant, 
+        isLecturer, 
+    } = useSpaceRole(spaceId!);
+    const canPost = !!role;
 
     useEffect(() => {
         if (!spaceId) return;
@@ -238,7 +244,7 @@ export default function SpaceFeedScreen() {
         />
 
         {/* Create FAB */}
-        {(isMonitor || isLecturer) && (
+        {canPost && (
           <Pressable 
             onPress={() => setShowPostTypeSheet(true)}
             style={({ pressed }) => [
@@ -267,6 +273,7 @@ export default function SpaceFeedScreen() {
                     setShowCreateSheet(true);
                 }
             }}
+            isStudent={role === 'student'}
         />
 
         <CreatePostSheet

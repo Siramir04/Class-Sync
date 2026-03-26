@@ -20,8 +20,12 @@ import EmptyState from '../../components/ui/EmptyState';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import PostTypeSheet from '../../components/sheets/PostTypeSheet';
 import CreatePostSheet, { CreatePostData } from '../../components/sheets/CreatePostSheet';
-import { PostType, Course } from '../../types';
-import { createPost } from '../../services/postService';
+import { PostType, Course, UserRole } from '../../types';
+import { createPost, updatePostPinStatus } from '../../services/postService';
+import { useSpaceRole } from '../../hooks/useSpaceRole';
+import MemberPickerSheet from '../../components/sheets/MemberPickerSheet';
+import { assignLecturer as assignLecturerService } from '../../services/courseService';
+import * as LucideIcons from 'lucide-react-native';
 
 export default function CourseFeedScreen() {
     const { spaceId, courseId } = useLocalSearchParams<{
@@ -37,10 +41,13 @@ export default function CourseFeedScreen() {
 
     const [showPostTypeSheet, setShowPostTypeSheet] = useState(false);
     const [showCreateSheet, setShowCreateSheet] = useState(false);
+    const [showPicker, setShowPicker] = useState(false);
     const [selectedPostType, setSelectedPostType] = useState<PostType>('lecture');
 
-    const isMonitor = user?.role === 'monitor' || user?.role === 'assistant_monitor';
-    const isLecturer = user?.uid === course?.lecturerUid;
+    const { role, isMonitor, isAssistant, isLecturer } = useSpaceRole(spaceId || '');
+    
+    // Permission to post: Monitor, Asst, Lecturer, OR Student (for Note/Link)
+    const canPost = isMonitor || isAssistant || isLecturer || (role === 'student');
 
     useEffect(() => {
         loadCourse();
@@ -104,11 +111,21 @@ export default function CourseFeedScreen() {
 
             {/* Course info bar */}
             <View style={styles.infoBar}>
-                {course?.lecturerName && (
+                <View style={styles.lecturerRow}>
                     <Text style={styles.infoText}>
-                        👨‍🏫 {course.lecturerName}
+                        👨‍🏫 {course?.lecturerName || 'No lecturer assigned'}
                     </Text>
-                )}
+                    {isMonitor && (
+                        <TouchableOpacity 
+                            onPress={() => setShowPicker(true)} 
+                            style={styles.manageBtn}
+                        >
+                            <Text style={styles.manageText}>
+                                {course?.lecturerUid ? 'Change' : 'Assign'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
                 <Text style={styles.infoText}>
                     {course?.fullCode}
                 </Text>
@@ -139,16 +156,31 @@ export default function CourseFeedScreen() {
                 />
             )}
 
-            {/* FAB for Monitor / Lecturer */}
-            {(isMonitor || isLecturer) && (
+            {/* FAB for Permitted Users */}
+            {canPost && (
                 <TouchableOpacity
                     style={styles.fab}
                     onPress={() => setShowPostTypeSheet(true)}
                     activeOpacity={0.8}
                 >
-                    <Ionicons name="add" size={28} color={Colors.white} />
+                    <LucideIcons.Plus size={28} color="#FFFFFF" />
                 </TouchableOpacity>
             )}
+
+            <MemberPickerSheet 
+                visible={showPicker}
+                onClose={() => setShowPicker(false)}
+                spaceId={spaceId || ''}
+                onSelect={async (lecturer) => {
+                    if (!spaceId || !courseId) return;
+                    try {
+                        await assignLecturerService(spaceId, courseId, lecturer.uid, lecturer.fullName);
+                        loadCourse(); // Refresh
+                    } catch (error) {
+                        console.error("Error assigning lecturer:", error);
+                    }
+                }}
+            />
 
             <PostTypeSheet
                 visible={showPostTypeSheet}
@@ -157,7 +189,9 @@ export default function CourseFeedScreen() {
                     setSelectedPostType(type);
                     setShowCreateSheet(true);
                 }}
-                filterToLecture={isLecturer}
+                // Lecturers can only create lectures/materials
+                filterToLecture={isLecturer && !isMonitor && !isAssistant}
+                isStudent={role === 'student'}
             />
 
             <CreatePostSheet
@@ -180,8 +214,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: Spacing.screenPadding,
-        paddingTop: Spacing.md,
-        paddingBottom: Spacing.sm,
+        paddingTop: 16,
+        paddingBottom: 8,
     },
     backBtn: {
         width: 40,
@@ -191,10 +225,11 @@ const styles = StyleSheet.create({
     },
     headerContent: {
         flex: 1,
-        marginLeft: Spacing.sm,
+        marginLeft: 12,
     },
     courseCode: {
-        ...Typography.codeDisplay,
+        fontSize: Typography.size.md,
+        fontFamily: Typography.family.bold,
         color: Colors.accentBlue,
     },
     courseName: {
@@ -206,12 +241,31 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing.screenPadding,
-        paddingVertical: Spacing.sm,
-        backgroundColor: Colors.subtleFill,
+        paddingVertical: 10,
+        backgroundColor: Colors.surfaceSecondary,
     },
     infoText: {
-        ...Typography.label,
+        fontSize: Typography.size.sm,
+        fontFamily: Typography.family.medium,
         color: Colors.textSecondary,
+    },
+    lecturerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    manageBtn: {
+        backgroundColor: Colors.accentBlueSoft,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    manageText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: Colors.accentBlue,
+        fontFamily: Typography.family.bold,
+        textTransform: 'uppercase',
     },
     feedContent: {
         padding: Spacing.screenPadding,
@@ -221,9 +275,9 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 20,
         right: 20,
-        width: Spacing.fabSize,
-        height: Spacing.fabSize,
-        borderRadius: Spacing.fabSize / 2,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         backgroundColor: Colors.accentBlue,
         justifyContent: 'center',
         alignItems: 'center',

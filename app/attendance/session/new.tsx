@@ -16,14 +16,14 @@ import { Spacing } from '../../../constants/spacing';
 import { startSession } from '../../../services/attendanceService';
 import { proximityService } from '../../../services/proximityService';
 import { useAuthStore } from '../../../store/authStore';
-import Button from '../../../components/ui/Button';
+import { Button } from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 
 /**
  * Attendance Session Creation Screen
- * Replaces the missing app/attendance/session/new.tsx
+ * Final confirmation before starting a session for a course.
  */
 export default function NewSessionScreen() {
     const { courseId, spaceId, courseCode, courseName } = useLocalSearchParams<{
@@ -41,20 +41,18 @@ export default function NewSessionScreen() {
 
         setLoading(true);
         try {
-            // Phase 3: Check if Bluetooth is available before starting
-            // Note: On actual device this checks if BT is on. 
-            // If it fails (e.g. permission denied or off), we show advisory.
+            // Phase 3: Check permissions
             const btPermission = await proximityService.requestProximityPermissions();
             
             if (!btPermission) {
                 Alert.alert(
                     'Bluetooth Required',
-                    'ClassSync needs Bluetooth to verify proximity. Attendance will continue with code verification only.',
-                    [{ text: 'Continue with code only' }]
+                    'ClassSync needs Bluetooth to verify proximity accurately. Attendance will fall back to code verification if needed.',
+                    [{ text: 'Continue' }]
                 );
             }
 
-            // Fetch total members for this course to initialize stats
+            // Fetch total members for this course
             const membersRef = collection(db, `spaces/${spaceId}/courses/${courseId}/members`);
             const membersSnap = await getDocs(membersRef);
             const totalMembers = membersSnap.size;
@@ -65,11 +63,14 @@ export default function NewSessionScreen() {
                 courseCode || '',
                 decodeURIComponent(courseName || ''),
                 user.uid,
-                totalMembers
+                totalMembers || 50
             );
             
             // Redirect to the live session screen
-            router.replace(`/attendance/${sessionId}?spaceId=${spaceId}&courseId=${courseId}`);
+            router.replace({
+                pathname: `/attendance/session/[sessionId]`,
+                params: { sessionId, spaceId, courseId }
+            });
         } catch (error: any) {
             console.error('Failed to start session:', error);
             Alert.alert('Error', error.message || 'Could not start attendance session.');
@@ -98,13 +99,13 @@ export default function NewSessionScreen() {
 
                 <Card style={styles.instructionCard}>
                     <View style={styles.instructionRow}>
-                        <View style={[styles.iconBox, { backgroundColor: Colors.primaryBlue + '10' }]}>
-                            <Ionicons name="qr-code" size={20} color={Colors.primaryBlue} />
+                        <View style={[styles.iconBox, { backgroundColor: Colors.accentBlue + '10' }]}>
+                            <Ionicons name="qr-code" size={20} color={Colors.accentBlue} />
                         </View>
                         <View style={styles.instructionTextContent}>
                             <Text style={styles.instructionTitle}>Dynamic QR Code</Text>
                             <Text style={styles.instructionSubtitle}>
-                                A secure QR code will be generated. It refreshes every 60 seconds to prevent spoofing.
+                                A secure QR code refreshing every 60 seconds with proximity verification.
                             </Text>
                         </View>
                     </View>
@@ -114,9 +115,9 @@ export default function NewSessionScreen() {
                             <Ionicons name="people" size={20} color={Colors.success} />
                         </View>
                         <View style={styles.instructionTextContent}>
-                            <Text style={styles.instructionTitle}>Live List</Text>
+                            <Text style={styles.instructionTitle}>Live Updates</Text>
                             <Text style={styles.instructionSubtitle}>
-                                See students join the session in real-time as they scan the code.
+                                Track student attendance in real-time as they join the session nearby.
                             </Text>
                         </View>
                     </View>
@@ -125,12 +126,12 @@ export default function NewSessionScreen() {
                 <View style={styles.warningBox}>
                     <Ionicons name="information-circle-outline" size={20} color={Colors.textTertiary} />
                     <Text style={styles.warningText}>
-                        Students must be present physically to scan the code from your device.
+                        Students must be physically present to scan the code from your device.
                     </Text>
                 </View>
 
                 <Button
-                    title="Generate QR & Start Session"
+                    label="Generate QR & Start Session"
                     onPress={handleStartSession}
                     loading={loading}
                     style={styles.actionButton}
@@ -151,6 +152,9 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 8,
         height: 56,
+        backgroundColor: Colors.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.separator,
     },
     headerButton: {
         width: 44,
@@ -160,7 +164,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 17,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     content: {
@@ -174,21 +178,21 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 11,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textTertiary,
         letterSpacing: 1.2,
         marginBottom: 8,
     },
     courseTitle: {
         fontSize: 22,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
         textAlign: 'center',
     },
     courseCode: {
         fontSize: 15,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.primaryBlue,
+        fontFamily: Typography.family.semiBold,
+        color: Colors.accentBlue,
         marginTop: 4,
     },
     instructionCard: {
@@ -212,13 +216,13 @@ const styles = StyleSheet.create({
     },
     instructionTitle: {
         fontSize: 16,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
         marginBottom: 4,
     },
     instructionSubtitle: {
         fontSize: 13,
-        fontFamily: 'DMSans_400Regular',
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
         lineHeight: 18,
     },
@@ -232,7 +236,7 @@ const styles = StyleSheet.create({
     warningText: {
         flex: 1,
         fontSize: 13,
-        fontFamily: 'DMSans_500Medium',
+        fontFamily: Typography.family.medium,
         color: Colors.textTertiary,
     },
     actionButton: {

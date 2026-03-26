@@ -19,7 +19,6 @@ import { markAsRead, markAllAsRead } from '../services/notificationService';
 import { useAuthStore } from '../store/authStore';
 import NotificationCard from '../components/cards/NotificationCard';
 import EmptyState from '../components/ui/EmptyState';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { AppNotification } from '../types';
 
 export default function NotificationsScreen() {
@@ -86,7 +85,7 @@ export default function NotificationsScreen() {
                     style={[styles.markReadBtn, { opacity: anyUnread ? 1 : 0.3 }]}
                     activeOpacity={0.7}
                 >
-                    <Ionicons name="checkmark-done" size={22} color={Colors.primaryBlue} />
+                    <Ionicons name="checkmark-done" size={22} color={Colors.accentBlue} />
                 </TouchableOpacity>
             </View>
 
@@ -137,7 +136,7 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
         backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '15',
+        borderBottomColor: Colors.separator,
     },
     backBtn: {
         width: 44,
@@ -152,7 +151,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerTitle: {
-        ...Typography.sectionHeader,
+        fontSize: Typography.size.title3,
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     sectionHeader: {
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 13,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textTertiary,
         textTransform: 'uppercase',
         letterSpacing: 1.2,
@@ -173,8 +173,8 @@ const styles = StyleSheet.create({
     },
     separator: {
         height: 1,
-        backgroundColor: Colors.border + '15',
-        marginLeft: 72, // Align with content to the right of icon container (44 + 12 + screenPadding) -> screenPadding is 20, icon total is 56. 72 is good margin.
+        backgroundColor: Colors.separator,
+        marginLeft: 72, 
     },
     emptyContainer: {
         flex: 1,

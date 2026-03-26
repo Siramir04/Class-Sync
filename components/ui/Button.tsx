@@ -7,7 +7,7 @@ import {
   ViewStyle, 
   TextStyle 
 } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Spacing } from '../../constants/spacing';
 import * as LucideIcons from 'lucide-react-native';
@@ -122,10 +122,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   labelBase: {
-    fontWeight: '700',
+    fontFamily: Typography.family.bold,
   },
   labelGhost: {
-    fontWeight: '500',
+    fontFamily: Typography.family.medium,
   },
   disabled: {
     opacity: 0.45,

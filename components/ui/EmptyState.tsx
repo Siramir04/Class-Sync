@@ -4,8 +4,10 @@ import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Spacing } from '../../constants/spacing';
 
+import { Ionicons } from '@expo/vector-icons';
+
 interface EmptyStateProps {
-    icon?: string;
+    icon?: keyof typeof Ionicons.glyphMap;
     title: string;
     subtitle?: string;
 }
@@ -13,7 +15,11 @@ interface EmptyStateProps {
 export default function EmptyState({ icon, title, subtitle }: EmptyStateProps) {
     return (
         <View style={styles.container}>
-            {icon ? <Text style={styles.icon}>{icon}</Text> : null}
+            {icon ? (
+                <View style={styles.iconBox}>
+                    <Ionicons name={icon} size={48} color={Colors.textTertiary} />
+                </View>
+            ) : null}
             <Text style={styles.title}>{title}</Text>
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
@@ -24,21 +30,23 @@ const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: Spacing.xxl,
-        paddingHorizontal: Spacing.lg,
+        paddingVertical: 40,
+        paddingHorizontal: 20,
     },
-    icon: {
-        fontSize: 48,
-        marginBottom: Spacing.md,
+    iconBox: {
+        marginBottom: 20,
+        opacity: 0.5,
     },
     title: {
-        ...Typography.sectionHeader,
+        fontSize: 18,
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
         textAlign: 'center',
-        marginBottom: Spacing.sm,
+        marginBottom: 8,
     },
     subtitle: {
-        ...Typography.body,
+        fontSize: 14,
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
         textAlign: 'center',
     },

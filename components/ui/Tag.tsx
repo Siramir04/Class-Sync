@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 
 export type TagType = 
   | 'lecture' | 'assignment' | 'test' | 'note' | 'announcement' 

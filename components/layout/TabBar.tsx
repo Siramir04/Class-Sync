@@ -11,7 +11,7 @@ import {
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/spacing';
 
 const { width } = Dimensions.get('window');

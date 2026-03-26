@@ -11,8 +11,8 @@ import {
     Switch,
     ActivityIndicator,
     Platform,
-    Clipboard,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
@@ -20,6 +20,7 @@ import { Typography } from '../../constants/typography';
 import { Spacing } from '../../constants/spacing';
 import { useAuthStore } from '../../store/authStore';
 import { useCourses } from '../../hooks/useCourses';
+import { useSpaceRole } from '../../hooks/useSpaceRole';
 import { 
     getSpaceById, 
     updateSpace, 
@@ -29,10 +30,8 @@ import {
     promoteToAssistantMonitor 
 } from '../../services/spaceService';
 import { getAttendanceSettings, updateCourseAttendanceSettings } from '../../services/attendanceService';
-import { CourseAttendanceSettings } from '../../types/attendance';
+import { CourseAttendanceSettings } from '../../types';
 import Card from '../../components/ui/Card';
-import Tag from '../../components/ui/Tag';
-import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { Space, CourseMember, Course } from '../../types';
@@ -48,9 +47,25 @@ export default function SpaceManageScreen() {
     const [spaceName, setSpaceName] = useState('');
     const { courses } = useCourses(spaceId || null);
 
+    const { 
+        isMonitor, 
+        isAssistant, 
+        canManageSpace,
+        canDeleteSpace 
+    } = useSpaceRole(spaceId!);
+
     useEffect(() => {
+        if (!spaceId) return;
         loadData();
     }, [spaceId]);
+
+    // Unauthorized Access Redirect
+    useEffect(() => {
+        if (!loading && !canManageSpace) {
+            Alert.alert('Unauthorized', 'You do not have permission to manage this space.');
+            router.back();
+        }
+    }, [loading, canManageSpace]);
 
     const loadData = async () => {
         if (!spaceId) return;
@@ -87,13 +102,18 @@ export default function SpaceManageScreen() {
         });
     };
 
-    const handleCopyCode = () => {
+    const handleCopyCode = async () => {
         if (!space) return;
-        Clipboard.setString(space.spaceCode);
+        await Clipboard.setStringAsync(space.spaceCode);
         Alert.alert('Copied', 'Space code copied to clipboard.');
     };
 
     const handleDeleteSpace = () => {
+        if (!canDeleteSpace) {
+            Alert.alert('Permission Denied', 'Only the Primary Monitor can delete the space.');
+            return;
+        }
+
         Alert.alert(
             'Delete Community Space', 
             'This action is permanent. All posts, attendance records, and member associations will be deleted forever.', 
@@ -116,6 +136,7 @@ export default function SpaceManageScreen() {
     };
 
     if (loading) return <LoadingSpinner fullScreen />;
+    if (!canManageSpace) return null;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -154,7 +175,7 @@ export default function SpaceManageScreen() {
                 <Text style={[styles.sectionLabel, { marginTop: 24 }]}>INVITATION</Text>
                 <Card style={styles.codeCard}>
                     <View style={styles.codeHeader}>
-                        <Ionicons name="people-circle-outline" size={24} color={Colors.primaryBlue} />
+                        <Ionicons name="people-circle-outline" size={24} color={Colors.accentBlue} />
                         <Text style={styles.codeTitle}>Invite Members</Text>
                     </View>
                     <View style={styles.codeBox}>
@@ -162,12 +183,12 @@ export default function SpaceManageScreen() {
                     </View>
                     <View style={styles.codeActions}>
                         <TouchableOpacity style={styles.codeActionBtn} onPress={handleCopyCode} activeOpacity={0.7}>
-                            <Ionicons name="copy-outline" size={20} color={Colors.primaryBlue} />
+                            <Ionicons name="copy-outline" size={20} color={Colors.accentBlue} />
                             <Text style={styles.codeActionText}>Copy</Text>
                         </TouchableOpacity>
                         <View style={styles.verticalDivider} />
                         <TouchableOpacity style={styles.codeActionBtn} onPress={handleShareCode} activeOpacity={0.7}>
-                            <Ionicons name="share-outline" size={20} color={Colors.primaryBlue} />
+                            <Ionicons name="share-outline" size={20} color={Colors.accentBlue} />
                             <Text style={styles.codeActionText}>Share</Text>
                         </TouchableOpacity>
                     </View>
@@ -194,26 +215,36 @@ export default function SpaceManageScreen() {
                     {members.map((member, index) => (
                         <View key={member.uid}>
                             <View style={styles.memberRow}>
-                                <View style={styles.memberAvatar}>
-                                    <Text style={styles.memberInitials}>{member.role.charAt(0).toUpperCase()}</Text>
+                                <View style={[styles.memberAvatar, { backgroundColor: getRoleColor(member.role) + '20' }]}>
+                                    <Ionicons 
+                                        name={member.role === 'student' ? 'person' : 'shield-checkmark'} 
+                                        size={18} 
+                                        color={getRoleColor(member.role)} 
+                                    />
                                 </View>
                                 <View style={styles.memberInfo}>
                                     <Text style={styles.memberName} numberOfLines={1}>
                                         {member.fullName || member.uid}
                                     </Text>
-                                    <Text style={styles.memberRole}>
+                                    <Text style={[styles.memberRole, { color: getRoleColor(member.role) }]}>
                                         {member.role.replace('_', ' ')}
                                     </Text>
                                 </View>
-                                {member.uid !== user?.uid && (
+                                {member.uid !== user?.uid && member.role !== 'monitor' && (
                                     <TouchableOpacity 
                                         style={styles.moreBtn}
                                         onPress={() => {
-                                            Alert.alert('Manage Member', member.fullName || member.uid, [
-                                                { text: 'Make Assistant Monitor', onPress: () => promoteToAssistantMonitor(spaceId!, member.uid).then(loadData) },
-                                                { text: 'Remove from Space', style: 'destructive', onPress: () => removeSpaceMember(spaceId!, member.uid).then(loadData) },
-                                                { text: 'Cancel', style: 'cancel' },
-                                            ]);
+                                            const options = [];
+                                            
+                                            if (isMonitor && member.role !== 'assistant_monitor') {
+                                                options.push({ text: 'Make Assistant Monitor', onPress: () => promoteToAssistantMonitor(spaceId!, member.uid).then(loadData) });
+                                            }
+                                            
+                                            // Assistant Monitor cannot remove Monitor (already handled by role !== 'monitor')
+                                            options.push({ text: 'Remove from Space', style: 'destructive', onPress: () => removeSpaceMember(spaceId!, member.uid).then(loadData) });
+                                            options.push({ text: 'Cancel', style: 'cancel' });
+
+                                            Alert.alert('Manage Member', member.fullName || member.uid, options as any);
                                         }}
                                         activeOpacity={0.7}
                                     >
@@ -227,28 +258,32 @@ export default function SpaceManageScreen() {
                 </Card>
 
                 {/* Danger Zone */}
-                <Text style={[styles.sectionLabel, { marginTop: 32, color: Colors.error }]}>DANGER ZONE</Text>
-                <Card style={[styles.formCard, { borderColor: Colors.error + '40', borderWidth: 1 }]}>
-                    <TouchableOpacity 
-                        style={styles.dangerAction}
-                        onPress={() => Alert.alert('Coming Soon', 'Transfer ownership will be available in the next update.')}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.dangerIconBox}>
-                            <Ionicons name="swap-horizontal" size={20} color={Colors.error} />
-                        </View>
-                        <Text style={styles.dangerText}>Transfer Ownership</Text>
-                        <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
-                    </TouchableOpacity>
-                    <View style={styles.rowDivider} />
-                    <TouchableOpacity style={styles.dangerAction} onPress={handleDeleteSpace} activeOpacity={0.7}>
-                        <View style={styles.dangerIconBox}>
-                            <Ionicons name="trash" size={20} color={Colors.error} />
-                        </View>
-                        <Text style={styles.dangerText}>Delete Community Space</Text>
-                        <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
-                    </TouchableOpacity>
-                </Card>
+                {isMonitor && (
+                    <>
+                        <Text style={[styles.sectionLabel, { marginTop: 32, color: Colors.error }]}>DANGER ZONE</Text>
+                        <Card style={[styles.formCard, { borderColor: Colors.error + '40', borderWidth: 1 }]}>
+                            <TouchableOpacity 
+                                style={styles.dangerAction}
+                                onPress={() => Alert.alert('Coming Soon', 'Transfer ownership will be available in the next update.')}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.dangerIconBox}>
+                                    <Ionicons name="swap-horizontal" size={20} color={Colors.error} />
+                                </View>
+                                <Text style={styles.dangerText}>Transfer Ownership</Text>
+                                <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
+                            </TouchableOpacity>
+                            <View style={styles.rowDivider} />
+                            <TouchableOpacity style={styles.dangerAction} onPress={handleDeleteSpace} activeOpacity={0.7}>
+                                <View style={styles.dangerIconBox}>
+                                    <Ionicons name="trash" size={20} color={Colors.error} />
+                                </View>
+                                <Text style={styles.dangerText}>Delete Community Space</Text>
+                                <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
+                            </TouchableOpacity>
+                        </Card>
+                    </>
+                )}
 
                 <View style={{ height: 60 }} />
             </ScrollView>
@@ -285,13 +320,13 @@ function CourseCardWithAttendance({ course, spaceId }: { course: Course, spaceId
                 </View>
                 <View style={styles.switchContainer}>
                     {loading ? (
-                        <ActivityIndicator size="small" color={Colors.primaryBlue} />
+                        <ActivityIndicator size="small" color={Colors.accentBlue} />
                     ) : (
                         <Switch
                             value={enabled}
                             onValueChange={toggleAttendance}
-                            trackColor={{ false: Colors.border + '40', true: Colors.primaryBlue }}
-                            thumbColor={Platform.OS === 'ios' ? undefined : (enabled ? Colors.primaryBlue : '#f4f3f4')}
+                            trackColor={{ false: Colors.separator, true: Colors.accentBlue }}
+                            thumbColor={Platform.OS === 'ios' ? undefined : (enabled ? Colors.accentBlue : '#f4f3f4')}
                         />
                     )}
                 </View>
@@ -306,6 +341,15 @@ function CourseCardWithAttendance({ course, spaceId }: { course: Course, spaceId
     );
 }
 
+const getRoleColor = (role: string) => {
+    switch (role) {
+        case 'monitor': return '#1A3C6E';
+        case 'assistant_monitor': return '#475569';
+        case 'lecturer': return '#059669';
+        default: return Colors.textSecondary;
+    }
+};
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -317,6 +361,9 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 8,
         height: 56,
+        backgroundColor: Colors.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.separator,
     },
     headerIconButton: {
         width: 44,
@@ -326,7 +373,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 17,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     saveBtn: {
@@ -336,8 +383,8 @@ const styles = StyleSheet.create({
     },
     saveBtnText: {
         fontSize: 16,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.primaryBlue,
+        fontFamily: Typography.family.bold,
+        color: Colors.accentBlue,
     },
     scrollContent: {
         paddingHorizontal: Spacing.screenPadding,
@@ -345,7 +392,7 @@ const styles = StyleSheet.create({
     },
     sectionLabel: {
         fontSize: 11,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textTertiary,
         letterSpacing: 1.2,
         marginBottom: 10,
@@ -359,17 +406,17 @@ const styles = StyleSheet.create({
         marginTop: 16,
         paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: Colors.border + '15',
+        borderTopColor: Colors.separator,
     },
     readonlyLabel: {
         fontSize: 11,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textTertiary,
         marginBottom: 4,
     },
     readonlyValue: {
         fontSize: 15,
-        fontFamily: 'DMSans_500Medium',
+        fontFamily: Typography.family.medium,
         color: Colors.textSecondary,
     },
     codeCard: {
@@ -384,29 +431,29 @@ const styles = StyleSheet.create({
     },
     codeTitle: {
         fontSize: 15,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     codeBox: {
-        backgroundColor: Colors.primaryBlue + '08',
+        backgroundColor: Colors.accentBlue + '08',
         paddingHorizontal: 24,
         paddingVertical: 12,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: Colors.primaryBlue + '20',
+        borderColor: Colors.accentBlue + '20',
         marginBottom: 20,
     },
     codeValue: {
         fontSize: 28,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.primaryBlue,
+        fontFamily: Typography.family.bold,
+        color: Colors.accentBlue,
         letterSpacing: 2,
     },
     codeActions: {
         flexDirection: 'row',
         width: '100%',
         borderTopWidth: 1,
-        borderTopColor: Colors.border + '15',
+        borderTopColor: Colors.separator,
         paddingTop: 16,
     },
     codeActionBtn: {
@@ -418,12 +465,12 @@ const styles = StyleSheet.create({
     },
     codeActionText: {
         fontSize: 14,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.primaryBlue,
+        fontFamily: Typography.family.bold,
+        color: Colors.accentBlue,
     },
     verticalDivider: {
         width: 1,
-        backgroundColor: Colors.border + '15',
+        backgroundColor: Colors.separator,
     },
     courseCard: {
         padding: 16,
@@ -441,14 +488,14 @@ const styles = StyleSheet.create({
     },
     courseNameText: {
         fontSize: 16,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
         marginBottom: 2,
     },
     courseCodeText: {
         fontSize: 13,
-        fontFamily: 'DMSans_600SemiBold',
-        color: Colors.primaryBlue,
+        fontFamily: Typography.family.semiBold,
+        color: Colors.accentBlue,
     },
     switchContainer: {
         height: 32,
@@ -460,11 +507,11 @@ const styles = StyleSheet.create({
         gap: 6,
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: Colors.border + '15',
+        borderTopColor: Colors.separator,
     },
     lecturerText: {
         fontSize: 13,
-        fontFamily: 'DMSans_500Medium',
+        fontFamily: Typography.family.medium,
         color: Colors.textTertiary,
     },
     membersHeader: {
@@ -488,14 +535,13 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: Colors.subtleFill,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
     memberInitials: {
         fontSize: 16,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textSecondary,
     },
     memberInfo: {
@@ -503,13 +549,12 @@ const styles = StyleSheet.create({
     },
     memberName: {
         fontSize: 15,
-        fontFamily: 'DMSans_600SemiBold',
+        fontFamily: Typography.family.semiBold,
         color: Colors.textPrimary,
     },
     memberRole: {
         fontSize: 12,
-        fontFamily: 'DMSans_500Medium',
-        color: Colors.textTertiary,
+        fontFamily: Typography.family.medium,
         textTransform: 'capitalize',
     },
     moreBtn: {
@@ -517,7 +562,7 @@ const styles = StyleSheet.create({
     },
     rowDivider: {
         height: 1,
-        backgroundColor: Colors.border + '15',
+        backgroundColor: Colors.separator,
         marginLeft: 64,
     },
     dangerAction: {
@@ -537,7 +582,7 @@ const styles = StyleSheet.create({
     dangerText: {
         flex: 1,
         fontSize: 15,
-        fontFamily: 'DMSans_600SemiBold',
+        fontFamily: Typography.family.semiBold,
         color: Colors.error,
     },
 });

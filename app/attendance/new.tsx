@@ -6,7 +6,6 @@ import {
     ScrollView,
     TouchableOpacity,
     SafeAreaView,
-    Platform,
     ActivityIndicator,
     Alert,
 } from 'react-native';
@@ -19,16 +18,13 @@ import { useAuthStore } from '../../store/authStore';
 import { useCourses } from '../../hooks/useCourses';
 import { useRecentPosts } from '../../hooks/usePosts';
 import * as attendanceService from '../../services/attendanceService';
-import Button from '../../components/ui/Button';
-import Card from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 import { getSpaceMembers } from '../../services/spaceService';
 
 export default function NewAttendanceSessionScreen() {
-    const { spaceId, courseId: initialCourseId, courseCode: initialCourseCode, courseName: initialCourseName } = useLocalSearchParams<{
+    const { spaceId, courseId: initialCourseId } = useLocalSearchParams<{
         spaceId: string;
         courseId: string;
-        courseCode: string;
-        courseName: string;
     }>();
     const router = useRouter();
     const { user } = useAuthStore();
@@ -54,7 +50,6 @@ export default function NewAttendanceSessionScreen() {
     const loadMemberCount = async () => {
         try {
             const members = await getSpaceMembers(spaceId!);
-            // In a real app, you'd filter by course membership if selective
             setMemberCount(members.length);
         } catch (error) {
             console.error('Error loading members:', error);
@@ -79,11 +74,11 @@ export default function NewAttendanceSessionScreen() {
                 course?.courseCode || 'Unknown',
                 lectureName,
                 user!.uid,
-                memberCount || 50 // Fallback if count fails
+                memberCount || 50 // Fallback
             );
 
             router.replace({
-                pathname: `/attendance/[sessionId]`,
+                pathname: `/attendance/session/[sessionId]`,
                 params: { sessionId, spaceId: spaceId!, courseId: selectedCourseId }
             });
         } catch (error) {
@@ -103,7 +98,7 @@ export default function NewAttendanceSessionScreen() {
                 <View style={{ width: 44 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Select Course</Text>
                     <View style={styles.courseList}>
@@ -115,12 +110,13 @@ export default function NewAttendanceSessionScreen() {
                                     selectedCourseId === course.id && styles.courseItemActive,
                                 ]}
                                 onPress={() => setSelectedCourseId(course.id)}
+                                activeOpacity={0.7}
                             >
-                                <View style={[styles.iconBox, { backgroundColor: selectedCourseId === course.id ? Colors.white : Colors.primaryBlue + '15' }]}>
+                                <View style={[styles.iconBox, { backgroundColor: selectedCourseId === course.id ? '#FFFFFF' : Colors.accentBlue + '15' }]}>
                                     <Ionicons 
                                         name="book" 
                                         size={20} 
-                                        color={selectedCourseId === course.id ? Colors.primaryBlue : Colors.primaryBlue} 
+                                        color={selectedCourseId === course.id ? Colors.accentBlue : Colors.accentBlue} 
                                     />
                                 </View>
                                 <View style={styles.courseInfo}>
@@ -132,7 +128,7 @@ export default function NewAttendanceSessionScreen() {
                                     </Text>
                                 </View>
                                 {selectedCourseId === course.id && (
-                                    <Ionicons name="checkmark-circle" size={24} color={Colors.white} />
+                                    <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
                                 )}
                             </TouchableOpacity>
                         ))}
@@ -151,6 +147,7 @@ export default function NewAttendanceSessionScreen() {
                                         selectedLectureId === lecture.id && styles.lectureItemActive,
                                     ]}
                                     onPress={() => setSelectedLectureId(lecture.id)}
+                                    activeOpacity={0.7}
                                 >
                                     <View style={styles.lectureInfo}>
                                         <Text style={styles.lectureTitle}>{lecture.title}</Text>
@@ -172,14 +169,14 @@ export default function NewAttendanceSessionScreen() {
                 <View style={styles.infoBox}>
                     <Ionicons name="information-circle" size={20} color={Colors.textSecondary} />
                     <Text style={styles.infoText}>
-                        Starting a session generates a 6-digit code valid for 10 minutes. Students must enter this code to be marked present.
+                        Starting a session generates a dynamic code or QR for proximity verification. Students must be nearby to join.
                     </Text>
                 </View>
             </ScrollView>
 
             <View style={styles.footer}>
                 <Button
-                    title="Start Live Session"
+                    label="Start Live Session"
                     onPress={handleStart}
                     loading={loading}
                     disabled={!selectedCourseId}
@@ -201,7 +198,7 @@ const styles = StyleSheet.create({
         height: 56,
         backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '15',
+        borderBottomColor: Colors.separator,
     },
     headerButton: {
         width: 44,
@@ -213,7 +210,7 @@ const styles = StyleSheet.create({
         flex: 1,
         textAlign: 'center',
         fontSize: 18,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     scrollContent: {
@@ -223,8 +220,11 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     sectionTitle: {
-        ...Typography.subHeader,
+        fontSize: 13,
+        fontFamily: Typography.family.bold,
         color: Colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 1.2,
         marginBottom: 16,
     },
     courseList: {
@@ -237,11 +237,11 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.surface,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: Colors.border + '15',
+        borderColor: Colors.separator,
     },
     courseItemActive: {
-        backgroundColor: Colors.primaryBlue,
-        borderColor: Colors.primaryBlue,
+        backgroundColor: Colors.accentBlue,
+        borderColor: Colors.accentBlue,
     },
     iconBox: {
         width: 40,
@@ -256,16 +256,16 @@ const styles = StyleSheet.create({
     },
     courseCode: {
         fontSize: 16,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     courseName: {
         fontSize: 13,
-        fontFamily: 'DMSans_400Regular',
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
     },
     textWhite: {
-        color: Colors.white,
+        color: '#FFFFFF',
     },
     textWhiteOpacity: {
         color: 'rgba(255,255,255,0.7)',
@@ -278,23 +278,23 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         marginBottom: 10,
         borderWidth: 1,
-        borderColor: Colors.border + '10',
+        borderColor: Colors.separator,
     },
     lectureItemActive: {
-        borderColor: Colors.primaryBlue,
-        backgroundColor: Colors.primaryBlue + '05',
+        borderColor: Colors.accentBlue,
+        backgroundColor: Colors.accentBlue + '05',
     },
     lectureInfo: {
         flex: 1,
     },
     lectureTitle: {
         fontSize: 15,
-        fontFamily: 'DMSans_600SemiBold',
+        fontFamily: Typography.family.semiBold,
         color: Colors.textPrimary,
     },
     lectureDate: {
         fontSize: 12,
-        fontFamily: 'DMSans_400Regular',
+        fontFamily: Typography.family.regular,
         color: Colors.textTertiary,
         marginTop: 2,
     },
@@ -303,22 +303,22 @@ const styles = StyleSheet.create({
         height: 20,
         borderRadius: 10,
         borderWidth: 2,
-        borderColor: Colors.border,
+        borderColor: Colors.separator,
         justifyContent: 'center',
         alignItems: 'center',
     },
     radioActive: {
-        borderColor: Colors.primaryBlue,
+        borderColor: Colors.accentBlue,
     },
     radioInner: {
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: Colors.primaryBlue,
+        backgroundColor: Colors.accentBlue,
     },
     emptyText: {
         fontSize: 14,
-        fontFamily: 'DMSans_400Regular',
+        fontFamily: Typography.family.regular,
         color: Colors.textTertiary,
         fontStyle: 'italic',
     },
@@ -329,11 +329,13 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         gap: 12,
         alignItems: 'flex-start',
+        borderWidth: 1,
+        borderColor: Colors.separator,
     },
     infoText: {
         flex: 1,
         fontSize: 13,
-        fontFamily: 'DMSans_400Regular',
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
         lineHeight: 18,
     },
@@ -341,6 +343,6 @@ const styles = StyleSheet.create({
         padding: Spacing.screenPadding,
         backgroundColor: Colors.surface,
         borderTopWidth: 1,
-        borderTopColor: Colors.border + '15',
+        borderTopColor: Colors.separator,
     },
 });

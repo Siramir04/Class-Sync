@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     SafeAreaView,
     ScrollView,
-    Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../constants/colors';
@@ -29,16 +28,16 @@ export default function AboutScreen() {
                 <View style={{ width: 44 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.logoContainer}>
                     <View style={styles.logoPlaceholder}>
-                        <Ionicons name="sync" size={60} color={Colors.white} />
+                        <Ionicons name="sync" size={60} color="#FFFFFF" />
                     </View>
                     <Text style={styles.appName}>ClassSync</Text>
                     <Text style={styles.appVersion}>Version {version} ({build})</Text>
                 </View>
 
-                <View style={[styles.card, { marginTop: Spacing.xl }]}>
+                <View style={[styles.card, { marginTop: 40 }]}>
                     <Text style={styles.cardText}>
                         ClassSync is the ultimate companion for university students and class monitors. 
                         Streamline your academic life with real-time notifications, a collaborative 
@@ -46,7 +45,7 @@ export default function AboutScreen() {
                     </Text>
                 </View>
 
-                <Text style={styles.sectionTitle}>Credits</Text>
+                <Text style={styles.sectionTitle}>CREDITS</Text>
                 <View style={styles.card}>
                     <Text style={styles.creditLabel}>Developed by</Text>
                     <Text style={styles.creditValue}>ClassSync Team</Text>
@@ -54,11 +53,11 @@ export default function AboutScreen() {
                     <View style={{ height: 16 }} />
                     
                     <Text style={styles.creditLabel}>Design</Text>
-                    <Text style={styles.creditValue}>iOS Native Experience</Text>
+                    <Text style={styles.creditValue}>iOS Native Experience Pro</Text>
                 </View>
 
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>© 2025 ClassSync. All rights reserved.</Text>
+                    <Text style={styles.footerText}>© 2026 ClassSync. All rights reserved.</Text>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -76,9 +75,9 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 8,
         height: 56,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '30',
         backgroundColor: Colors.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.separator,
     },
     headerButton: {
         width: 44,
@@ -88,69 +87,78 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 17,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     content: {
-        padding: Spacing.lg,
+        padding: Spacing.screenPadding,
     },
     logoContainer: {
         alignItems: 'center',
-        marginTop: Spacing.xl,
+        marginTop: 40,
     },
     logoPlaceholder: {
         width: 100,
         height: 100,
         borderRadius: 24,
-        backgroundColor: Colors.primaryBlue,
+        backgroundColor: Colors.accentBlue,
         justifyContent: 'center',
         alignItems: 'center',
     },
     appName: {
-        ...Typography.pageTitle,
-        marginTop: Spacing.md,
         fontSize: 24,
+        fontFamily: Typography.family.bold,
+        color: Colors.textPrimary,
+        marginTop: 16,
     },
     appVersion: {
-        ...Typography.label,
+        fontSize: 13,
+        fontFamily: Typography.family.medium,
         color: Colors.textSecondary,
         marginTop: 4,
     },
     card: {
         backgroundColor: Colors.surface,
         borderRadius: 16,
-        padding: Spacing.lg,
+        padding: 20,
         borderWidth: 1,
-        borderColor: Colors.border + '30',
+        borderColor: Colors.separator,
     },
     cardText: {
-        ...Typography.body,
+        fontSize: 15,
+        fontFamily: Typography.family.regular,
         color: Colors.textPrimary,
         lineHeight: 22,
     },
     sectionTitle: {
-        ...Typography.sectionHeader,
-        color: Colors.textSecondary,
-        marginTop: Spacing.xl,
-        marginBottom: Spacing.md,
+        fontSize: 11,
+        fontFamily: Typography.family.bold,
+        color: Colors.textTertiary,
+        textTransform: 'uppercase',
+        letterSpacing: 1.2,
+        marginTop: 32,
+        marginBottom: 12,
+        marginLeft: 4,
     },
     creditLabel: {
-        ...Typography.label,
+        fontSize: 12,
+        fontFamily: Typography.family.medium,
         color: Colors.textSecondary,
     },
     creditValue: {
-        ...Typography.body,
-        fontWeight: '600',
+        fontSize: 15,
+        fontFamily: Typography.family.semiBold,
         color: Colors.textPrimary,
         marginTop: 2,
     },
     footer: {
-        marginTop: Spacing.xxl,
+        marginTop: 60,
         alignItems: 'center',
-        paddingBottom: Spacing.xl,
+        paddingBottom: 40,
     },
     footerText: {
-        ...Typography.label,
+        fontSize: 12,
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
     },
 });

@@ -7,9 +7,19 @@ import {
     updatePassword,
     User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { User, UserRole } from '../types';
+
+/**
+ * Check if a username is already taken in Firestore.
+ */
+export async function isUsernameUnique(username: string): Promise<boolean> {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('username', '==', username.toLowerCase().trim()));
+    const snapshot = await getDocs(q);
+    return snapshot.empty;
+}
 
 /**
  * Register a new user with email/password and create their Firestore profile.
@@ -17,6 +27,7 @@ import { User, UserRole } from '../types';
 export async function registerUser(
     fullName: string,
     email: string,
+    username: string,
     university: string,
     role: UserRole,
     password: string
@@ -30,6 +41,7 @@ export async function registerUser(
         uid,
         fullName,
         email,
+        username: username.toLowerCase().trim(),
         university,
         role,
         createdAt: serverTimestamp(),

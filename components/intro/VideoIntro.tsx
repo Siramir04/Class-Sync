@@ -44,7 +44,7 @@ export default function VideoIntro({ onFinish }: { onFinish: () => void }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primaryBlue,
+    backgroundColor: Colors.accentBlue,
     alignItems: 'center',
     justifyContent: 'center',
     width,
@@ -55,12 +55,13 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 42,
-    fontWeight: 'bold',
+    fontFamily: 'DMSans_700Bold',
     color: '#FFFFFF',
     letterSpacing: 1,
   },
   tagline: {
     fontSize: 16,
+    fontFamily: 'DMSans_400Regular',
     color: 'rgba(255,255,255,0.7)',
     marginTop: 12,
   },

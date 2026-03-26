@@ -315,6 +315,20 @@ export async function getReadReceipts(
 }
 
 /**
+ * Toggle pinning of a post.
+ */
+export async function updatePostPinStatus(
+    spaceId: string,
+    courseId: string,
+    postId: string,
+    isPinned: boolean
+): Promise<void> {
+    await updateDoc(doc(db, 'spaces', spaceId, 'courses', courseId, 'posts', postId), {
+        isPinned,
+    });
+}
+
+/**
  * Toggle importance of a post.
  */
 export async function updatePostImportantStatus(
@@ -354,6 +368,7 @@ function docToPost(d: any): Post {
         linkedPostId: data.linkedPostId,
         isCarryover: Boolean(data.isCarryover),
         isImportant: Boolean(data.isImportant),
+        isPinned: Boolean(data.isPinned),
         readCount: data.readCount || 0,
     };
 }

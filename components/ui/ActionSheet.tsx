@@ -9,7 +9,7 @@ import {
     Dimensions,
 } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');

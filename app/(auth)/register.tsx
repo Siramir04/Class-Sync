@@ -10,7 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { AuthLayout } from '../../components/auth/AuthLayout';
@@ -36,6 +36,7 @@ export default function RegisterScreen() {
   // Step 1 state
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -71,8 +72,12 @@ export default function RegisterScreen() {
   };
 
   const handleNextStep = () => {
-    if (!fullName.trim() || !email.trim() || !password) {
+    if (!fullName.trim() || !email.trim() || !username.trim() || !password) {
       setError('Please fill in all fields');
+      return;
+    }
+    if (username.length < 3) {
+      setError('Username must be at least 3 characters');
       return;
     }
     if (password.length < 8) {
@@ -95,6 +100,7 @@ export default function RegisterScreen() {
       const firebaseUser = await registerUser(
         fullName, 
         email, 
+        username,
         selectedUniversity.name, 
         role, 
         password
@@ -175,6 +181,13 @@ export default function RegisterScreen() {
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <FormRow 
+                  placeholder="Username (e.g. john_doe)"
+                  icon="AtSign"
+                  value={username}
+                  onChangeText={setUsername}
                   autoCapitalize="none"
                 />
                 <FormRow 

@@ -6,7 +6,7 @@ export interface User {
     email: string;
     university: string;
     role: UserRole;
-    regNumber?: string;
+    username: string;
     createdAt: Date;
     fcmToken?: string;
     notificationPrefs?: {
@@ -83,6 +83,7 @@ export interface Post {
     linkedPostId?: string;
     isCarryover?: boolean;
     isImportant?: boolean;
+    isPinned?: boolean;
     readCount?: number;
 }
 
@@ -147,11 +148,15 @@ export interface AttendanceSession {
   spaceId: string;
   courseId: string;
   courseCode: string;
+  courseName?: string;       // Added for compatibility
   lectureName: string;
   lectureDate: Date;
-  code: string;              // 6-digit code
-  codeExpiresAt: Date;       // 10 minutes after session start
+  code: string;              // 6-digit code or QR token
+  codeExpiresAt: Date;       // when the current code/token expires
+  qrToken?: string;          // Alias for code in some screens
+  qrExpiresAt?: Date;        // Alias for codeExpiresAt in some screens
   isOpen: boolean;
+  isActive?: boolean;        // Alias for isOpen
   openedAt: Date;
   closedAt?: Date;
   openedByUid: string;
@@ -165,12 +170,19 @@ export interface AttendanceSession {
 export interface AttendanceRecord {
   uid: string;
   fullName: string;
+  username?: string;
   markedAt: Date;
   isPresent: boolean;
   isCarryover: boolean;
-  verificationMethod: VerificationMethod;   // NEW
-  proximityReading?: ProximityReading;       // NEW
-  isFlagged?: boolean;                       // NEW — code-only with no proximity
+  verificationMethod: VerificationMethod;
+  proximityReading?: ProximityReading;
+  isFlagged?: boolean;
+}
+
+export interface CourseAttendanceSettings {
+  courseId: string;
+  isEnabled: boolean;
+  requireRegNumber?: boolean;
 }
 
 export type AttendanceStatus = 'present' | 'absent' | 'not_taken'

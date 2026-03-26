@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Platform, Dimensions } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { PostType } from '../../types';
 
@@ -10,6 +10,7 @@ interface PostTypeSheetProps {
     onClose: () => void;
     onSelect: (type: PostType) => void;
     filterToLecture?: boolean;
+    isStudent?: boolean;
 }
 
 interface PostTypeOption {
@@ -35,10 +36,18 @@ export default function PostTypeSheet({
     onClose,
     onSelect,
     filterToLecture = false,
+    isStudent = false,
 }: PostTypeSheetProps) {
-    const options = filterToLecture
-        ? allOptions.filter((o) => o.type === 'lecture')
-        : allOptions;
+    let options = allOptions;
+    if (filterToLecture) {
+        options = allOptions.filter((o) => o.type === 'lecture');
+    } else if (isStudent) {
+        options = allOptions.filter((o) => o.type === 'note').map(o => ({
+            ...o,
+            label: 'Share Material/Link',
+            description: 'Post helpful resources for your course mates'
+        }));
+    }
 
     return (
         <Modal

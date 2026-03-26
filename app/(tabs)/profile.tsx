@@ -12,7 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { useAuthStore } from '../../store/authStore';
 import { Avatar } from '../../components/ui/Avatar';
@@ -70,7 +70,7 @@ export default function ProfileScreen() {
             <View style={styles.heroText}>
               <Text style={styles.userName}>{fullName}</Text>
               <Text style={styles.userSub}>{user?.university}</Text>
-              <Text style={styles.userSub}>{user?.regNumber || 'No ID set'}</Text>
+              <Text style={styles.userSub}>{user?.username ? `@${user.username}` : 'No username set'}</Text>
             </View>
           </View>
 

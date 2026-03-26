@@ -7,17 +7,16 @@ import { Typography } from '../../../constants/typography';
 import AttendanceRow from '../../../components/attendance/AttendanceRow';
 import {
     getSessionsByCourse,
-    getSessionRecords,
     exportAttendanceToExcel
 } from '../../../services/attendanceService';
-import { AttendanceSession, AttendanceRecord } from '../../../types/attendance';
+import { AttendanceSession, AttendanceRecord } from '../../../types';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 
 interface StudentReportItem {
     uid: string;
     fullName: string;
-    regNumber: string;
+    username: string;
     attendedCount: number;
 }
 
@@ -46,8 +45,8 @@ export default function AttendanceReportScreen() {
                 }
 
                 // 2. Fetch all closed sessions
-                const sessionList = await getSessionsByCourse(courseId, spaceId);
-                const closedSessions = sessionList.filter(s => !s.isActive);
+                const sessionList = await getSessionsByCourse(spaceId, courseId);
+                const closedSessions = sessionList.filter(s => !s.isOpen);
                 setSessions(closedSessions);
 
                 // 3. Fetch all course members
@@ -63,14 +62,16 @@ export default function AttendanceReportScreen() {
 
                     let attendedCount = 0;
                     for (const session of closedSessions) {
-                        const recordSnap = await getDoc(doc(db, 'spaces', spaceId, 'courses', courseId, 'sessions', session.id, 'records', mDoc.id));
-                        if (recordSnap.exists()) attendedCount++;
+                        const recordSnap = await getDoc(doc(db, 'spaces', spaceId, 'courses', courseId, 'attendance', session.id, 'records', mDoc.id));
+                        if (recordSnap.exists() && recordSnap.data().isPresent) {
+                            attendedCount++;
+                        }
                     }
 
                     students.push({
                         uid: mDoc.id,
                         fullName: userData.fullName,
-                        regNumber: userData.regNumber || 'N/A',
+                        username: userData.username || 'N/A',
                         attendedCount
                     });
                 }
@@ -95,8 +96,9 @@ export default function AttendanceReportScreen() {
         setExporting(true);
         try {
             await exportAttendanceToExcel(courseId, spaceId, courseDetails.name, courseDetails.code);
+            Alert.alert('Success', 'Attendance report exported successfully.');
         } catch (error) {
-            Alert.alert('Export Failed', 'An error occurred while generating the Excel file.');
+            Alert.alert('Export Failed', 'An error occurred while generating the report.');
         } finally {
             setExporting(false);
         }
@@ -105,7 +107,7 @@ export default function AttendanceReportScreen() {
     if (loading) {
         return (
             <View style={[styles.container, styles.centered]}>
-                <ActivityIndicator size="large" color={Colors.primaryBlue} />
+                <ActivityIndicator size="large" color={Colors.accentBlue} />
                 <Text style={styles.loadingText}>Generating Report...</Text>
             </View>
         );
@@ -129,12 +131,12 @@ export default function AttendanceReportScreen() {
                     activeOpacity={0.7}
                 >
                     {exporting ? (
-                        <ActivityIndicator size="small" color={Colors.primaryBlue} />
+                        <ActivityIndicator size="small" color={Colors.accentBlue} />
                     ) : (
                         <Ionicons
                             name="download-outline"
                             size={22}
-                            color={studentData.length === 0 ? Colors.textSecondary : Colors.primaryBlue}
+                            color={studentData.length === 0 ? Colors.textTertiary : Colors.accentBlue}
                         />
                     )}
                 </TouchableOpacity>
@@ -158,14 +160,14 @@ export default function AttendanceReportScreen() {
                 renderItem={({ item }) => (
                     <AttendanceRow
                         studentName={item.fullName}
-                        regNumber={item.regNumber}
+                        username={item.username}
                         attendedCount={item.attendedCount}
                         totalSessions={sessions.length}
                     />
                 )}
                 ListEmptyComponent={
                     <View style={styles.emptyView}>
-                        <Ionicons name="people-outline" size={64} color={Colors.textSecondary} />
+                        <Ionicons name="people-outline" size={64} color={Colors.textTertiary} />
                         <Text style={styles.emptyTitle}>No Students Found</Text>
                         <Text style={styles.emptySub}>There are no students registered for this course.</Text>
                     </View>
@@ -194,7 +196,7 @@ const styles = StyleSheet.create({
         height: 56,
         backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '15',
+        borderBottomColor: Colors.separator,
     },
     headerBtn: {
         width: 44,
@@ -208,12 +210,12 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 17,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     headerSub: {
         fontSize: 11,
-        fontFamily: 'DMSans_500Medium',
+        fontFamily: Typography.family.medium,
         color: Colors.textSecondary,
     },
     summaryBar: {
@@ -221,30 +223,32 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.background,
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border,
+        borderBottomColor: Colors.separator,
     },
     summaryItem: {
         flex: 1,
         alignItems: 'center',
     },
     summaryValue: {
-        ...Typography.sectionHeader,
-        color: Colors.primaryBlue,
         fontSize: 18,
+        fontFamily: Typography.family.bold,
+        color: Colors.accentBlue,
     },
     summaryLabel: {
-        ...Typography.label,
+        fontSize: 12,
+        fontFamily: Typography.family.medium,
         color: Colors.textSecondary,
     },
     divider: {
         width: 1,
-        backgroundColor: Colors.border,
+        backgroundColor: Colors.separator,
     },
     listContent: {
         paddingBottom: 100,
     },
     loadingText: {
-        ...Typography.body,
+        fontSize: 15,
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
         marginTop: 12,
     },
@@ -255,13 +259,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: 40,
     },
     emptyTitle: {
-        ...Typography.sectionHeader,
+        fontSize: 17,
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
         marginTop: 16,
         marginBottom: 8,
     },
     emptySub: {
-        ...Typography.body,
+        fontSize: 15,
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
         textAlign: 'center',
     },

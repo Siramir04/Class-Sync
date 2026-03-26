@@ -10,14 +10,15 @@ import {
     refreshQRToken,
     closeSession,
     getSessionRecords,
-    markPresent,
+    markAttendance,
     validateQRToken,
     hasStudentScanned
 } from '../../../services/attendanceService';
-import { AttendanceSession, AttendanceRecord } from '../../../types/attendance';
+import { AttendanceSession, AttendanceRecord } from '../../../types';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { useAuthStore } from '../../../store/authStore';
+import { useSpaceRole } from '../../../hooks/useSpaceRole';
 
 export default function SessionScreen() {
     const { sessionId, courseId, spaceId } = useLocalSearchParams<{
@@ -35,22 +36,29 @@ export default function SessionScreen() {
     const [isMarking, setIsMarking] = useState(false);
     const [hasAlreadyScanned, setHasAlreadyScanned] = useState(false);
 
-    const isLecturerOrMonitor = user?.role === 'lecturer' || user?.role === 'monitor';
+    const { 
+        isMonitor, 
+        isAssistant, 
+        isLecturer, 
+    } = useSpaceRole(spaceId!);
+    const isLecturerOrMonitor = isMonitor || isAssistant || isLecturer;
 
     // Subscribe to session changes
     useEffect(() => {
         if (!sessionId || !courseId || !spaceId) return;
 
         const unsubscribe = onSnapshot(
-            doc(db, 'spaces', spaceId, 'courses', courseId, 'sessions', sessionId),
+            doc(db, 'spaces', spaceId, 'courses', courseId, 'attendance', sessionId),
             (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     setSession({
                         ...data,
                         id: docSnap.id,
-                        date: data.date?.toDate() ?? new Date(),
-                        qrExpiresAt: data.qrExpiresAt?.toDate() ?? new Date(),
+                        lectureDate: data.lectureDate?.toDate() ?? new Date(),
+                        codeExpiresAt: data.codeExpiresAt?.toDate() ?? new Date(),
+                        qrToken: data.code, // Compatibility mapping
+                        qrExpiresAt: data.codeExpiresAt?.toDate() ?? new Date(), // Compatibility mapping
                     } as AttendanceSession);
                 } else {
                     Alert.alert('Error', 'Session not found');
@@ -73,7 +81,7 @@ export default function SessionScreen() {
 
     // Timer for QR refresh (Lecturer only)
     useEffect(() => {
-        if (!isLecturerOrMonitor || !session?.isActive) return;
+        if (!isLecturerOrMonitor || !session?.isOpen) return;
 
         const timer = setInterval(() => {
             setCountdown((prev) => {
@@ -86,11 +94,11 @@ export default function SessionScreen() {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [session?.isActive, isLecturerOrMonitor, sessionId, courseId, spaceId]);
+    }, [session?.isOpen, isLecturerOrMonitor, sessionId, courseId, spaceId]);
 
     const handleRefresh = async () => {
         try {
-            await refreshQRToken(sessionId, courseId, spaceId);
+            await refreshQRToken(sessionId!, courseId!, spaceId!);
             setCountdown(60);
         } catch (error) {
             console.error('Failed to refresh token:', error);
@@ -108,7 +116,7 @@ export default function SessionScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await closeSession(sessionId, courseId, spaceId);
+                            await closeSession(spaceId!, courseId!, sessionId!);
                             Alert.alert('Success', 'Session ended successfully', [
                                 { text: 'OK', onPress: () => router.back() }
                             ]);
@@ -123,7 +131,7 @@ export default function SessionScreen() {
 
     const fetchRecords = async () => {
         try {
-            const data = await getSessionRecords(sessionId, courseId, spaceId);
+            const data = await getSessionRecords(spaceId!, courseId!, sessionId!);
             setRecords(data);
             setShowLiveList(true);
         } catch (error) {
@@ -134,18 +142,16 @@ export default function SessionScreen() {
     const handleScan = async (scannedToken: string) => {
         if (!user || isMarking || hasAlreadyScanned || !session) return;
 
-        // 1. Validate Reg Number
-        if (!user.regNumber) {
+        if (!user.username) {
             Alert.alert(
                 'Profile Incomplete',
-                'Please update your Profile with your Registration Number before marking attendance.',
+                'Please update your Profile with a Username before marking attendance.',
                 [{ text: 'OK', onPress: () => router.push('/(tabs)/profile') }]
             );
             return;
         }
 
-        // 2. Validate Token
-        const isValid = validateQRToken(scannedToken, sessionId, session.qrExpiresAt);
+        const isValid = validateQRToken(scannedToken, sessionId!, session.codeExpiresAt);
         if (!isValid) {
             Alert.alert('Invalid QR', 'This QR code has expired or is invalid. Please scan the current one.');
             return;
@@ -153,13 +159,15 @@ export default function SessionScreen() {
 
         setIsMarking(true);
         try {
-            await markPresent(
-                sessionId,
-                courseId,
-                spaceId,
+            await markAttendance(
+                spaceId!,
+                courseId!,
+                sessionId!,
+                scannedToken,
                 user.uid,
                 user.fullName,
-                user.regNumber
+                false, // isCarryover
+                'code', // verificationMethod (QR is code-based)
             );
             setHasAlreadyScanned(true);
             Alert.alert('Success', 'Attendance marked successfully!');
@@ -172,7 +180,7 @@ export default function SessionScreen() {
 
     if (!session) return (
         <View style={[styles.container, styles.centered]}>
-            <ActivityIndicator size="large" color={Colors.primaryBlue} />
+            <ActivityIndicator size="large" color={Colors.accentBlue} />
         </View>
     );
 
@@ -203,11 +211,11 @@ export default function SessionScreen() {
                             <Text style={styles.backButtonText}>Back to Course</Text>
                         </TouchableOpacity>
                     </View>
-                ) : !session.isActive ? (
+                ) : !session.isOpen ? (
                     <View style={styles.successView}>
                         <Ionicons name="alert-circle" size={80} color={Colors.error} />
                         <Text style={styles.successTitle}>Session Closed</Text>
-                        <Text style={styles.successSub}>This attendance session has already been closed by the lecturer.</Text>
+                        <Text style={styles.successSub}>This attendance session has already been closed.</Text>
                         <TouchableOpacity
                             style={styles.backButton}
                             onPress={() => router.back()}
@@ -233,7 +241,6 @@ export default function SessionScreen() {
     // LECTURER / MONITOR VIEW
     return (
         <View style={styles.container}>
-            {/* Top Bar */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backBtn}>
                     <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
@@ -249,7 +256,7 @@ export default function SessionScreen() {
                     <Text style={styles.scanLabel}>Scan to mark attendance</Text>
 
                     <View style={styles.qrWrapper}>
-                        <QRDisplay value={session.qrToken} />
+                        <QRDisplay value={session.code} />
                     </View>
 
                     <Text style={styles.timerText}>
@@ -269,7 +276,7 @@ export default function SessionScreen() {
 
                     <TouchableOpacity style={styles.listLink} onPress={fetchRecords} activeOpacity={0.7}>
                         <Text style={styles.listLinkText}>View live list</Text>
-                        <Ionicons name="chevron-forward" size={16} color={Colors.primaryBlue} />
+                        <Ionicons name="chevron-forward" size={16} color={Colors.accentBlue} />
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -277,17 +284,16 @@ export default function SessionScreen() {
             <View style={styles.footer}>
                 <TouchableOpacity
                     onPress={handleEndSession}
-                    disabled={!session.isActive}
-                    style={[styles.endButton, !session.isActive && { opacity: 0.5 }]}
+                    disabled={!session.isOpen}
+                    style={[styles.endButton, !session.isOpen && { opacity: 0.5 }]}
                     activeOpacity={0.7}
                 >
                     <Text style={styles.endButtonText}>
-                        {session.isActive ? 'End Session' : 'Session Ended'}
+                        {session.isOpen ? 'End Session' : 'Session Ended'}
                     </Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Live List Modal */}
             <Modal
                 visible={showLiveList}
                 animationType="slide"
@@ -305,15 +311,15 @@ export default function SessionScreen() {
 
                         <FlatList
                             data={records}
-                            keyExtractor={(item) => item.studentUid}
+                            keyExtractor={(item) => item.uid}
                             renderItem={({ item }) => (
                                 <View style={styles.recordRow}>
                                     <View>
-                                        <Text style={styles.studentName}>{item.studentName}</Text>
-                                        <Text style={styles.regNumber}>{item.regNumber}</Text>
+                                        <Text style={styles.studentName}>{item.fullName}</Text>
+                                        <Text style={styles.username}>@{item.username || item.uid.slice(0, 8)}</Text>
                                     </View>
                                     <Text style={styles.timeText}>
-                                        {item.markedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {item.markedAt instanceof Date ? item.markedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'}
                                     </Text>
                                 </View>
                             )}
@@ -357,13 +363,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerTitle: {
-        ...Typography.sectionHeader,
+        fontSize: 17,
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     endText: {
-        ...Typography.label,
+        fontSize: 12,
         color: Colors.error,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
     },
     scrollContent: {
         padding: 20,
@@ -383,7 +390,8 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     scanLabel: {
-        ...Typography.body,
+        fontSize: 15,
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
         marginBottom: 20,
     },
@@ -391,12 +399,14 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     timerText: {
-        ...Typography.sectionHeader,
-        color: Colors.primaryBlue,
+        fontSize: 18,
+        fontFamily: Typography.family.bold,
+        color: Colors.accentBlue,
         marginBottom: 8,
     },
     securityHint: {
-        ...Typography.label,
+        fontSize: 12,
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
         textAlign: 'center',
     },
@@ -416,13 +426,14 @@ const styles = StyleSheet.create({
         borderBottomColor: '#F0F0F0',
     },
     counterLabel: {
-        ...Typography.body,
+        fontSize: 15,
+        fontFamily: Typography.family.regular,
         color: Colors.textPrimary,
     },
     counterValue: {
-        ...Typography.display,
         fontSize: 24,
-        color: Colors.primaryBlue,
+        fontFamily: Typography.family.extraBold,
+        color: Colors.accentBlue,
     },
     header: {
         flexDirection: 'row',
@@ -432,7 +443,7 @@ const styles = StyleSheet.create({
         height: 56,
         backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '15',
+        borderBottomColor: Colors.separator,
     },
     headerTitleContainer: {
         flex: 1,
@@ -444,15 +455,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     listLinkText: {
-        ...Typography.buttonText,
-        color: Colors.primaryBlue,
+        fontSize: 14,
+        fontFamily: Typography.family.bold,
+        color: Colors.accentBlue,
         marginRight: 4,
     },
     footer: {
         padding: 20,
         backgroundColor: 'white',
         borderTopWidth: 1,
-        borderTopColor: Colors.border,
+        borderTopColor: Colors.separator,
         paddingBottom: 40,
     },
     endButton: {
@@ -462,7 +474,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     endButtonText: {
-        ...Typography.buttonText,
+        fontSize: 16,
+        fontFamily: Typography.family.bold,
         color: 'white',
     },
     modalOverlay: {
@@ -484,7 +497,8 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     modalTitle: {
-        ...Typography.sectionHeader,
+        fontSize: 17,
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     listContent: {
@@ -499,20 +513,23 @@ const styles = StyleSheet.create({
         borderBottomColor: '#F0F0F0',
     },
     studentName: {
-        ...Typography.body,
-        fontFamily: 'DMSans_700Bold',
+        fontSize: 15,
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
-    regNumber: {
-        ...Typography.label,
+    username: {
+        fontSize: 12,
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
     },
     timeText: {
-        ...Typography.label,
+        fontSize: 12,
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
     },
     emptyText: {
-        ...Typography.body,
+        fontSize: 15,
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
         textAlign: 'center',
         marginTop: 40,
@@ -524,25 +541,28 @@ const styles = StyleSheet.create({
         padding: 40,
     },
     successTitle: {
-        ...Typography.pageTitle,
+        fontSize: 22,
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
         marginTop: 20,
         marginBottom: 8,
     },
     successSub: {
-        ...Typography.body,
+        fontSize: 15,
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
         textAlign: 'center',
         marginBottom: 32,
     },
     backButton: {
-        backgroundColor: Colors.primaryBlue,
+        backgroundColor: Colors.accentBlue,
         paddingHorizontal: 24,
         paddingVertical: 12,
         borderRadius: 8,
     },
     backButtonText: {
-        ...Typography.buttonText,
+        fontSize: 14,
+        fontFamily: Typography.family.bold,
         color: 'white',
     },
     loadingOverlay: {
@@ -552,7 +572,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loadingText: {
-        ...Typography.body,
+        fontSize: 15,
+        fontFamily: Typography.family.regular,
         color: 'white',
         marginTop: 12,
     },

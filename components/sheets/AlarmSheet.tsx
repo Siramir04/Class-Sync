@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Platform, ScrollView, Alert, Dimensions } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
 import { format, subMinutes } from 'date-fns';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Post } from '../../types';
 import { useAlarmStore } from '../../store/alarmStore';

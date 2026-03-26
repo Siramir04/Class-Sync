@@ -13,7 +13,7 @@ import {
   Dimensions,
 } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Spacing } from '../../constants/spacing';
 import { AttendanceSession, ProximityScanResult } from '../../types';

@@ -4,7 +4,7 @@ import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 
 interface AttendanceRowProps {
-    regNumber: string;
+    username: string;
     studentName: string;
     attendedCount: number;
     totalSessions: number;
@@ -12,7 +12,7 @@ interface AttendanceRowProps {
 }
 
 export default function AttendanceRow({
-    regNumber,
+    username,
     studentName,
     attendedCount,
     totalSessions,
@@ -36,7 +36,7 @@ export default function AttendanceRow({
         >
             <View style={styles.leftInfo}>
                 <Text style={styles.name} numberOfLines={1}>{studentName}</Text>
-                <Text style={styles.regNumber}>{regNumber}</Text>
+                <Text style={styles.username}>{username ? `@${username}` : ''}</Text>
             </View>
 
             <View style={styles.rightInfo}>
@@ -68,12 +68,14 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     name: {
-        ...Typography.sectionHeader,
+        fontSize: 15,
+        fontFamily: Typography.family.bold,
         color: '#333',
         marginBottom: 2,
     },
-    regNumber: {
-        ...Typography.label,
+    username: {
+        fontSize: 12,
+        fontFamily: Typography.family.regular,
         color: '#666',
     },
     rightInfo: {
@@ -84,7 +86,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     fraction: {
-        ...Typography.label,
+        fontSize: 12,
+        fontFamily: Typography.family.medium,
         color: '#666',
         marginRight: 8,
     },
@@ -96,7 +99,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     percentage: {
-        ...Typography.label,
-        fontFamily: 'DMSans_700Bold',
+        fontSize: 12,
+        fontFamily: Typography.family.bold,
     },
 });

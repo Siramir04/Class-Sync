@@ -17,7 +17,7 @@ import { Typography } from '../constants/typography';
 import { Spacing } from '../constants/spacing';
 import { useAuthStore } from '../store/authStore';
 import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
+import { Button } from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { joinSpaceByCode, createSpace } from '../services/spaceService';
 import { joinCourseByCode } from '../services/courseService';
@@ -191,7 +191,7 @@ export default function JoinScreen() {
                     {mode === 'join' ? (
                         <View style={styles.joinContainer}>
                             <View style={styles.infoCard}>
-                                <Ionicons name="information-circle-outline" size={20} color={Colors.primaryBlue} />
+                                <Ionicons name="information-circle-outline" size={20} color={Colors.accentBlue} />
                                 <Text style={styles.infoText}>
                                     Communities are private. Ask your Class Monitor or Course Rep for the unique space or course code.
                                 </Text>
@@ -210,12 +210,14 @@ export default function JoinScreen() {
                                 containerStyle={styles.inputContainer}
                             />
                             
-                            <Button 
-                                title="Join Community" 
-                                onPress={handleJoin} 
-                                loading={joinLoading} 
-                                style={styles.primaryBtn}
-                            />
+                            <View style={styles.buttonContainer}>
+                                <Button 
+                                    label="Join Community" 
+                                    onPress={handleJoin} 
+                                    loading={joinLoading} 
+                                    style={styles.primaryBtn}
+                                />
+                            </View>
                             
                             <View style={styles.helpBox}>
                                 <Text style={styles.helpTitle}>What are codes?</Text>
@@ -302,16 +304,18 @@ export default function JoinScreen() {
                             ))}
 
                             <TouchableOpacity style={styles.addBtn} onPress={addCourse} activeOpacity={0.7}>
-                                <Ionicons name="add-circle" size={24} color={Colors.primaryBlue} />
+                                <Ionicons name="add-circle" size={24} color={Colors.accentBlue} />
                                 <Text style={styles.addBtnText}>Add Another Course</Text>
                             </TouchableOpacity>
 
-                            <Button
-                                title="Create Community Space"
-                                onPress={handleCreate}
-                                loading={createLoading}
-                                style={styles.createBtn}
-                            />
+                            <View style={styles.buttonContainer}>
+                                <Button
+                                    label="Create Community Space"
+                                    onPress={handleCreate}
+                                    loading={createLoading}
+                                    style={styles.createBtn}
+                                />
+                            </View>
                         </View>
                     )}
                     <View style={{ height: 40 }} />
@@ -332,6 +336,9 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 8,
         height: 56,
+        backgroundColor: Colors.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.separator,
     },
     headerIconButton: {
         width: 44,
@@ -341,7 +348,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 17,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     segmentContainer: {
@@ -354,7 +361,7 @@ const styles = StyleSheet.create({
         padding: 4,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: Colors.border + '30',
+        borderColor: Colors.separator,
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
@@ -374,10 +381,10 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     segmentActive: {
-        backgroundColor: Colors.primaryBlue,
+        backgroundColor: Colors.accentBlue,
         ...Platform.select({
             ios: {
-                shadowColor: Colors.primaryBlue,
+                shadowColor: Colors.accentBlue,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.2,
                 shadowRadius: 4,
@@ -389,11 +396,11 @@ const styles = StyleSheet.create({
     },
     segmentText: {
         fontSize: 14,
-        fontFamily: 'DMSans_600SemiBold',
+        fontFamily: Typography.family.semiBold,
         color: Colors.textSecondary,
     },
     segmentTextActive: {
-        color: Colors.white,
+        color: '#FFFFFF',
     },
     scrollContent: {
         paddingHorizontal: Spacing.screenPadding,
@@ -404,24 +411,27 @@ const styles = StyleSheet.create({
     },
     infoCard: {
         flexDirection: 'row',
-        backgroundColor: Colors.primaryBlue + '08',
+        backgroundColor: Colors.accentBlue + '08',
         padding: 16,
         borderRadius: 16,
         marginBottom: 24,
         alignItems: 'flex-start',
         borderWidth: 1,
-        borderColor: Colors.primaryBlue + '20',
+        borderColor: Colors.accentBlue + '20',
     },
     infoText: {
         flex: 1,
         marginLeft: 12,
         fontSize: 14,
-        fontFamily: 'DMSans_500Medium',
-        color: Colors.primaryBlue,
+        fontFamily: Typography.family.medium,
+        color: Colors.accentBlue,
         lineHeight: 20,
     },
     inputContainer: {
         marginBottom: 24,
+    },
+    buttonContainer: {
+        marginTop: 8,
     },
     primaryBtn: {
         height: 56,
@@ -433,24 +443,24 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         backgroundColor: Colors.surface,
         borderWidth: 1,
-        borderColor: Colors.border + '20',
+        borderColor: Colors.separator,
     },
     helpTitle: {
         fontSize: 15,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
         marginBottom: 8,
     },
     helpText: {
         fontSize: 13,
-        fontFamily: 'DMSans_400Regular',
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
         lineHeight: 20,
     },
     createContainer: {},
     sectionLabel: {
         fontSize: 11,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textTertiary,
         letterSpacing: 1.2,
         marginBottom: 12,
@@ -465,7 +475,7 @@ const styles = StyleSheet.create({
     },
     errorText: {
         fontSize: 12,
-        fontFamily: 'DMSans_500Medium',
+        fontFamily: Typography.family.medium,
         color: Colors.error,
         marginBottom: 12,
         marginLeft: 4,
@@ -483,8 +493,8 @@ const styles = StyleSheet.create({
     },
     courseIndex: {
         fontSize: 13,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.primaryBlue,
+        fontFamily: Typography.family.bold,
+        color: Colors.accentBlue,
     },
     addBtn: {
         flexDirection: 'row',
@@ -492,17 +502,17 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 16,
         gap: 8,
-        backgroundColor: Colors.primaryBlue + '05',
+        backgroundColor: Colors.accentBlue + '05',
         borderRadius: 16,
         borderWidth: 1,
         borderStyle: 'dashed',
-        borderColor: Colors.primaryBlue + '30',
+        borderColor: Colors.accentBlue + '30',
         marginTop: 8,
     },
     addBtnText: {
         fontSize: 15,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.primaryBlue,
+        fontFamily: Typography.family.bold,
+        color: Colors.accentBlue,
     },
     createBtn: {
         marginTop: 32,

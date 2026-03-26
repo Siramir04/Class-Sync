@@ -14,10 +14,11 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { AttendanceSession, AttendanceRecord, VerificationMethod, ProximityReading } from '../types';
+import { AttendanceSession, AttendanceRecord, VerificationMethod, ProximityReading, CourseAttendanceSettings } from '../types';
 import { generateAttendanceCode } from '../utils/generateCode';
 import { proximityService } from './proximityService';
 import * as Crypto from 'expo-crypto';
+import { isBefore } from 'date-fns';
 
 const SESSIONS_COLLECTION = (spaceId: string, courseId: string) => 
   `spaces/${spaceId}/courses/${courseId}/attendance`;
@@ -118,10 +119,8 @@ export const markAttendance = async (
   });
 };
 
-/**
- * PHASE 3: Monitor manual override for flagged records.
- * Updates verification method to 'manual' and removes flagging.
- */
+export const markPresent = markAttendance;
+
 export const verifyAttendanceRecord = async (
   spaceId: string,
   courseId: string,
@@ -138,23 +137,18 @@ export const verifyAttendanceRecord = async (
 export const closeSession = async (spaceId: string, courseId: string, sessionId: string): Promise<void> => {
   const sessionRef = doc(db, SESSIONS_COLLECTION(spaceId, courseId), sessionId);
   
-  // Update session status
   await updateDoc(sessionRef, {
     isOpen: false,
     closedAt: serverTimestamp(),
   });
 
-  // Mark others absent
-  // 1. Get all course members
   const membersRef = collection(db, `spaces/${spaceId}/courses/${courseId}/members`);
   const membersSnap = await getDocs(membersRef);
   
-  // 2. Get present records
   const recordsRef = collection(db, RECORDS_COLLECTION(spaceId, courseId, sessionId));
   const recordsSnap = await getDocs(recordsRef);
   const presentUids = new Set(recordsSnap.docs.map(doc => doc.id));
 
-  // 3. Create absent records for non-present members
   for (const memberDoc of membersSnap.docs) {
     if (!presentUids.has(memberDoc.id)) {
       const memberData = memberDoc.data();
@@ -164,7 +158,7 @@ export const closeSession = async (spaceId: string, courseId: string, sessionId:
         markedAt: new Date(),
         isPresent: false,
         isCarryover: memberData.isCarryover || false,
-        verificationMethod: 'manual', // Default for absent/closed
+        verificationMethod: 'manual',
         isFlagged: false,
       };
       await setDoc(doc(db, RECORDS_COLLECTION(spaceId, courseId, sessionId), memberDoc.id), {
@@ -179,8 +173,10 @@ export const getSessionHistory = async (spaceId: string, courseId: string) => {
   const sessionsRef = collection(db, SESSIONS_COLLECTION(spaceId, courseId));
   const q = query(sessionsRef, orderBy('lectureDate', 'desc'));
   const snap = await getDocs(q);
-  return snap.docs.map(doc => doc.data() as AttendanceSession);
+  return snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as AttendanceSession));
 };
+
+export const getSessionsByCourse = getSessionHistory;
 
 export const subscribeToRecords = (
   spaceId: string, 
@@ -192,7 +188,7 @@ export const subscribeToRecords = (
   const q = query(recordsRef, orderBy('markedAt', 'desc'));
   
   return onSnapshot(q, (snap) => {
-    const records = snap.docs.map(doc => doc.data() as AttendanceRecord);
+    const records = snap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as AttendanceRecord));
     callback(records);
   });
 };
@@ -200,11 +196,12 @@ export const subscribeToRecords = (
 export const getUserAttendanceStats = async (uid: string, spaceId: string, courseId: string) => {
   const sessionsRef = collection(db, SESSIONS_COLLECTION(spaceId, courseId));
   const sessionsSnap = await getDocs(sessionsRef);
-  const totalSessions = sessionsSnap.docs.filter(d => !d.data().isOpen).length;
+  
+  const closedSessions = sessionsSnap.docs.filter(d => !d.data().isOpen);
+  const totalSessions = closedSessions.length;
 
   let presentCount = 0;
-  for (const sessionDoc of sessionsSnap.docs) {
-    if (sessionDoc.data().isOpen) continue;
+  for (const sessionDoc of closedSessions) {
     const recordRef = doc(db, RECORDS_COLLECTION(spaceId, courseId, sessionDoc.id), uid);
     const recordSnap = await getDoc(recordRef);
     if (recordSnap.exists() && recordSnap.data().isPresent) {
@@ -219,4 +216,137 @@ export const getUserAttendanceStats = async (uid: string, spaceId: string, cours
     total: totalSessions,
     percentage: Math.round(percentage),
   };
+};
+
+export const getSessionRecords = async (spaceId: string, courseId: string, sessionId: string) => {
+  const recordsRef = collection(db, RECORDS_COLLECTION(spaceId, courseId, sessionId));
+  const snap = await getDocs(recordsRef);
+  return snap.docs.map(doc => ({
+    ...doc.data(),
+    uid: doc.id,
+    markedAt: doc.data().markedAt?.toDate() ?? new Date(),
+  } as AttendanceRecord));
+};
+
+import * as XLSX from 'xlsx';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+
+export const exportAttendanceToExcel = async (
+  courseId: string, 
+  spaceId: string, 
+  courseName: string, 
+  courseCode: string
+) => {
+  try {
+    // 1. Fetch all sessions for this course
+    const sessions = await getSessionsByCourse(spaceId, courseId);
+    const closedSessions = sessions.filter(s => !s.isOpen).sort((a, b) => 
+      a.lectureDate.getTime() - b.lectureDate.getTime()
+    );
+
+    if (closedSessions.length === 0) {
+      throw new Error('No closed sessions found to export.');
+    }
+
+    // 2. Fetch all members
+    const membersRef = collection(db, `spaces/${spaceId}/courses/${courseId}/members`);
+    const membersSnap = await getDocs(membersRef);
+    
+    // 3. Prepare data for XLSX
+    const data: any[] = [];
+    
+    // Header Row: [Name, Username, Date1, Date2, ..., Total]
+    const header = ['Full Name', 'Username'];
+    closedSessions.forEach(s => {
+      header.push(s.lectureDate.toLocaleDateString());
+    });
+    header.push('Total Present');
+    data.push(header);
+
+    // Student Rows
+    for (const mDoc of membersSnap.docs) {
+      const userSnap = await getDoc(doc(db, 'users', mDoc.id));
+      const userData = userSnap.data();
+      if (!userData || userData.role !== 'student') continue;
+
+      const row = [userData.fullName, userData.username || 'N/A'];
+      let presentCount = 0;
+
+      for (const session of closedSessions) {
+        const recordSnap = await getDoc(doc(db, `spaces/${spaceId}/courses/${courseId}/attendance/${session.id}/records`, mDoc.id));
+        const isPresent = recordSnap.exists() && recordSnap.data().isPresent;
+        row.push(isPresent ? 'P' : 'A');
+        if (isPresent) presentCount++;
+      }
+
+      row.push(presentCount.toString());
+      data.push(row);
+    }
+
+    // 4. Create Workbook
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+
+    // 5. Generate File
+    const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+    const fileName = `Attendance_${courseCode}_${new Date().getTime()}.xlsx`;
+    const uri = (FileSystem as any).cacheDirectory + fileName;
+
+    await FileSystem.writeAsStringAsync(uri, wbout, {
+      encoding: (FileSystem as any).EncodingType.Base64,
+    });
+
+    // 6. Share
+    await Sharing.shareAsync(uri);
+
+  } catch (error) {
+    console.error('Excel Export Error:', error);
+    throw error;
+  }
+};
+
+export const refreshQRToken = async (sessionId: string, courseId: string, spaceId: string) => {
+  const sessionRef = doc(db, SESSIONS_COLLECTION(spaceId, courseId), sessionId);
+  const newToken = Crypto.randomUUID().slice(0, 8).toUpperCase();
+  const expiresAt = new Date(Date.now() + 65 * 1000);
+  
+  await updateDoc(sessionRef, {
+    code: newToken,
+    codeExpiresAt: expiresAt,
+  });
+  return { newToken, expiresAt };
+};
+
+export const validateQRToken = (scannedToken: string, sessionId: string, expiresAt: Date): boolean => {
+  if (!scannedToken) return false;
+  return isBefore(new Date(), expiresAt);
+};
+
+export const hasStudentScanned = async (sessionId: string, courseId: string, spaceId: string, uid: string) => {
+  const recordRef = doc(db, RECORDS_COLLECTION(spaceId, courseId, sessionId), uid);
+  const snap = await getDoc(recordRef);
+  return snap.exists();
+};
+
+/**
+ * Settings logic for Space Management
+ */
+export const getAttendanceSettings = async (courseId: string, spaceId: string): Promise<CourseAttendanceSettings> => {
+  const settingsRef = doc(db, `spaces/${spaceId}/courses/${courseId}/settings`, 'attendance');
+  const snap = await getDoc(settingsRef);
+  if (snap.exists()) {
+    return snap.data() as CourseAttendanceSettings;
+  }
+  return { courseId, isEnabled: false };
+};
+
+export const updateCourseAttendanceSettings = async (
+  courseId: string, 
+  spaceId: string, 
+  settings: Partial<CourseAttendanceSettings>
+) => {
+  const settingsRef = doc(db, `spaces/${spaceId}/courses/${courseId}/settings`, 'attendance');
+  await setDoc(settingsRef, settings, { merge: true });
 };

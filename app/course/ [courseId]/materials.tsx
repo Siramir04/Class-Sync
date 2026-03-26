@@ -39,7 +39,7 @@ export default function CourseMaterialsScreen() {
     const [uploading, setUploading] = useState(false);
     
     // RBAC
-    const { canUploadMaterials } = useSpaceRole(spaceId!);
+    const { canUploadMaterials, isMonitor, isAssistant } = useSpaceRole(spaceId!);
 
     useEffect(() => {
         if (!spaceId || !courseId) return;
@@ -92,7 +92,7 @@ export default function CourseMaterialsScreen() {
 
     const handleDownload = async (material: CourseMaterial) => {
         try {
-            const cacheDir = (FileSystem as any).cacheDirectory || '';
+            const cacheDir = FileSystem.cacheDirectory || '';
             const fileUri = `${cacheDir}${material.title}`;
             const downloadResumable = FileSystem.createDownloadResumable(
                 material.fileUrl,

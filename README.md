@@ -15,6 +15,7 @@ ClassSync is a modern, real-time class management and notification mobile applic
 
 ## 📖 Documentation
 
+- [**FINAL YEAR PROJECT**](./docs/FINAL_YEAR_PROJECT.md): Full project documentation, abstract, and system design.
 - [**IDENTITY & RBAC Docs**](./docs/IDENTITY_AND_RBAC.md): Deep dive into permissions and roles.
 - [**PROXIMITY ATTENDANCE Docs**](./docs/PROXIMITY_ATTENDANCE.md): Details on the anti-fraud attendance verification.
 

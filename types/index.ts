@@ -9,14 +9,26 @@ export interface User {
     username: string;
     createdAt: Date;
     fcmToken?: string;
-    notificationPrefs?: {
-        global: {
-            lecture: boolean;
-            assignment: boolean;
-            test: boolean;
-            announcement: boolean;
-        };
-        spaces: Record<string, boolean>;
+    
+    // Denormalized enrollment for Spark-optimized feed queries
+    primarySpaceId?: string;
+    enrolledCourses: Array<{
+        courseId: string;
+        spaceId: string;
+        enrolledAt: Date;
+        autoJoined: boolean;
+    }>;
+    
+    carryoverEnrollments: Array<{
+        courseId: string;
+        spaceId: string;
+        enrolledAt: Date;
+        status: 'active' | 'dropped' | 'muted';
+    }>;
+    
+    preferences: {
+        autoJoinNewCourses: boolean; // Default: true
+        notificationPrefs: Record<string, boolean>; // global or per course/space
     };
 }
 
@@ -54,6 +66,8 @@ export interface Course {
     lecturerName?: string;
     isCarryover?: boolean;
     accepted?: boolean;
+    allowCarryover?: boolean; // NEW: Enable/Disable carryover joining
+    isGeneral?: boolean;      // NEW: If true, posts appear in all feeds in this space
     createdAt: Date;
 }
 
@@ -63,7 +77,7 @@ export type LectureStatus = 'scheduled' | 'cancelled' | 'rescheduled';
 export interface Post {
     id: string;
     spaceId: string;
-    courseId: string;
+    courseId: string | 'GENERAL'; // Updated to support Space-wide notifications
     courseCode: string;
     type: PostType;
     title: string;
@@ -205,4 +219,13 @@ export interface ReadReceipt {
   uid: string;
   fullName: string;
   readAt: Date;
+}
+
+/**
+ * Optimized Feed structure for client-side aggregation
+ */
+export interface FeedPost extends Post {
+    isCarryover: boolean;
+    spaceName: string;
+    courseCode: string;
 }

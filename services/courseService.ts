@@ -11,26 +11,36 @@ import {
     serverTimestamp,
     Timestamp,
     Unsubscribe,
+    arrayUnion,
+    writeBatch,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Course, CourseMember, UserRole } from '../types';
 
 /**
- * Add a course to a space. Also adds all existing space members as course members.
+ * Add a course to a space. Also adds all existing space members as course members
+ * and updates their denormalized User.enrolledCourses array if auto-join is enabled.
  */
 export async function addCourseToSpace(
     spaceId: string,
     courseName: string,
     courseCode: string,
-    fullCode: string
+    fullCode: string,
+    lecturerUid?: string,
+    allowCarryover: boolean = true
 ): Promise<string> {
+    const batch = writeBatch(db);
     const courseRef = doc(collection(db, 'spaces', spaceId, 'courses'));
 
-    await setDoc(courseRef, {
+    batch.set(courseRef, {
+        id: courseRef.id,
         spaceId,
         courseName,
         courseCode: courseCode.toUpperCase(),
         fullCode: fullCode.toUpperCase(),
+        lecturerUid: lecturerUid || null,
+        allowCarryover,
+        isGeneral: false,
         createdAt: serverTimestamp(),
     });
 
@@ -38,9 +48,12 @@ export async function addCourseToSpace(
     const membersSnap = await getDocs(
         collection(db, 'spaces', spaceId, 'members')
     );
+    
     for (const memberDoc of membersSnap.docs) {
         const memberData = memberDoc.data();
-        await setDoc(
+        
+        // 1. Add to course members subcollection
+        batch.set(
             doc(db, 'spaces', spaceId, 'courses', courseRef.id, 'members', memberDoc.id),
             {
                 uid: memberDoc.id,
@@ -50,9 +63,45 @@ export async function addCourseToSpace(
                 accepted: true,
             }
         );
+
+        // 2. Auto-enroll in user document if enabled
+        if (memberData.autoJoinEnabled !== false) { // Default to true if not set
+            batch.update(doc(db, 'users', memberDoc.id), {
+                enrolledCourses: arrayUnion({
+                    courseId: courseRef.id,
+                    spaceId,
+                    enrolledAt: new Date(),
+                    autoJoined: true
+                })
+            });
+        }
     }
 
+    await batch.commit();
     return courseRef.id;
+}
+
+/**
+ * Toggle the auto-join preference for a user in a specific space.
+ */
+export async function toggleAutoJoinPreference(
+    userId: string,
+    spaceId: string,
+    enabled: boolean
+): Promise<void> {
+    const batch = writeBatch(db);
+    
+    // Update user preference (Internal to User doc)
+    batch.update(doc(db, 'users', userId), {
+        'preferences.autoJoinNewCourses': enabled
+    });
+    
+    // Update space membership record (Used by the creation trigger)
+    batch.update(doc(db, 'spaces', spaceId, 'members', userId), {
+        autoJoinEnabled: enabled
+    });
+    
+    await batch.commit();
 }
 
 /**

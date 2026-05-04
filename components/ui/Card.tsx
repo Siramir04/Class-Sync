@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { Spacing } from '../../constants/spacing';
 
 interface CardProps {
@@ -22,6 +22,7 @@ export default function Card({
     variant = 'elevated',
     elevation = 1
 }: CardProps) {
+    const { colors: Colors } = useTheme();
 
     const getVariantStyle = () => {
         switch (variant) {

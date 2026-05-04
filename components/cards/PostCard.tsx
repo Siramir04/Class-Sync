@@ -21,7 +21,7 @@ interface PostCardProps {
  * Uses Tonal Surface elevations and large rounded corners.
  * Features smooth spring-scale interaction.
  */
-export default function PostCard({
+export default React.memo(function PostCard({
   post,
   isCarryover = false,
   onPress,
@@ -178,7 +178,7 @@ export default function PostCard({
       )}
     </>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 
 interface AvatarProps {
   firstName?: string;
@@ -23,6 +22,7 @@ export const Avatar = ({
   size = 'md', 
   style 
 }: AvatarProps) => {
+  const { colors: Colors, typography: Typography } = useTheme();
   const config = SIZE_MAP[size];
   const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
 
@@ -32,11 +32,19 @@ export const Avatar = ({
       { 
         width: config.size, 
         height: config.size, 
-        borderRadius: config.radius 
+        borderRadius: config.radius,
+        backgroundColor: Colors.primaryNavy
       }, 
       style
     ]}>
-      <Text style={[styles.initials, { fontSize: config.fontSize }]}>
+      <Text style={[
+        styles.initials, 
+        { 
+            fontSize: config.fontSize,
+            color: Colors.white,
+            fontFamily: Typography.family.bold
+        }
+      ]}>
         {initials}
       </Text>
     </View>
@@ -45,13 +53,10 @@ export const Avatar = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.primaryNavy,
     alignItems: 'center',
     justifyContent: 'center',
   },
   initials: {
-    color: 'white',
-    fontFamily: Typography.family.bold,
     fontWeight: '700',
   },
 });

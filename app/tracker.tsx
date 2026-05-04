@@ -24,9 +24,9 @@ export default function TrackerScreen() {
     const { deadlines, loading } = useTracker();
 
     const sections = useMemo(() => {
-        const today: any[] = [];
-        const thisWeek: any[] = [];
-        const later: any[] = [];
+        const today: Post[] = [];
+        const thisWeek: Post[] = [];
+        const later: Post[] = [];
 
         deadlines.forEach(item => {
             if (!item.dueDate) return;

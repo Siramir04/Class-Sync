@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function getUserRole(spaceId) {
+      return get(/databases/$(database)/documents/spaces/$(spaceId)/members/$(request.auth.uid)).data.role;
+    }
+    
+    function isSpaceMember(spaceId) {
+      return exists(/databases/$(database)/documents/spaces/$(spaceId)/members/$(request.auth.uid));
+    }
+    
+    function isMonitor(spaceId) {
+      return isSpaceMember(spaceId) && getUserRole(spaceId) in ['monitor', 'assistant_monitor', 'lecturer'];
+    }
+    
+    function isLecturer(spaceId) {
+      return isSpaceMember(spaceId) && getUserRole(spaceId) == 'lecturer';
+    }
+    
+    function isAdmin(spaceId) {
+      return isSpaceMember(spaceId) && getUserRole(spaceId) == 'monitor';
+    }
+    
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+    
+    match /users/{userId} {
+      // Users can read/write their own profile
+      allow read, write: if isUser(userId);
+      
+      // Memberships subcollection: user can read their own, 
+      // space monitors can read members of their space (for management)
+      match /memberships/{spaceId} {
+        allow read: if isUser(userId) || isMonitor(spaceId);
+        allow write: if isUser(userId); // Only the user writes their own memberships
+      }
+    }
+    
+    // ============================================
+    // SPACES COLLECTION
+    // ============================================
+    
+    match /spaces/{spaceId} {
+      // Anyone authenticated can read space metadata (needed for joining)
+      allow read: if isAuthenticated();
+      
+      // Only monitors can update space settings
+      allow update: if isAdmin(spaceId);
+      allow delete: if isAdmin(spaceId);
+      
+      // Members subcollection
+      match /members/{memberId} {
+        // Members can read other members (for contact lists, attendance)
+        allow read: if isSpaceMember(spaceId);
+        
+        // Only monitors can add/remove/change roles
+        allow create, update, delete: if isMonitor(spaceId);
+        
+        // Users can write their OWN membership doc on join (if invitation code valid)
+        // This is handled client-side with transaction — rules allow if not existing
+        allow create: if isUser(memberId) && !exists(/databases/$(database)/documents/spaces/$(spaceId)/members/$(memberId));
+      }
+      
+      // Courses subcollection
+      match /courses/{courseId} {
+        allow read: if isSpaceMember(spaceId);
+        allow write: if isMonitor(spaceId);
+      }
+      
+      // Posts subcollection
+      match /posts/{postId} {
+        allow read: if isSpaceMember(spaceId);
+        allow create: if isSpaceMember(spaceId); // Any member can post (adjust if needed)
+        allow update, delete: if isMonitor(spaceId) || request.auth.uid == resource.data.authorId;
+      }
+      
+      // Attendance sessions
+      match /attendanceSessions/{sessionId} {
+        allow read: if isSpaceMember(spaceId);
+        allow create, update, delete: if isMonitor(spaceId);
+      }
+      
+      // Attendance records
+      match /attendanceRecords/{recordId} {
+        // Students can read their own records
+        allow read: if isSpaceMember(spaceId) && 
+          (resource.data.studentId == request.auth.uid || isMonitor(spaceId));
+        
+        // Monitors can create records; students can ONLY create their own
+        // AND only if the session hasn't expired (server-side timestamp validation)
+        allow create: if isSpaceMember(spaceId) && (
+          isMonitor(spaceId) || 
+          (request.auth.uid == request.resource.data.studentId && 
+           getAfter(/databases/$(database)/documents/spaces/$(spaceId)/attendanceSessions/$(request.resource.data.sessionId)).data.codeExpiresAt > request.time)
+        );
+        
+        allow update, delete: if isMonitor(spaceId);
+      }
+    }
+    
+    // ============================================
+    // NOTIFICATIONS
+    // ============================================
+    
+    match /notifications/{notificationId} {
+      // User can only read their own notifications
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if false; // Server-only via Cloud Functions or admin SDK
+    }
+  }
+}

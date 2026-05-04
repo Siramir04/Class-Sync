@@ -12,6 +12,7 @@ interface SpaceState {
     setCarryoverCourses: (courses: Course[]) => void;
     addSpace: (space: Space) => void;
     removeSpace: (spaceId: string) => void;
+    cleanup: () => void;
 }
 
 export const useSpaceStore = create<SpaceState>()(
@@ -29,6 +30,7 @@ export const useSpaceStore = create<SpaceState>()(
                 set((state) => ({
                     spaces: state.spaces.filter((s) => s.id !== spaceId),
                 })),
+            cleanup: () => set({ spaces: [], activeSpaceId: null, carryoverCourses: [] }),
         }),
         {
             name: 'space-storage',

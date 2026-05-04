@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { Spacing } from '../../constants/spacing';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +12,7 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ icon, title, subtitle }: EmptyStateProps) {
+    const { colors: Colors, typography: Typography } = useTheme();
     return (
         <View style={styles.container}>
             {icon ? (
@@ -20,8 +20,14 @@ export default function EmptyState({ icon, title, subtitle }: EmptyStateProps) {
                     <Ionicons name={icon} size={48} color={Colors.textTertiary} />
                 </View>
             ) : null}
-            <Text style={styles.title}>{title}</Text>
-            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+            <Text style={[styles.title, { color: Colors.textPrimary, fontFamily: Typography.family.bold }]}>
+                {title}
+            </Text>
+            {subtitle ? (
+                <Text style={[styles.subtitle, { color: Colors.textSecondary, fontFamily: Typography.family.regular }]}>
+                    {subtitle}
+                </Text>
+            ) : null}
         </View>
     );
 }
@@ -39,15 +45,11 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 18,
-        fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
         textAlign: 'center',
         marginBottom: 8,
     },
     subtitle: {
         fontSize: 14,
-        fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
         textAlign: 'center',
     },
 });

@@ -7,20 +7,19 @@ import * as attendanceService from './attendanceService';
 import { useAuthStore } from '../store/authStore';
 import { useSpaceStore } from '../store/spaceStore';
 import { AttendanceSession } from '../types';
+import { logger } from '../utils/logger';
 
 export const BACKGROUND_ATTENDANCE_TASK = 'BACKGROUND_ATTENDANCE_SCAN';
 
 // Define the background task
 TaskManager.defineTask(BACKGROUND_ATTENDANCE_TASK, async () => {
   const now = new Date();
-  console.log(`[BackgroundFetch] Task triggered at ${now.toISOString()}`);
 
   try {
     const { user } = useAuthStore.getState();
     const { spaces } = useSpaceStore.getState();
 
     if (!user || spaces.length === 0) {
-        console.log('[BackgroundFetch] No user or spaces, skipping.');
         return BackgroundFetch.BackgroundFetchResult.NoData;
     }
 
@@ -38,7 +37,6 @@ TaskManager.defineTask(BACKGROUND_ATTENDANCE_TASK, async () => {
         .filter(session => spaceIds.includes(session.spaceId));
 
     if (sessions.length === 0) {
-        console.log('[BackgroundFetch] No active sessions found.');
         return BackgroundFetch.BackgroundFetchResult.NoData;
     }
 
@@ -50,7 +48,6 @@ TaskManager.defineTask(BACKGROUND_ATTENDANCE_TASK, async () => {
             const result = await proximityService.checkProximity(session);
             
             if (result.detected && result.signalStrength !== 'weak') {
-                console.log(`[BackgroundFetch] Detected beacon for ${session.courseCode}. Marking attendance...`);
                 await attendanceService.markAttendance(
                     session.spaceId,
                     session.courseId,
@@ -65,7 +62,7 @@ TaskManager.defineTask(BACKGROUND_ATTENDANCE_TASK, async () => {
                 markedAny = true;
             }
         } catch (err) {
-            console.error(`[BackgroundFetch] Error scanning for session ${session.id}:`, err);
+            logger.error(`[BackgroundFetch] Error scanning for session ${session.id}:`, err);
         }
     }
 
@@ -74,7 +71,7 @@ TaskManager.defineTask(BACKGROUND_ATTENDANCE_TASK, async () => {
         : BackgroundFetch.BackgroundFetchResult.NoData;
 
   } catch (error) {
-    console.error('[BackgroundFetch] Task failed:', error);
+    logger.error('[BackgroundFetch] Task failed:', error);
     return BackgroundFetch.BackgroundFetchResult.Failed;
   }
 });
@@ -89,9 +86,8 @@ export const registerBackgroundTasks = async () => {
         stopOnTerminate: false, // Android only
         startOnBoot: true, // Android only
       });
-      console.log(`[BackgroundFetch] Task ${BACKGROUND_ATTENDANCE_TASK} registered.`);
     }
   } catch (err) {
-    console.error(`[BackgroundFetch] Registration failed:`, err);
+    logger.error(`[BackgroundFetch] Registration failed:`, err);
   }
 };

@@ -11,8 +11,7 @@ import {
     Easing,
 } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -28,6 +27,7 @@ interface ActionSheetProps {
  * Features a large 28dp corner radius, drag handle, and smooth slide-up animation.
  */
 export default function ActionSheet({ visible, onClose, title, children }: ActionSheetProps) {
+    const { colors: Colors, typography: Typography } = useTheme();
     const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -65,7 +65,7 @@ export default function ActionSheet({ visible, onClose, title, children }: Actio
         }
     }, [visible]);
 
-    if (!visible && slideAnim._value === SCREEN_HEIGHT) return null;
+    if (!visible && (slideAnim as any)._value === SCREEN_HEIGHT) return null;
 
     return (
         <Modal
@@ -89,14 +89,19 @@ export default function ActionSheet({ visible, onClose, title, children }: Actio
                 <Animated.View
                     style={[
                         styles.sheet,
-                        { transform: [{ translateY: slideAnim }] }
+                        { 
+                            backgroundColor: Colors.surface,
+                            transform: [{ translateY: slideAnim }] 
+                        }
                     ]}
                 >
-                    <View style={styles.handle} />
+                    <View style={[styles.handle, { backgroundColor: Colors.outlineVariant }]} />
                     
                     {title && (
                         <View style={styles.header}>
-                            <Text style={styles.title}>{title}</Text>
+                            <Text style={[styles.title, { ...Typography.m3.titleLarge, color: Colors.onSurface }]}>
+                                {title}
+                            </Text>
                             <Pressable
                                 onPress={onClose}
                                 style={({ pressed }) => [
@@ -104,7 +109,7 @@ export default function ActionSheet({ visible, onClose, title, children }: Actio
                                     pressed && { backgroundColor: Colors.surfaceElevation3 }
                                 ]}
                             >
-                                <LucideIcons.X size={20} color={Colors.onSurfaceVariant} />
+                                <LucideIcons.X size={20} color={Colors.textSecondary} />
                             </Pressable>
                         </View>
                     )}
@@ -128,7 +133,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.4)',
     },
     sheet: {
-        backgroundColor: Colors.surface,
         borderTopLeftRadius: 28, // M3 Extra Large Corners
         borderTopRightRadius: 28,
         paddingTop: 12,
@@ -144,7 +148,6 @@ const styles = StyleSheet.create({
     handle: {
         width: 32,
         height: 4,
-        backgroundColor: Colors.outlineVariant,
         borderRadius: 2,
         alignSelf: 'center',
         marginBottom: 24,
@@ -158,8 +161,6 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     title: {
-        ...Typography.m3.titleLarge,
-        color: Colors.onSurface,
         fontWeight: '700',
     },
     closeBtn: {

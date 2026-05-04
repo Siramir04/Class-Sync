@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 
 export type TagType = 
   | 'lecture' | 'assignment' | 'test' | 'note' | 'announcement' 
@@ -16,9 +15,11 @@ interface TagProps {
 
 /**
  * Material 3 (M3) Tag / Filter Chip
- * Uses tonal palettes and rounded stadium shapes.
+ * Uses theme-aware tonal palettes and rounded stadium shapes.
  */
 export const Tag = ({ label, type = 'lecture', style }: TagProps) => {
+  const { colors: Colors, typography: Typography } = useTheme();
+
   const getM3Styles = (): { bg: string; text: string } => {
     switch (type) {
       case 'lecture':
@@ -47,7 +48,7 @@ export const Tag = ({ label, type = 'lecture', style }: TagProps) => {
 
   return (
     <View style={[styles.container, { backgroundColor: m3.bg }, style]}>
-      <Text style={[styles.text, { color: m3.text }]}>
+      <Text style={[styles.text, { color: m3.text, ...Typography.m3.labelSmall }]}>
         {label.charAt(0).toUpperCase() + label.slice(1)}
       </Text>
     </View>
@@ -64,7 +65,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   text: {
-    ...Typography.m3.labelSmall,
     fontWeight: '700',
     letterSpacing: 0.1,
   },

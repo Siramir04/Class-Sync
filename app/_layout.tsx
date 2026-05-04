@@ -12,7 +12,8 @@ import { User } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useCarryoverAutoAccept } from '../hooks/useCarryoverAutoAccept';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../hooks/useTheme';
+import { logger } from '../utils/logger';
 import CourseAcceptSheet from '../components/sheets/CourseAcceptSheet';
 import { registerBackgroundTasks } from '../services/backgroundTask';
 
@@ -20,6 +21,7 @@ export default function RootLayout() {
     const { isAuthenticated, isLoading } = useAuth();
     const segments = useSegments();
     const router = useRouter();
+    const { colors: Colors, isDark } = useTheme();
 
     // Phase 7 — Push Notifications
     const { expoPushToken } = usePushNotifications();
@@ -55,8 +57,8 @@ export default function RootLayout() {
                         // User exists in Auth but not in Firestore - handle or clear
                         useAuthStore.getState().setUser(null);
                     }
-                } catch (error) {
-                    console.error('Error fetching user data:', error);
+                } catch (err) {
+                    logger.error('Error fetching user data:', err);
                     useAuthStore.getState().setUser(null);
                 }
             } else {
@@ -100,7 +102,7 @@ export default function RootLayout() {
 
     return (
         <SafeAreaProvider>
-            <StatusBar style="dark" />
+            <StatusBar style={isDark ? "light" : "dark"} />
             <Slot />
 
             {/* Phase 8 — Carryover auto-accept notification sheet */}

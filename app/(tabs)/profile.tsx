@@ -6,14 +6,12 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  Platform,
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import { Avatar } from '../../components/ui/Avatar';
 import { FormGroup } from '../../components/ui/FormGroup';
@@ -23,6 +21,7 @@ import { logoutUser } from '../../services/authService';
 export default function ProfileScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { colors: Colors, typography: Typography } = useTheme();
     const { user, logout } = useAuthStore();
 
     const handleLogout = async () => {
@@ -45,14 +44,14 @@ export default function ProfileScreen() {
     const lastName = fullName.split(' ')[1] || '';
 
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: Colors.background }]}>
         <StatusBar barStyle="dark-content" />
         
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-           <Text style={styles.title}>Profile</Text>
-           <Pressable style={styles.settingsCircle}>
-             <LucideIcons.Settings size={18} color="#000" />
+           <Text style={[styles.title, { color: Colors.onSurface, fontFamily: Typography.family.extraBold }]}>Profile</Text>
+           <Pressable style={[styles.settingsCircle, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }]}>
+             <LucideIcons.Settings size={18} color={Colors.onSurface} />
            </Pressable>
         </View>
 
@@ -68,14 +67,14 @@ export default function ProfileScreen() {
               size="xl" 
             />
             <View style={styles.heroText}>
-              <Text style={styles.userName}>{fullName}</Text>
-              <Text style={styles.userSub}>{user?.university}</Text>
-              <Text style={styles.userSub}>{user?.username ? `@${user.username}` : 'No username set'}</Text>
+              <Text style={[styles.userName, { color: Colors.onSurface, fontFamily: Typography.family.bold }]}>{fullName}</Text>
+              <Text style={[styles.userSub, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>{user?.university}</Text>
+              <Text style={[styles.userSub, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>{user?.username ? `@${user.username}` : 'No username set'}</Text>
             </View>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Account security</Text>
+            <Text style={[styles.sectionLabel, { color: Colors.textTertiary, fontFamily: Typography.family.semiBold }]}>Account security</Text>
             <FormGroup>
                <FormRow 
                  label="Security & Privacy"
@@ -92,7 +91,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>University & programme</Text>
+            <Text style={[styles.sectionLabel, { color: Colors.textTertiary, fontFamily: Typography.family.semiBold }]}>University & programme</Text>
             <FormGroup>
                <FormRow 
                  label="University Details"
@@ -109,7 +108,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Preferences</Text>
+            <Text style={[styles.sectionLabel, { color: Colors.textTertiary, fontFamily: Typography.family.semiBold }]}>Preferences</Text>
             <FormGroup>
                <FormRow 
                  label="Notifications"
@@ -143,10 +142,10 @@ export default function ProfileScreen() {
                pressed && { opacity: 0.7 }
             ]}
           >
-            <Text style={styles.logoutText}>Sign out of ClassSync</Text>
+            <Text style={[styles.logoutText, { color: Colors.error, fontFamily: Typography.family.semiBold }]}>Sign out of ClassSync</Text>
           </Pressable>
 
-          <Text style={styles.versionText}>Version 2.4.0 (102)</Text>
+          <Text style={[styles.versionText, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>Version 2.4.0 (102)</Text>
         </ScrollView>
       </View>
     );
@@ -155,7 +154,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -167,19 +165,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#000',
     letterSpacing: -1,
-    fontFamily: Typography.family.extraBold,
   },
   settingsCircle: {
     width: 36,
     height: 36,
-    backgroundColor: 'white',
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.separatorOpaque,
   },
   hero: {
     alignItems: 'center',
@@ -192,15 +186,11 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#000',
     letterSpacing: -0.5,
-    fontFamily: Typography.family.bold,
   },
   userSub: {
     fontSize: 13,
-    color: Colors.textTertiary,
     marginTop: 2,
-    fontFamily: Typography.family.regular,
   },
   section: {
     marginBottom: 20,
@@ -208,12 +198,10 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: Colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingHorizontal: 18,
     marginBottom: 8,
-    fontFamily: Typography.family.semiBold,
   },
   logoutButton: {
     marginTop: 10,
@@ -224,15 +212,11 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.error,
-    fontFamily: Typography.family.semiBold,
   },
   versionText: {
     marginTop: 20,
     fontSize: 11,
-    color: Colors.textTertiary,
     textAlign: 'center',
     opacity: 0.5,
-    fontFamily: Typography.family.regular,
   },
 });

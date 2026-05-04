@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { Spacing } from '../../constants/spacing';
 
 interface FormGroupProps {
@@ -9,8 +9,9 @@ interface FormGroupProps {
 }
 
 export const FormGroup = ({ children, style }: FormGroupProps) => {
+  const { colors: Colors } = useTheme();
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, { backgroundColor: Colors.surface }, style]}>
       {React.Children.map(children, (child, index) => {
         if (!React.isValidElement(child)) return child;
         
@@ -26,7 +27,6 @@ export const FormGroup = ({ children, style }: FormGroupProps) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.surface,
     borderRadius: Spacing.cardRadius,
     overflow: 'hidden',
   },

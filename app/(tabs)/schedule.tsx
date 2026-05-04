@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,19 +7,21 @@ import {
   Pressable,
   StatusBar,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
-import { addDays, format, isSameDay, startOfToday, eachDayOfInterval } from 'date-fns';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { addDays, format, isSameDay, startOfToday } from 'date-fns';
+import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import { useRecentPosts } from '../../hooks/usePosts';
 import ClassCard from '../../components/cards/ClassCard';
 import PostTypeSheet from '../../components/sheets/PostTypeSheet';
 import CreatePostSheet from '../../components/sheets/CreatePostSheet';
-import { Post, PostType } from '../../types';
+import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
+import { ErrorState } from '../../components/feedback/ErrorState';
+import { PostType } from '../../types';
 
 const { width } = Dimensions.get('window');
 
@@ -31,8 +33,9 @@ function generateWeekDates(): Date[] {
 export default function ScheduleScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors: Colors, typography: Typography } = useTheme();
   const { user } = useAuthStore();
-  const { posts, loading } = useRecentPosts(50);
+  const { posts, loading, error, refetch } = useRecentPosts(50);
 
   const [selectedDate, setSelectedDate] = useState(startOfToday());
   const [showPostTypeSheet, setShowPostTypeSheet] = useState(false);
@@ -66,31 +69,34 @@ export default function ScheduleScreen() {
     }, 500);
   }, [selectedDate]);
 
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorState message="Failed to load schedule" onRetry={refetch} />;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: Colors.background }]}>
       <StatusBar barStyle="dark-content" />
       
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View>
-          <Text style={styles.title}>Schedule</Text>
-          <Text style={styles.subtitle}>{format(selectedDate, 'MMMM yyyy')}</Text>
+          <Text style={[styles.title, { color: Colors.onSurface, fontFamily: Typography.family.extraBold }]}>Schedule</Text>
+          <Text style={[styles.subtitle, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>{format(selectedDate, 'MMMM yyyy')}</Text>
         </View>
 
         <View style={styles.headerActions}>
-           <View style={styles.searchCircle}>
-             <LucideIcons.Search size={18} color="#000" />
+           <View style={[styles.searchCircle, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }]}>
+             <LucideIcons.Search size={18} color={Colors.onSurface} />
            </View>
            {isMonitorOrAssistant ? (
              <Pressable 
                onPress={() => setShowPostTypeSheet(true)}
-               style={styles.calendarCircle}
+               style={[styles.calendarCircle, { backgroundColor: Colors.accentBlue }]}
              >
-               <LucideIcons.CalendarPlus size={18} color="white" />
+               <LucideIcons.CalendarPlus size={18} color={Colors.white} />
              </Pressable>
            ) : (
-             <View style={styles.calendarCircle}>
-               <LucideIcons.Calendar size={18} color="white" />
+             <View style={[styles.calendarCircle, { backgroundColor: Colors.accentBlue }]}>
+               <LucideIcons.Calendar size={18} color={Colors.white} />
              </View>
            )}
         </View>
@@ -113,16 +119,25 @@ export default function ScheduleScreen() {
                 onPress={() => setSelectedDate(date)}
                 style={[
                   styles.dateTile,
-                  isSelected && styles.dateTileSelected
+                  { backgroundColor: Colors.transparent },
+                  isSelected && [styles.dateTileSelected, { backgroundColor: Colors.surface }]
                 ]}
               >
-                <Text style={[styles.dayInitial, isSelected && styles.dayInitialSelected]}>
+                <Text style={[
+                  styles.dayInitial, 
+                  { color: Colors.textTertiary, fontFamily: Typography.family.semiBold },
+                  isSelected && { color: Colors.accentBlue }
+                ]}>
                   {format(date, 'EEEEE')}
                 </Text>
-                <Text style={[styles.dateNum, isSelected && styles.dateNumSelected]}>
+                <Text style={[
+                  styles.dateNum, 
+                  { color: Colors.onSurface, fontFamily: Typography.family.bold },
+                  isSelected && { color: Colors.accentBlue }
+                ]}>
                   {format(date, 'd')}
                 </Text>
-                {isToday && !isSelected && <View style={styles.todayDot} />}
+                {isToday && !isSelected && <View style={[styles.todayDot, { backgroundColor: Colors.accentBlue }]} />}
               </Pressable>
             );
           })}
@@ -137,8 +152,8 @@ export default function ScheduleScreen() {
           dayLectures.map((lecture) => (
             <View key={lecture.id} style={styles.timelineRow}>
               <View style={styles.timeColumn}>
-                <Text style={styles.startTimeText}>{lecture.startTime || '--:--'}</Text>
-                <View style={styles.timelineLine} />
+                <Text style={[styles.startTimeText, { color: Colors.textSecondary, fontFamily: Typography.family.bold }]}>{lecture.startTime || '--:--'}</Text>
+                <View style={[styles.timelineLine, { backgroundColor: Colors.separatorOpaque }]} />
               </View>
               <View style={styles.cardColumn}>
                 <ClassCard
@@ -156,13 +171,13 @@ export default function ScheduleScreen() {
           ))
         ) : (
           <View style={styles.emptyState}>
-            <View style={styles.emptyIconCircle}>
+            <View style={[styles.emptyIconCircle, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }]}>
               <LucideIcons.CalendarX size={32} color={Colors.textTertiary} opacity={0.3} />
             </View>
-            <Text style={styles.emptyTitle}>
+            <Text style={[styles.emptyTitle, { color: Colors.onSurface, fontFamily: Typography.family.bold }]}>
               {isSameDay(selectedDate, startOfToday()) ? "No classes today" : "Nothing scheduled"}
             </Text>
-            <Text style={styles.emptySubtitle}>
+            <Text style={[styles.emptySubtitle, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>
               Enjoy your free day or check another date.
             </Text>
           </View>
@@ -192,7 +207,6 @@ export default function ScheduleScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -204,15 +218,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#000',
     letterSpacing: -1,
-    fontFamily: Typography.family.extraBold,
   },
   subtitle: {
     fontSize: 13,
-    color: Colors.textTertiary,
     marginTop: 2,
-    fontFamily: Typography.family.regular,
   },
   headerActions: {
     flexDirection: 'row',
@@ -221,17 +231,14 @@ const styles = StyleSheet.create({
   searchCircle: {
     width: 36,
     height: 36,
-    backgroundColor: 'white',
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.separatorOpaque,
   },
   calendarCircle: {
     width: 36,
     height: 36,
-    backgroundColor: Colors.accentBlue,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
@@ -249,10 +256,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
   },
   dateTileSelected: {
-    backgroundColor: 'white',
     borderRadius: 14,
     ...Platform.select({
       ios: {
@@ -269,28 +274,17 @@ const styles = StyleSheet.create({
   dayInitial: {
     fontSize: 10,
     fontWeight: '600',
-    color: Colors.textTertiary,
     textTransform: 'uppercase',
     marginBottom: 4,
-    fontFamily: Typography.family.semiBold,
-  },
-  dayInitialSelected: {
-    color: Colors.accentBlue,
   },
   dateNum: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#000',
-    fontFamily: Typography.family.bold,
-  },
-  dateNumSelected: {
-    color: Colors.accentBlue,
   },
   todayDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: Colors.accentBlue,
     marginTop: 4,
   },
   timelineRow: {
@@ -307,13 +301,10 @@ const styles = StyleSheet.create({
   startTimeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.textSecondary,
-    fontFamily: Typography.family.bold,
   },
   timelineLine: {
     flex: 1,
     width: 1,
-    backgroundColor: Colors.separatorOpaque,
     marginTop: 8,
     marginBottom: -120, // To connect to next row
   },
@@ -331,26 +322,20 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'white',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: Colors.separatorOpaque,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#000',
     marginBottom: 8,
     textAlign: 'center',
-    fontFamily: Typography.family.bold,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: Colors.textTertiary,
     textAlign: 'center',
     lineHeight: 20,
-    fontFamily: Typography.family.regular,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,17 +6,13 @@ import {
   ScrollView,
   Pressable,
   StatusBar,
-  Dimensions,
   FlatList,
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../config/firebase';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import { useCourses } from '../../hooks/useCourses';
 import { getPostsBySpace, createPost } from '../../services/postService';
@@ -26,9 +22,10 @@ import { Avatar } from '../../components/ui/Avatar';
 import PostCard from '../../components/cards/PostCard';
 import PostTypeSheet from '../../components/sheets/PostTypeSheet';
 import CreatePostSheet, { CreatePostData } from '../../components/sheets/CreatePostSheet';
-import { Post, PostType, Space, AttendanceSession, CourseMember } from '../../types';
-
-const { width } = Dimensions.get('window');
+import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
+import { ErrorState } from '../../components/feedback/ErrorState';
+import { logger } from '../../utils/logger';
+import { Post, PostType, Space, CourseMember } from '../../types';
 
 const postTypeFilters = ['All', 'Lectures', 'Assignments', 'Tests', 'Notes'] as const;
 const postTypeMap: Record<string, PostType | undefined> = {
@@ -43,6 +40,7 @@ export default function SpaceFeedScreen() {
     const { spaceId } = useLocalSearchParams<{ spaceId: string }>();
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { colors: Colors, typography: Typography } = useTheme();
     const { user } = useAuthStore();
     const { courses } = useCourses(spaceId || null);
 
@@ -50,19 +48,17 @@ export default function SpaceFeedScreen() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [members, setMembers] = useState<CourseMember[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [activeCourseId, setActiveCourseId] = useState<string>('All');
     const [activeTypeFilter, setActiveTypeFilter] = useState<string>('All');
     const [showPostTypeSheet, setShowPostTypeSheet] = useState(false);
     const [showCreateSheet, setShowCreateSheet] = useState(false);
     const [selectedPostType, setSelectedPostType] = useState<PostType>('lecture');
     const [createLoading, setCreateLoading] = useState(false);
-    const [activeSessions, setActiveSessions] = useState<AttendanceSession[]>([]);
 
     const { 
         role, 
         isMonitor, 
-        isAssistant, 
-        isLecturer, 
     } = useSpaceRole(spaceId!);
     const canPost = !!role;
 
@@ -75,6 +71,7 @@ export default function SpaceFeedScreen() {
 
     const loadData = async () => {
         setLoading(true);
+        setError(null);
         try {
             const [spaceData, postsData] = await Promise.all([
                 getSpaceById(spaceId!),
@@ -82,8 +79,9 @@ export default function SpaceFeedScreen() {
             ]);
             setSpace(spaceData);
             setPosts(postsData);
-        } catch (error) {
-            console.error('Error loading space:', error);
+        } catch (err) {
+            logger.error('Error loading space:', err);
+            setError('Failed to load space data');
         } finally {
             setLoading(false);
         }
@@ -128,66 +126,77 @@ export default function SpaceFeedScreen() {
             });
             setShowCreateSheet(false);
             loadData();
-        } catch (error) {
-            console.error('Error creating post:', error);
+        } catch (err) {
+            logger.error('Error creating post:', err);
         } finally {
             setCreateLoading(false);
         }
     };
 
+    const renderPost = useCallback(({ item }: { item: Post }) => (
+        <PostCard 
+            post={item} 
+            onPress={() => router.push(`/post/${item.id}?spaceId=${spaceId}`)}
+            style={{ marginBottom: 10 }}
+        />
+    ), [router, spaceId]);
+
+    if (loading) return <LoadingSpinner />;
+    if (error) return <ErrorState message={error} onRetry={loadData} />;
+
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: Colors.background }]}>
         <StatusBar barStyle="dark-content" />
         
         {/* Header Section */}
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
            <Pressable onPress={() => router.back()} style={styles.backButton}>
-             <LucideIcons.ChevronLeft size={24} color="#000" />
+             <LucideIcons.ChevronLeft size={24} color={Colors.onSurface} />
            </Pressable>
 
            <View style={styles.titleContainer}>
-             <Text style={styles.spaceName}>{activeCourseId !== 'All' ? courses.find(c => c.id === activeCourseId)?.courseCode : space?.spaceCode}</Text>
-             <Text style={styles.spaceSubtitle} numberOfLines={1}>
+             <Text style={[styles.spaceName, { color: Colors.onSurface, fontFamily: Typography.family.extraBold }]}>{activeCourseId !== 'All' ? courses.find(c => c.id === activeCourseId)?.courseCode : space?.spaceCode}</Text>
+             <Text style={[styles.spaceSubtitle, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]} numberOfLines={1}>
                {activeCourseId !== 'All' ? courses.find(c => c.id === activeCourseId)?.courseName : space?.name}
              </Text>
            </View>
 
            <View style={styles.headerActions}>
-             <Pressable style={styles.iconCircle}>
-               <LucideIcons.Cloud size={18} color="#000" />
+             <Pressable style={[styles.iconCircle, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }]}>
+               <LucideIcons.Cloud size={18} color={Colors.onSurface} />
              </Pressable>
              <Pressable 
                onPress={() => router.push(`/space/manage?spaceId=${spaceId}`)}
-               style={styles.iconCircle}
+               style={[styles.iconCircle, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }]}
              >
-               <LucideIcons.Info size={18} color="#000" />
+               <LucideIcons.Info size={18} color={Colors.onSurface} />
              </Pressable>
            </View>
         </View>
 
         {/* Course Filters */}
-        <View style={styles.courseFilters}>
+        <View style={[styles.courseFilters, { borderBottomColor: Colors.separator }]}>
            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
               <Pressable 
                 onPress={() => setActiveCourseId('All')}
-                style={[styles.coursePill, activeCourseId === 'All' && styles.coursePillActive]}
+                style={[styles.coursePill, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }, activeCourseId === 'All' && [styles.coursePillActive, { backgroundColor: Colors.accentBlue, borderColor: Colors.accentBlue }]]}
               >
-                <Text style={[styles.coursePillText, activeCourseId === 'All' && styles.coursePillTextActive]}>General</Text>
+                <Text style={[styles.coursePillText, { color: Colors.textSecondary, fontFamily: Typography.family.bold }, activeCourseId === 'All' && { color: Colors.white }]}>General</Text>
               </Pressable>
               {courses.map(course => (
                  <Pressable 
                    key={course.id}
                    onPress={() => setActiveCourseId(course.id)}
-                   style={[styles.coursePill, activeCourseId === course.id && styles.coursePillActive]}
+                   style={[styles.coursePill, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }, activeCourseId === course.id && [styles.coursePillActive, { backgroundColor: Colors.accentBlue, borderColor: Colors.accentBlue }]]}
                  >
-                   <Text style={[styles.coursePillText, activeCourseId === course.id && styles.coursePillTextActive]}>{course.courseCode}</Text>
+                   <Text style={[styles.coursePillText, { color: Colors.textSecondary, fontFamily: Typography.family.bold }, activeCourseId === course.id && { color: Colors.white }]}>{course.courseCode}</Text>
                  </Pressable>
               ))}
            </ScrollView>
         </View>
 
         {/* Member Strip */}
-        <View style={styles.memberStrip}>
+        <View style={[styles.memberStrip, { backgroundColor: Colors.background, borderBottomColor: Colors.separator }]}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.memberStripContent}>
             {members.map((member, idx) => (
               <View key={member.uid || idx} style={styles.memberAvatar}>
@@ -196,7 +205,7 @@ export default function SpaceFeedScreen() {
                   lastName={member.fullName?.split(' ')[1] || ''} 
                   size="sm" 
                 />
-                <Text style={styles.memberName} numberOfLines={1}>
+                <Text style={[styles.memberName, { color: Colors.textTertiary, fontFamily: Typography.family.semiBold }]} numberOfLines={1}>
                   {member.fullName?.split(' ')[0]}
                 </Text>
               </View>
@@ -205,15 +214,15 @@ export default function SpaceFeedScreen() {
         </View>
 
         {/* Type Filters */}
-        <View style={styles.typeFilters}>
+        <View style={[styles.typeFilters, { backgroundColor: Colors.surface, borderBottomColor: Colors.separator }]}>
            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
              {postTypeFilters.map(filter => (
                <Pressable 
                  key={filter} 
                  onPress={() => setActiveTypeFilter(filter)}
-                 style={[styles.typePill, activeTypeFilter === filter && styles.typePillActive]}
+                 style={[styles.typePill, activeTypeFilter === filter && [styles.typePillActive, { backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : '#EFF6FF' }]]}
                >
-                 <Text style={[styles.typePillText, activeTypeFilter === filter && styles.typePillTextActive]}>{filter}</Text>
+                 <Text style={[styles.typePillText, { color: Colors.textTertiary, fontFamily: Typography.family.medium }, activeTypeFilter === filter && { color: Colors.accentBlue, fontWeight: '700' }]}>{filter}</Text>
                </Pressable>
              ))}
            </ScrollView>
@@ -228,17 +237,11 @@ export default function SpaceFeedScreen() {
             paddingTop: 10,
             paddingBottom: 120 // Space for tab bar and FAB
           }}
-          renderItem={({ item }) => (
-            <PostCard 
-              post={item} 
-              onPress={() => router.push(`/post/${item.id}?spaceId=${spaceId}`)}
-              style={{ marginBottom: 10 }}
-            />
-          )}
+          renderItem={renderPost}
           ListEmptyComponent={
             <View style={styles.emptyFeed}>
               <LucideIcons.Newspaper size={40} color={Colors.textTertiary} opacity={0.2} />
-              <Text style={styles.emptyFeedText}>No updates found for this filter.</Text>
+              <Text style={[styles.emptyFeedText, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>No updates found for this filter.</Text>
             </View>
           }
         />
@@ -249,7 +252,13 @@ export default function SpaceFeedScreen() {
             onPress={() => setShowPostTypeSheet(true)}
             style={({ pressed }) => [
               styles.fab,
-              pressed && { transform: [{ scale: 0.92 }], opacity: 0.9 }
+              { backgroundColor: Colors.accentBlue },
+              pressed && { transform: [{ scale: 0.92 }], opacity: 0.9 },
+              Platform.select({
+                ios: {
+                  shadowColor: Colors.accentBlue,
+                }
+              })
             ]}
           >
             <LucideIcons.Plus size={28} color="white" />
@@ -291,7 +300,6 @@ export default function SpaceFeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -314,14 +322,10 @@ const styles = StyleSheet.create({
   spaceName: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#000',
     letterSpacing: -0.3,
-    fontFamily: Typography.family.extraBold,
   },
   spaceSubtitle: {
     fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: Typography.family.regular,
   },
   headerActions: {
     flexDirection: 'row',
@@ -330,17 +334,14 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 34,
     height: 34,
-    backgroundColor: 'white',
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.separatorOpaque,
   },
   courseFilters: {
     paddingVertical: 10,
     borderBottomWidth: 0.5,
-    borderBottomColor: Colors.separator,
   },
   filterContent: {
     paddingHorizontal: 16,
@@ -350,28 +351,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: Colors.separatorOpaque,
   },
-  coursePillActive: {
-    backgroundColor: Colors.accentBlue,
-    borderColor: Colors.accentBlue,
-  },
+  coursePillActive: {},
   coursePillText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.textSecondary,
-    fontFamily: Typography.family.bold,
   },
-  coursePillTextActive: {
-    color: 'white',
-  },
+  coursePillTextActive: {},
   memberStrip: {
     paddingVertical: 14,
-    backgroundColor: Colors.background,
     borderBottomWidth: 0.5,
-    borderBottomColor: Colors.separator,
   },
   memberStripContent: {
     paddingHorizontal: 16,
@@ -384,44 +374,31 @@ const styles = StyleSheet.create({
   memberName: {
     fontSize: 9,
     fontWeight: '600',
-    color: Colors.textTertiary,
     marginTop: 4,
     textAlign: 'center',
-    fontFamily: Typography.family.semiBold,
   },
   typeFilters: {
     paddingVertical: 10,
-    backgroundColor: 'white',
     borderBottomWidth: 0.5,
-    borderBottomColor: Colors.separator,
   },
   typePill: {
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 8,
   },
-  typePillActive: {
-    backgroundColor: '#EFF6FF',
-  },
+  typePillActive: {},
   typePillText: {
     fontSize: 11,
     fontWeight: '600',
-    color: Colors.textTertiary,
-    fontFamily: Typography.family.medium,
   },
-  typePillTextActive: {
-    color: Colors.accentBlue,
-    fontWeight: '700',
-  },
+  typePillTextActive: {},
   emptyFeed: {
     paddingTop: 80,
     alignItems: 'center',
   },
   emptyFeedText: {
     fontSize: 13,
-    color: Colors.textTertiary,
     marginTop: 12,
-    fontFamily: Typography.family.regular,
   },
   fab: {
     position: 'absolute',
@@ -430,12 +407,10 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 31,
-    backgroundColor: Colors.accentBlue,
     alignItems: 'center',
     justifyContent: 'center',
     ...Platform.select({
       ios: {
-        shadowColor: Colors.accentBlue,
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.3,
         shadowRadius: 10,

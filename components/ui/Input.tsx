@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,8 @@ import {
   TextInputProps,
   ViewStyle,
   Animated,
-  Platform
 } from 'react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 
 interface InputProps extends TextInputProps {
     label: string;
@@ -18,10 +16,6 @@ interface InputProps extends TextInputProps {
     containerStyle?: ViewStyle;
 }
 
-/**
- * Material 3 (M3) Outlined Text Field
- * Features a smooth floating label animation and distinct focus indicator.
- */
 export default function Input({
     label,
     error,
@@ -31,9 +25,9 @@ export default function Input({
     value,
     ...rest
 }: InputProps) {
-    const [isFocused, setIsFocused] = React.useState(false);
+    const { colors: Colors, typography: Typography } = useTheme();
+    const [isFocused, setIsFocused] = useState(false);
 
-    // Animation refs for the floating label
     const labelAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
     const focusAnim = useRef(new Animated.Value(0)).current;
 
@@ -63,11 +57,11 @@ export default function Input({
         }),
         backgroundColor: labelAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: ['transparent', Colors.background],
+            outputRange: ['transparent', Colors.surface],
         }),
         color: focusAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: error ? Colors.error : [Colors.onSurfaceVariant, Colors.primary],
+            outputRange: error ? [Colors.error, Colors.error] : [Colors.textSecondary, Colors.primary],
         }),
         paddingHorizontal: labelAnim.interpolate({
             inputRange: [0, 1],
@@ -77,7 +71,7 @@ export default function Input({
 
     const borderColor = focusAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: error ? [Colors.error, Colors.error] : [Colors.outline, Colors.primary],
+        outputRange: error ? [Colors.error, Colors.error] : [Colors.border, Colors.primary],
     });
 
     const borderWidth = focusAnim.interpolate({
@@ -99,7 +93,11 @@ export default function Input({
             >
                 <Animated.Text
                     pointerEvents="none"
-                    style={[styles.floatingLabel, labelStyle]}
+                    style={[
+                        styles.floatingLabel, 
+                        labelStyle,
+                        { fontFamily: Typography.family.medium }
+                    ]}
                 >
                     {label}
                 </Animated.Text>
@@ -107,9 +105,13 @@ export default function Input({
                 <TextInput
                     style={[
                         styles.input,
+                        { 
+                            color: Colors.textPrimary,
+                            fontFamily: Typography.family.regular
+                        },
                         rest.multiline && { paddingTop: 16, textAlignVertical: 'top' }
                     ]}
-                    placeholderTextColor="transparent" // Placeholder is handled by floating label
+                    placeholderTextColor="transparent"
                     onFocus={(e) => {
                         setIsFocused(true);
                         onFocus?.(e);
@@ -125,7 +127,7 @@ export default function Input({
 
             {error ? (
                 <View style={styles.errorWrapper}>
-                    <Text style={styles.error}>{error}</Text>
+                    <Text style={[styles.error, { color: Colors.error, ...Typography.m3.labelSmall }]}>{error}</Text>
                 </View>
             ) : null}
         </View>
@@ -137,7 +139,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     inputWrapper: {
-        borderRadius: 4, // M3 Outlined standard uses small radius
+        borderRadius: 4,
         paddingHorizontal: 12,
         justifyContent: 'center',
     },
@@ -145,22 +147,15 @@ const styles = StyleSheet.create({
         position: 'absolute',
         left: 12,
         zIndex: 10,
-        fontFamily: Typography.family.medium,
     },
     input: {
         fontSize: 16,
-        color: Colors.onSurface,
-        fontFamily: Typography.family.regular,
-        ...Platform.select({
-            web: { outlineStyle: 'none' },
-        }),
     },
     errorWrapper: {
         marginTop: 4,
         paddingHorizontal: 12,
     },
     error: {
-        ...Typography.m3.labelSmall,
-        color: Colors.error,
+        fontWeight: '500',
     },
 });

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { checkAndAutoAcceptCourses, getCoursesBySpace } from '../services/courseService';
 import { getUserSpaces } from '../services/spaceService';
+import { logger } from '../utils/logger';
 
 interface PendingCourse {
     courseName: string;
@@ -29,7 +30,7 @@ export function useCarryoverAutoAccept() {
                 // Auto-accept any courses past their deadline
                 const autoAccepted = await checkAndAutoAcceptCourses(user.uid);
                 if (autoAccepted.length > 0) {
-                    console.log('Auto-accepted courses:', autoAccepted);
+                    // Auto-accepted courses logic
                 }
 
                 // Find any remaining pending courses (not yet accepted, not past deadline)
@@ -56,7 +57,7 @@ export function useCarryoverAutoAccept() {
                     setShowSheet(true);
                 }
             } catch (error) {
-                console.error('Error checking carryover courses:', error);
+                logger.error('Error checking carryover courses:', error);
             }
         };
 

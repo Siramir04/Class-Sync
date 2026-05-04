@@ -12,8 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import { useRecentPosts } from '../../hooks/usePosts';
 import { useSpaces } from '../../hooks/useSpace';
@@ -23,6 +22,8 @@ import Card from '../../components/ui/Card';
 import ClassCard from '../../components/cards/ClassCard';
 import SpaceTile from '../../components/cards/SpaceTile';
 import PostCard from '../../components/cards/PostCard';
+import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
+import { ErrorState } from '../../components/feedback/ErrorState';
 
 const { width } = Dimensions.get('window');
 
@@ -36,9 +37,10 @@ function getGreeting(): string {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors: Colors, typography: Typography } = useTheme();
   const { user } = useAuthStore();
   const { unreadCount } = useNotifications();
-  const { posts: recentPosts, loading: postsLoading } = useRecentPosts(15);
+  const { posts: recentPosts, loading: postsLoading, error: postsError, refetch } = useRecentPosts(15);
   const { spaces } = useSpaces();
 
   // Animations
@@ -46,19 +48,16 @@ export default function HomeScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
+    if (!postsLoading) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
+    }
   }, [postsLoading]);
 
   const firstName = user?.fullName?.split(' ')[0] || 'there';
-  const todayDateStr = new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    month: 'long', 
-    day: 'numeric' 
-  });
 
   const today = new Date();
   const todayLectures = recentPosts.filter(
@@ -86,14 +85,17 @@ export default function HomeScreen() {
     extrapolate: 'clamp',
   });
 
+  if (postsLoading) return <LoadingSpinner />;
+  if (postsError) return <ErrorState message="Failed to load feed" onRetry={refetch} />;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: Colors.background }]}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
       
       {/* M3 Adaptive App Bar */}
-      <Animated.View style={[styles.appBar, { height: headerHeight, paddingTop: insets.top }]}>
+      <Animated.View style={[styles.appBar, { height: headerHeight, paddingTop: insets.top, backgroundColor: Colors.background }]}>
           <View style={styles.appBarTop}>
-              <Animated.Text style={[styles.appBarTitle, { opacity: headerTitleOpacity }]}>
+              <Animated.Text style={[styles.appBarTitle, { opacity: headerTitleOpacity, color: Colors.onSurface, ...Typography.m3.titleLarge }]}>
                   ClassSync
               </Animated.Text>
               <View style={styles.appBarActions}>
@@ -103,7 +105,7 @@ export default function HomeScreen() {
                   >
                     <LucideIcons.Bell size={22} color={Colors.onSurface} />
                     {unreadCount > 0 && (
-                      <View style={styles.badge} />
+                      <View style={[styles.badge, { backgroundColor: Colors.error, borderColor: Colors.background }]} />
                     )}
                   </Pressable>
                   <Pressable onPress={() => router.push('/(tabs)/profile')}>
@@ -116,8 +118,8 @@ export default function HomeScreen() {
               </View>
           </View>
           <Animated.View style={[styles.largeTitleContainer, { opacity: headerLargeTitleOpacity }]}>
-              <Text style={styles.greetingText}>{getGreeting()},</Text>
-              <Text style={styles.userNameText}>{firstName} 👋</Text>
+              <Text style={[styles.greetingText, { color: Colors.onSurfaceVariant, ...Typography.m3.bodyLarge, fontSize: 16 }]}>{getGreeting()},</Text>
+              <Text style={[styles.userNameText, { color: Colors.onSurface, ...Typography.m3.headlineMedium, fontWeight: 'bold' }]}>{firstName} 👋</Text>
           </Animated.View>
       </Animated.View>
 
@@ -137,9 +139,9 @@ export default function HomeScreen() {
             {/* Today's Timeline */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Today's Timeline</Text>
+                <Text style={[styles.sectionTitle, { color: Colors.onSurface, ...Typography.m3.titleMedium, fontWeight: '700' }]}>Today's Timeline</Text>
                 <Pressable onPress={() => router.push('/(tabs)/schedule')}>
-                  <Text style={styles.seeAll}>View Full Schedule</Text>
+                  <Text style={[styles.seeAll, { color: Colors.primary, ...Typography.m3.labelLarge }]}>View Full Schedule</Text>
                 </Pressable>
               </View>
 
@@ -158,13 +160,16 @@ export default function HomeScreen() {
                       endTime={item.endTime || '12:00'}
                       venue={item.venue || 'TBD'}
                       isCarryover={item.isCarryover}
-                      onPress={() => router.push(`/post/${item.id}`)}
+                      onPress={() => router.push({
+                        pathname: `/post/${item.id}`,
+                        params: { spaceId: item.spaceId, courseId: item.courseId }
+                      })}
                     />
                   ))
                 ) : (
                   <Card variant="filled" style={styles.emptyCard}>
                     <LucideIcons.CalendarCheck2 size={24} color={Colors.onSurfaceVariant} style={{ marginBottom: 8 }} />
-                    <Text style={styles.emptyText}>No more classes today. Relax!</Text>
+                    <Text style={[styles.emptyText, { color: Colors.onSurfaceVariant, ...Typography.m3.bodyMedium }]}>No more classes today. Relax!</Text>
                   </Card>
                 )}
               </ScrollView>
@@ -173,7 +178,7 @@ export default function HomeScreen() {
             {/* My Spaces Tonal Grid */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>My Academic Spaces</Text>
+                <Text style={[styles.sectionTitle, { color: Colors.onSurface, ...Typography.m3.titleMedium, fontWeight: '700' }]}>My Academic Spaces</Text>
                 <Pressable onPress={() => router.push('/(tabs)/spaces')}>
                   <LucideIcons.ArrowRight size={20} color={Colors.primary} />
                 </Pressable>
@@ -203,7 +208,7 @@ export default function HomeScreen() {
             {/* Recent Notices Feed */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recent Notices</Text>
+                <Text style={[styles.sectionTitle, { color: Colors.onSurface, ...Typography.m3.titleMedium, fontWeight: '700' }]}>Recent Notices</Text>
               </View>
 
               <View style={styles.noticesContainer}>
@@ -212,7 +217,10 @@ export default function HomeScreen() {
                     key={post.id}
                     post={post}
                     isCarryover={post.isCarryover}
-                    onPress={() => router.push(`/post/${post.id}`)}
+                    onPress={() => router.push({
+                      pathname: `/post/${post.id}`,
+                      params: { spaceId: post.spaceId, courseId: post.courseId }
+                    })}
                     style={{ marginBottom: 12 }}
                   />
                 ))}
@@ -227,7 +235,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   appBar: {
     position: 'absolute',
@@ -235,7 +242,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 100,
-    backgroundColor: Colors.background,
     paddingHorizontal: 20,
     justifyContent: 'flex-start',
   },
@@ -245,10 +251,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  appBarTitle: {
-    ...Typography.m3.titleLarge,
-    color: Colors.onSurface,
-  },
+  appBarTitle: {},
   appBarActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -257,16 +260,8 @@ const styles = StyleSheet.create({
   largeTitleContainer: {
     marginTop: 12,
   },
-  greetingText: {
-    ...Typography.m3.bodyLarge,
-    color: Colors.onSurfaceVariant,
-    fontSize: 16,
-  },
-  userNameText: {
-    ...Typography.m3.headlineMedium,
-    color: Colors.onSurface,
-    fontWeight: 'bold',
-  },
+  greetingText: {},
+  userNameText: {},
   iconButton: {
     width: 40,
     height: 40,
@@ -281,9 +276,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.error,
     borderWidth: 1.5,
-    borderColor: Colors.background,
   },
   section: {
     marginTop: 24,
@@ -295,15 +288,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
   },
-  sectionTitle: {
-    ...Typography.m3.titleMedium,
-    color: Colors.onSurface,
-    fontWeight: '700',
-  },
-  seeAll: {
-    ...Typography.m3.labelLarge,
-    color: Colors.primary,
-  },
+  sectionTitle: {},
+  seeAll: {},
   horizontalScroll: {
     paddingHorizontal: 20,
     gap: 12,
@@ -318,8 +304,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 28,
   },
-  emptyText: {
-    ...Typography.m3.bodyMedium,
-    color: Colors.onSurfaceVariant,
-  },
+  emptyText: {},
 });

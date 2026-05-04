@@ -9,8 +9,7 @@ import {
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { Spacing } from '../../constants/spacing';
 
 interface Props {
@@ -21,6 +20,7 @@ interface Props {
 }
 
 export default function CustomDateTimePicker({ label, value, onChange, mode }: Props) {
+    const { colors: Colors, typography: Typography } = useTheme();
     const [show, setShow] = useState(false);
 
     const onPickerChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
@@ -56,10 +56,10 @@ export default function CustomDateTimePicker({ label, value, onChange, mode }: P
                             style={styles.iosModalOverlay} 
                             onPress={() => setShow(false)} 
                         />
-                        <View style={styles.iosPickerContainer}>
-                            <View style={styles.iosPickerHeader}>
+                        <View style={[styles.iosPickerContainer, { backgroundColor: Colors.surface }]}>
+                            <View style={[styles.iosPickerHeader, { borderBottomColor: Colors.separator }]}>
                                 <TouchableOpacity onPress={() => setShow(false)}>
-                                    <Text style={styles.doneText}>Done</Text>
+                                    <Text style={[styles.doneText, { color: Colors.accentBlue }]}>Done</Text>
                                 </TouchableOpacity>
                             </View>
                             <DateTimePicker
@@ -91,13 +91,21 @@ export default function CustomDateTimePicker({ label, value, onChange, mode }: P
 
     return (
         <View style={styles.container}>
-            <Text style={styles.label}>{label}</Text>
+            <Text style={[styles.label, { color: Colors.textSecondary }]}>{label}</Text>
             <TouchableOpacity
-                style={styles.inputContainer}
+                style={[
+                    styles.inputContainer, 
+                    { 
+                        backgroundColor: Colors.surfaceSecondary,
+                        borderColor: Colors.border
+                    }
+                ]}
                 onPress={() => setShow(true)}
                 activeOpacity={0.7}
             >
-                <Text style={styles.valueText}>{formatDate(value)}</Text>
+                <Text style={[styles.valueText, { color: Colors.textPrimary, ...Typography.body }]}>
+                    {formatDate(value)}
+                </Text>
                 <Ionicons
                     name={mode === 'date' ? 'calendar-outline' : 'time-outline'}
                     size={20}
@@ -114,24 +122,21 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.md,
     },
     label: {
-        ...Typography.label,
-        color: Colors.textSecondary,
+        fontSize: 14,
+        fontWeight: '500',
         marginBottom: 8,
     },
     inputContainer: {
-        height: Spacing.inputHeight,
-        backgroundColor: Colors.subtleFill,
-        borderRadius: Spacing.inputRadius,
+        height: 50,
+        borderRadius: 12,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: Spacing.md,
+        paddingHorizontal: 16,
         borderWidth: 1,
-        borderColor: Colors.border,
     },
     valueText: {
-        ...Typography.body,
-        color: Colors.textPrimary,
+        fontSize: 16,
     },
     // iOS Modal Styles
     iosModalContainer: {
@@ -143,7 +148,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.3)',
     },
     iosPickerContainer: {
-        backgroundColor: Colors.surface,
         paddingBottom: 40,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
@@ -153,10 +157,8 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.divider,
     },
     doneText: {
-        color: Colors.accentBlue,
         fontWeight: '600',
         fontSize: 17,
     },

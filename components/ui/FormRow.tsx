@@ -8,8 +8,7 @@ import {
   TextInputProps,
   Pressable 
 } from 'react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import * as LucideIcons from 'lucide-react-native';
 
 interface FormRowProps extends TextInputProps {
@@ -27,8 +26,8 @@ interface FormRowProps extends TextInputProps {
 export const FormRow = ({
   label,
   icon,
-  iconBg = Colors.surfaceSecondary,
-  iconColor = Colors.textTertiary,
+  iconBg,
+  iconColor,
   isLast,
   onPress,
   showChevron,
@@ -36,10 +35,15 @@ export const FormRow = ({
   value,
   ...textInputProps
 }: FormRowProps) => {
+  const { colors: Colors, typography: Typography } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const IconComponent = icon ? (LucideIcons[icon] as any) : null;
 
   const isPicker = !!onPress;
+  
+  // Resolve default colors from theme
+  const resolvedIconBg = iconBg || Colors.surfaceSecondary;
+  const resolvedIconColor = iconColor || Colors.textTertiary;
 
   return (
     <Pressable 
@@ -47,30 +51,32 @@ export const FormRow = ({
       onPress={onPress}
       style={({ pressed }) => [
         styles.row,
-        pressed && styles.pressed
+        { backgroundColor: Colors.surface },
+        pressed && { backgroundColor: Colors.surfaceSecondary }
       ]}
     >
-      {!isLast && <View style={styles.separator} />}
+      {!isLast && <View style={[styles.separator, { backgroundColor: Colors.separator }]} />}
       
       {icon && (
         <View style={[
           styles.iconContainer, 
-          { backgroundColor: isFocused ? Colors.accentBlueSoft : iconBg }
+          { backgroundColor: isFocused ? Colors.primary + '15' : resolvedIconBg }
         ]}>
           <IconComponent 
             size={16} 
-            color={isFocused ? Colors.accentBlue : iconColor} 
+            color={isFocused ? Colors.primary : resolvedIconColor} 
           />
         </View>
       )}
 
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: Colors.textPrimary, fontFamily: Typography.family.regular }]}>{label}</Text>}
 
       {isPicker ? (
         <Text 
           style={[
             styles.valueText, 
-            !value && { color: Colors.textQuaternary }
+            { color: Colors.textPrimary, fontFamily: Typography.family.regular },
+            !value && { color: Colors.textTertiary }
           ]}
           numberOfLines={1}
         >
@@ -78,8 +84,8 @@ export const FormRow = ({
         </Text>
       ) : (
         <TextInput
-          style={styles.input}
-          placeholderTextColor={Colors.textQuaternary}
+          style={[styles.input, { color: Colors.textPrimary, fontFamily: Typography.family.regular }]}
+          placeholderTextColor={Colors.textTertiary}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           value={value}
@@ -106,11 +112,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    backgroundColor: Colors.surface,
     gap: 10,
-  },
-  pressed: {
-    backgroundColor: Colors.surfaceSecondary,
   },
   separator: {
     position: 'absolute',
@@ -118,7 +120,6 @@ const styles = StyleSheet.create({
     left: 14,
     right: 0,
     height: 0.5,
-    backgroundColor: Colors.separator,
   },
   iconContainer: {
     width: 28,
@@ -129,23 +130,17 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 15,
-    fontFamily: Typography.family.regular,
-    color: Colors.textPrimary,
     width: 90,
   },
   input: {
     flex: 1,
     height: '100%',
     fontSize: 15,
-    fontFamily: Typography.family.regular,
-    color: Colors.textPrimary,
     textAlign: 'right',
   },
   valueText: {
     flex: 1,
     fontSize: 15,
-    fontFamily: Typography.family.regular,
-    color: Colors.textPrimary,
     textAlign: 'right',
   },
   chevron: {

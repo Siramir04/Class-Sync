@@ -17,6 +17,7 @@ interface FeedState {
     setLoading: (loading: boolean) => void;
     clearFeed: () => void;
     isCacheValid: () => boolean;
+    cleanup: () => void;
 }
 
 export const useFeedStore = create<FeedState>()(
@@ -55,6 +56,12 @@ export const useFeedStore = create<FeedState>()(
                 if (!lastFetch || posts.length === 0) return false;
                 return (Date.now() - lastFetch) < CACHE_TTL_MS;
             },
+            cleanup: () => set({
+                posts: [],
+                lastFetch: null,
+                cursor: null,
+                hasMore: true
+            }),
         }),
         {
             name: 'feed-storage',

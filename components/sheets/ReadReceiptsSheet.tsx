@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { ReadReceipt } from '../../types';
 import * as postService from '../../services/postService';
 import ActionSheet from '../ui/ActionSheet';
@@ -26,6 +25,7 @@ export default function ReadReceiptsSheet({
     courseId,
     memberCount,
 }: ReadReceiptsSheetProps) {
+    const { colors: Colors, typography: Typography } = useTheme();
     const [receipts, setReceipts] = useState<ReadReceipt[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -48,36 +48,46 @@ export default function ReadReceiptsSheet({
     };
 
     const renderItem = ({ item }: { item: ReadReceipt }) => (
-        <View style={styles.receiptItem}>
+        <View style={[styles.receiptItem, { borderBottomColor: Colors.separator }]}>
             <Avatar firstName={item.fullName.split(' ')[0]} lastName={item.fullName.split(' ')[1] || ''} size="md" />
             <View style={styles.receiptInfo}>
-                <Text style={styles.memberName}>{item.fullName}</Text>
-                <Text style={styles.readAt}>
+                <Text style={[styles.memberName, { color: Colors.textPrimary, fontFamily: Typography.family.semiBold }]}>
+                    {item.fullName}
+                </Text>
+                <Text style={[styles.readAt, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>
                     Read {format(item.readAt, 'MMM d, h:mm a')}
                 </Text>
             </View>
-            <LucideIcons.CheckCircle2 size={16} color={Colors.accentBlue} />
+            <LucideIcons.CheckCircle2 size={16} color={Colors.primary} />
         </View>
     );
 
     return (
         <ActionSheet visible={visible} onClose={onClose} title="Read Receipts">
             <View style={styles.container}>
-                <View style={styles.statsContainer}>
+                <View style={[styles.statsContainer, { backgroundColor: Colors.surfaceSecondary }]}>
                     <View style={styles.statBox}>
-                        <Text style={styles.statValue}>{receipts.length}</Text>
-                        <Text style={styles.statLabel}>READ</Text>
+                        <Text style={[styles.statValue, { color: Colors.textPrimary, fontFamily: Typography.family.extraBold }]}>
+                            {receipts.length}
+                        </Text>
+                        <Text style={[styles.statLabel, { color: Colors.textTertiary, fontFamily: Typography.family.bold }]}>
+                            READ
+                        </Text>
                     </View>
-                    <View style={styles.statDivider} />
+                    <View style={[styles.statDivider, { backgroundColor: Colors.separator }]} />
                     <View style={styles.statBox}>
-                        <Text style={styles.statValue}>{Math.max(0, memberCount - receipts.length)}</Text>
-                        <Text style={styles.statLabel}>PENDING</Text>
+                        <Text style={[styles.statValue, { color: Colors.textPrimary, fontFamily: Typography.family.extraBold }]}>
+                            {Math.max(0, memberCount - receipts.length)}
+                        </Text>
+                        <Text style={[styles.statLabel, { color: Colors.textTertiary, fontFamily: Typography.family.bold }]}>
+                            PENDING
+                        </Text>
                     </View>
                 </View>
 
                 {loading ? (
                     <View style={styles.loadingBox}>
-                      <LucideIcons.Loader2 size={24} color={Colors.accentBlue} style={styles.spin} />
+                      <LucideIcons.Loader2 size={24} color={Colors.primary} />
                     </View>
                 ) : (
                     <FlatList
@@ -88,9 +98,13 @@ export default function ReadReceiptsSheet({
                         showsVerticalScrollIndicator={false}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
-                                <LucideIcons.EyeOff size={44} color={Colors.separatorOpaque} />
-                                <Text style={styles.emptyTitle}>No one hasn't read it yet</Text>
-                                <Text style={styles.emptySubtitle}>Receipts appear as members open the post.</Text>
+                                <LucideIcons.EyeOff size={44} color={Colors.textTertiary} />
+                                <Text style={[styles.emptyTitle, { color: Colors.textPrimary, fontFamily: Typography.family.bold }]}>
+                                    No one hasn't read it yet
+                                </Text>
+                                <Text style={[styles.emptySubtitle, { color: Colors.textSecondary, fontFamily: Typography.family.regular }]}>
+                                    Receipts appear as members open the post.
+                                </Text>
                             </View>
                         }
                     />
@@ -106,7 +120,6 @@ const styles = StyleSheet.create({
     },
     statsContainer: {
         flexDirection: 'row',
-        backgroundColor: '#F9F9FB',
         borderRadius: 20,
         padding: 16,
         marginHorizontal: 24,
@@ -119,19 +132,14 @@ const styles = StyleSheet.create({
     statValue: {
         fontSize: 24,
         fontWeight: '800',
-        color: '#000',
-        fontFamily: Typography.family.extraBold,
     },
     statLabel: {
         fontSize: 10,
         fontWeight: '700',
-        color: Colors.textTertiary,
         marginTop: 2,
-        fontFamily: Typography.family.bold,
     },
     statDivider: {
         width: 1,
-        backgroundColor: Colors.separator,
         marginHorizontal: 16,
     },
     listContent: {
@@ -143,7 +151,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 14,
         borderBottomWidth: 0.5,
-        borderBottomColor: Colors.separator,
     },
     receiptInfo: {
         flex: 1,
@@ -152,22 +159,15 @@ const styles = StyleSheet.create({
     memberName: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#000',
-        fontFamily: Typography.family.semiBold,
     },
     readAt: {
         fontSize: 12,
-        color: Colors.textTertiary,
         marginTop: 2,
-        fontFamily: Typography.family.regular,
     },
     loadingBox: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-    },
-    spin: {
-      // Logic for spinning would usually be an animated component, but for a placeholder:
     },
     emptyContainer: {
         alignItems: 'center',
@@ -177,16 +177,12 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 17,
         fontWeight: '700',
-        color: '#000',
         marginTop: 16,
-        fontFamily: Typography.family.bold,
     },
     emptySubtitle: {
         fontSize: 13,
-        color: Colors.textTertiary,
         textAlign: 'center',
         marginTop: 6,
         paddingHorizontal: 40,
-        fontFamily: Typography.family.regular,
     },
 });

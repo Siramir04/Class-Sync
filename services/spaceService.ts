@@ -180,28 +180,40 @@ export async function getSpaceById(spaceId: string): Promise<Space | null> {
 
 /**
  * Real-time listener for all spaces a user is a member of.
+ * Uses user-side memberships subcollection to avoid N+1 reads.
  */
 export function subscribeToUserSpaces(
     uid: string,
     callback: (spaces: Space[]) => void
 ): Unsubscribe {
-    const spacesRef = collection(db, 'spaces');
-    return onSnapshot(spacesRef, async (snapshot) => {
-        const spaces: Space[] = [];
-        for (const docSnap of snapshot.docs) {
-            const memberSnap = await getDoc(
-                doc(db, 'spaces', docSnap.id, 'members', uid)
-            );
-            if (memberSnap.exists()) {
-                const data = docSnap.data();
-                spaces.push({
-                    id: docSnap.id,
-                    ...data,
-                    createdAt: data.createdAt?.toDate?.() ?? new Date(),
-                } as Space);
-            }
+    const membershipsRef = collection(db, 'users', uid, 'memberships');
+    
+    return onSnapshot(membershipsRef, async (membershipSnapshot) => {
+        if (membershipSnapshot.empty) {
+            callback([]);
+            return;
         }
-        callback(spaces);
+
+        const spacePromises = membershipSnapshot.docs.map(async (mDoc) => {
+            const spaceId = mDoc.id;
+            const spaceSnap = await getDoc(doc(db, 'spaces', spaceId));
+            
+            if (!spaceSnap.exists()) return null;
+            
+            const data = spaceSnap.data();
+            return {
+                id: spaceSnap.id,
+                ...data,
+                createdAt: data.createdAt?.toDate?.() ?? new Date(),
+            } as Space;
+        });
+
+        const results = await Promise.all(spacePromises);
+        const validSpaces = results.filter((s): s is Space => s !== null);
+        callback(validSpaces);
+    }, (error) => {
+        console.error('[subscribeToUserSpaces] Error:', error);
+        callback([]);
     });
 }
 
@@ -209,25 +221,26 @@ export function subscribeToUserSpaces(
  * Get all spaces a user has joined (one-time fetch).
  */
 export async function getUserSpaces(uid: string): Promise<Space[]> {
-    const spacesRef = collection(db, 'spaces');
-    const snapshot = await getDocs(spacesRef);
-    const spaces: Space[] = [];
+    const membershipsRef = collection(db, 'users', uid, 'memberships');
+    const membershipSnap = await getDocs(membershipsRef);
+    
+    if (membershipSnap.empty) return [];
 
-    for (const docSnap of snapshot.docs) {
-        const memberSnap = await getDoc(
-            doc(db, 'spaces', docSnap.id, 'members', uid)
-        );
-        if (memberSnap.exists()) {
-            const data = docSnap.data();
-            spaces.push({
-                id: docSnap.id,
-                ...data,
-                createdAt: data.createdAt?.toDate?.() ?? new Date(),
-            } as Space);
-        }
-    }
+    const spacePromises = membershipSnap.docs.map(async (mDoc) => {
+        const spaceId = mDoc.id;
+        const spaceSnap = await getDoc(doc(db, 'spaces', spaceId));
+        if (!spaceSnap.exists()) return null;
+        
+        const data = spaceSnap.data();
+        return {
+            id: spaceSnap.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() ?? new Date(),
+        } as Space;
+    });
 
-    return spaces;
+    const results = await Promise.all(spacePromises);
+    return results.filter((s): s is Space => s !== null);
 }
 
 /**

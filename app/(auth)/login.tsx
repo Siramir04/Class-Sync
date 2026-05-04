@@ -42,8 +42,9 @@ export default function LoginScreen() {
       
       setUser(userData);
       router.replace('/(tabs)');
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
+    } catch (err: unknown) {
+        const error = err as { message: string };
+        Alert.alert('Login Error', error.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -96,7 +97,19 @@ export default function LoginScreen() {
           </View>
 
           <Pressable 
-            onPress={() => {}} // Reset password logic
+            onPress={async () => {
+                if (!email) {
+                    Alert.alert('Reset Password', 'Please enter your email address first.');
+                    return;
+                }
+                try {
+                    await resetPassword(email);
+                    Alert.alert('Success', 'Password reset email sent. Check your inbox.');
+                } catch (err: unknown) {
+                    const error = err as { message: string };
+                    Alert.alert('Error', error.message || 'Failed to send reset email.');
+                }
+            }}
             style={styles.forgotLink}
           >
             <Text style={styles.forgotText}>Forgot password?</Text>

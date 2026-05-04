@@ -12,8 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
-import { Typography } from '../constants/typography';
+import { useTheme } from '../hooks/useTheme';
 import { Spacing } from '../constants/spacing';
 import { useAuthStore } from '../store/authStore';
 import Input from '../components/ui/Input';
@@ -27,6 +26,7 @@ type Mode = 'join' | 'create';
 
 export default function JoinScreen() {
     const router = useRouter();
+    const { colors: Colors, typography: Typography } = useTheme();
     const { user } = useAuthStore();
 
     const [mode, setMode] = useState<Mode>('join');
@@ -143,17 +143,17 @@ export default function JoinScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
                 {/* Custom Header */}
-                <View style={styles.header}>
+                <View style={[styles.header, { backgroundColor: Colors.surface, borderBottomColor: Colors.separator }]}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.headerIconButton} activeOpacity={0.7}>
                         <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>
+                    <Text style={[styles.headerTitle, { color: Colors.textPrimary, fontFamily: Typography.family.bold }]}>
                         {mode === 'join' ? 'Join Community' : 'Create New Space'}
                     </Text>
                     <View style={{ width: 44 }} />
@@ -161,22 +161,22 @@ export default function JoinScreen() {
 
                 {/* Segmented Control */}
                 <View style={styles.segmentContainer}>
-                    <View style={styles.segmentedControl}>
+                    <View style={[styles.segmentedControl, { backgroundColor: Colors.surface, borderColor: Colors.separator }]}>
                             <TouchableOpacity
-                                style={[styles.segment, mode === 'join' && styles.segmentActive]}
+                                style={[styles.segment, mode === 'join' && [styles.segmentActive, { backgroundColor: Colors.accentBlue }]]}
                                 onPress={() => setMode('join')}
                                 activeOpacity={0.7}
                             >
-                            <Text style={[styles.segmentText, mode === 'join' && styles.segmentTextActive]}>
+                            <Text style={[styles.segmentText, { color: Colors.textSecondary, fontFamily: Typography.family.semiBold }, mode === 'join' && { color: Colors.white }]}>
                                 Join
                             </Text>
                         </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.segment, mode === 'create' && styles.segmentActive]}
+                                style={[styles.segment, mode === 'create' && [styles.segmentActive, { backgroundColor: Colors.accentBlue }]]}
                                 onPress={() => setMode('create')}
                                 activeOpacity={0.7}
                             >
-                            <Text style={[styles.segmentText, mode === 'create' && styles.segmentTextActive]}>
+                            <Text style={[styles.segmentText, { color: Colors.textSecondary, fontFamily: Typography.family.semiBold }, mode === 'create' && { color: Colors.white }]}>
                                 Create
                             </Text>
                         </TouchableOpacity>
@@ -190,9 +190,9 @@ export default function JoinScreen() {
                 >
                     {mode === 'join' ? (
                         <View style={styles.joinContainer}>
-                            <View style={styles.infoCard}>
+                            <View style={[styles.infoCard, { backgroundColor: Colors.accentBlue + '08', borderColor: Colors.accentBlue + '20' }]}>
                                 <Ionicons name="information-circle-outline" size={20} color={Colors.accentBlue} />
-                                <Text style={styles.infoText}>
+                                <Text style={[styles.infoText, { color: Colors.accentBlue, fontFamily: (Typography as any).family.medium }]}>
                                     Communities are private. Ask your Class Monitor or Course Rep for the unique space or course code.
                                 </Text>
                             </View>
@@ -219,14 +219,14 @@ export default function JoinScreen() {
                                 />
                             </View>
                             
-                            <View style={styles.helpBox}>
-                                <Text style={styles.helpTitle}>What are codes?</Text>
-                                <Text style={styles.helpText}>• SP-XXXX: Joins a full class space{'\n'}• CR-XXXX: Joins a specific carryover course</Text>
+                            <View style={[styles.helpBox, { backgroundColor: Colors.surface, borderColor: Colors.separator }]}>
+                                <Text style={[styles.helpTitle, { color: Colors.textPrimary, fontFamily: Typography.family.bold }]}>What are codes?</Text>
+                                <Text style={[styles.helpText, { color: Colors.textSecondary, fontFamily: Typography.family.regular }]}>• SP-XXXX: Joins a full class space{'\n'}• CR-XXXX: Joins a specific carryover course</Text>
                             </View>
                         </View>
                     ) : (
                         <View style={styles.createContainer}>
-                            <Text style={styles.sectionLabel}>SPACE INFORMATION</Text>
+                            <Text style={[styles.sectionLabel, { color: Colors.textTertiary, fontFamily: Typography.family.bold }]}>SPACE INFORMATION</Text>
                             <Card style={styles.formCard}>
                                 <Input
                                     label="SPACE NAME"
@@ -265,15 +265,15 @@ export default function JoinScreen() {
                                 </View>
                             </Card>
 
-                            <Text style={[styles.sectionLabel, { marginTop: 24 }]}>COURSES</Text>
+                            <Text style={[styles.sectionLabel, { marginTop: 24, color: Colors.textTertiary, fontFamily: Typography.family.bold }]}>COURSES</Text>
                             {createErrors.courses && (
-                                <Text style={styles.errorText}>{createErrors.courses}</Text>
+                                <Text style={[styles.errorText, { color: Colors.error, fontFamily: (Typography as any).family.medium }]}>{createErrors.courses}</Text>
                             )}
                             
                             {courseCodes.map((course, index) => (
-                                <Card key={index} style={styles.courseCard}>
+                                <Card key={index} style={[styles.courseCard, { backgroundColor: Colors.surface }]}>
                                     <View style={styles.courseHeader}>
-                                        <Text style={styles.courseIndex}>Course #{index + 1}</Text>
+                                        <Text style={[styles.courseIndex, { color: Colors.accentBlue, fontFamily: Typography.family.bold }]}>Course #{index + 1}</Text>
                                         {courseCodes.length > 1 && (
                                             <TouchableOpacity onPress={() => removeCourse(index)} activeOpacity={0.7}>
                                                 <Ionicons name="trash-outline" size={18} color={Colors.error} />
@@ -303,9 +303,9 @@ export default function JoinScreen() {
                                 </Card>
                             ))}
 
-                            <TouchableOpacity style={styles.addBtn} onPress={addCourse} activeOpacity={0.7}>
+                            <TouchableOpacity style={[styles.addBtn, { backgroundColor: Colors.accentBlue + '05', borderColor: Colors.accentBlue + '30' }]} onPress={addCourse} activeOpacity={0.7}>
                                 <Ionicons name="add-circle" size={24} color={Colors.accentBlue} />
-                                <Text style={styles.addBtnText}>Add Another Course</Text>
+                                <Text style={[styles.addBtnText, { color: Colors.accentBlue, fontFamily: Typography.family.bold }]}>Add Another Course</Text>
                             </TouchableOpacity>
 
                             <View style={styles.buttonContainer}>
@@ -328,7 +328,6 @@ export default function JoinScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
     },
     header: {
         flexDirection: 'row',
@@ -336,9 +335,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 8,
         height: 56,
-        backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.separator,
     },
     headerIconButton: {
         width: 44,
@@ -348,8 +345,6 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 17,
-        fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
     },
     segmentContainer: {
         paddingHorizontal: Spacing.screenPadding,
@@ -357,11 +352,9 @@ const styles = StyleSheet.create({
     },
     segmentedControl: {
         flexDirection: 'row',
-        backgroundColor: Colors.surface,
         padding: 4,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: Colors.separator,
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
@@ -381,10 +374,8 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     segmentActive: {
-        backgroundColor: Colors.accentBlue,
         ...Platform.select({
             ios: {
-                shadowColor: Colors.accentBlue,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.2,
                 shadowRadius: 4,
@@ -396,11 +387,6 @@ const styles = StyleSheet.create({
     },
     segmentText: {
         fontSize: 14,
-        fontFamily: Typography.family.semiBold,
-        color: Colors.textSecondary,
-    },
-    segmentTextActive: {
-        color: '#FFFFFF',
     },
     scrollContent: {
         paddingHorizontal: Spacing.screenPadding,
@@ -411,20 +397,16 @@ const styles = StyleSheet.create({
     },
     infoCard: {
         flexDirection: 'row',
-        backgroundColor: Colors.accentBlue + '08',
         padding: 16,
         borderRadius: 16,
         marginBottom: 24,
         alignItems: 'flex-start',
         borderWidth: 1,
-        borderColor: Colors.accentBlue + '20',
     },
     infoText: {
         flex: 1,
         marginLeft: 12,
         fontSize: 14,
-        fontFamily: Typography.family.medium,
-        color: Colors.accentBlue,
         lineHeight: 20,
     },
     inputContainer: {
@@ -441,27 +423,19 @@ const styles = StyleSheet.create({
         marginTop: 32,
         padding: 20,
         borderRadius: 20,
-        backgroundColor: Colors.surface,
         borderWidth: 1,
-        borderColor: Colors.separator,
     },
     helpTitle: {
         fontSize: 15,
-        fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
         marginBottom: 8,
     },
     helpText: {
         fontSize: 13,
-        fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
         lineHeight: 20,
     },
     createContainer: {},
     sectionLabel: {
         fontSize: 11,
-        fontFamily: Typography.family.bold,
-        color: Colors.textTertiary,
         letterSpacing: 1.2,
         marginBottom: 12,
         marginLeft: 4,
@@ -475,15 +449,12 @@ const styles = StyleSheet.create({
     },
     errorText: {
         fontSize: 12,
-        fontFamily: Typography.family.medium,
-        color: Colors.error,
         marginBottom: 12,
         marginLeft: 4,
     },
     courseCard: {
         padding: 16,
         marginBottom: 12,
-        backgroundColor: Colors.surface,
     },
     courseHeader: {
         flexDirection: 'row',
@@ -493,8 +464,6 @@ const styles = StyleSheet.create({
     },
     courseIndex: {
         fontSize: 13,
-        fontFamily: Typography.family.bold,
-        color: Colors.accentBlue,
     },
     addBtn: {
         flexDirection: 'row',
@@ -502,17 +471,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 16,
         gap: 8,
-        backgroundColor: Colors.accentBlue + '05',
         borderRadius: 16,
         borderWidth: 1,
         borderStyle: 'dashed',
-        borderColor: Colors.accentBlue + '30',
         marginTop: 8,
     },
     addBtnText: {
         fontSize: 15,
-        fontFamily: Typography.family.bold,
-        color: Colors.accentBlue,
     },
     createBtn: {
         marginTop: 32,

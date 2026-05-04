@@ -22,7 +22,7 @@ interface ClassCardProps {
  * Material 3 (M3) Class Card
  * Featuring large corner radii, tonal elevation, and smooth micro-interactions.
  */
-export default function ClassCard({
+export default React.memo(function ClassCard({
   courseCode,
   courseName,
   startTime,
@@ -123,7 +123,7 @@ export default function ClassCard({
       </Pressable>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

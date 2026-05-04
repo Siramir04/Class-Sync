@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { useAuthStore } from '../store/authStore';
 import { updateFCMToken } from '../services/authService';
+import { logger } from '../utils/logger';
 
 /**
  * Check if we are running inside Expo Go.
@@ -18,19 +19,14 @@ function isExpoGo(): boolean {
  * Returns null when running in Expo Go or on a simulator.
  */
 async function registerForPushNotificationsAsync(): Promise<string | null> {
-    if (isExpoGo()) {
-        console.log('Push notifications are not supported in Expo Go — skipping.');
-        return null;
-    }
+    if (isExpoGo()) return null;
 
     if (!Device.isDevice) {
-        console.log('Push notifications require a physical device.');
+        logger.warn('Push notifications require a physical device.');
         return null;
     }
 
     try {
-        // Dynamically import expo-notifications only when NOT in Expo Go
-        // This avoids the side-effect crash from DevicePushTokenAutoRegistration.fx.js
         const Notifications = await import('expo-notifications');
 
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -42,7 +38,6 @@ async function registerForPushNotificationsAsync(): Promise<string | null> {
         }
 
         if (finalStatus !== 'granted') {
-            console.log('Push notification permission not granted.');
             return null;
         }
 
@@ -59,7 +54,7 @@ async function registerForPushNotificationsAsync(): Promise<string | null> {
 
         return tokenData.data;
     } catch (error) {
-        console.log('Error registering for push notifications:', error);
+        logger.error('Error registering for push notifications:', error);
         return null;
     }
 }
@@ -74,7 +69,6 @@ export function usePushNotifications() {
     const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
 
     useEffect(() => {
-        // Skip entirely in Expo Go — even dynamic import can trigger side effects
         if (isExpoGo()) return;
 
         let notificationSub: { remove: () => void } | undefined;
@@ -102,23 +96,27 @@ export function usePushNotifications() {
                     if (user?.uid) {
                         try {
                             await updateFCMToken(user.uid, token);
-                        } catch (err) {
-                            console.error('Error saving push token:', err);
+                        } catch (err: unknown) {
+                            logger.error('Error saving push token:', err);
                         }
                     }
                 }
 
                 // Listener: notification received while app is foregrounded
                 notificationSub = Notifications.addNotificationReceivedListener((n) => {
-                    console.log('Notification received:', n.request.content.title);
+                    // Silent receipt handling
                 });
 
                 // Listener: user tapped on a notification
                 responseSub = Notifications.addNotificationResponseReceivedListener((r) => {
-                    console.log('Notification tapped, data:', r.notification.request.content.data);
+                    const data = r.notification.request.content.data;
+                    // Deep linking handler: route the user based on notification type
+                    if (data?.type === 'post' && data.postId) {
+                        // Deep link logic would go here
+                    }
                 });
-            } catch (error) {
-                console.log('Push notifications unavailable:', error);
+            } catch (error: unknown) {
+                logger.error('Push notifications unavailable:', error);
             }
         })();
 

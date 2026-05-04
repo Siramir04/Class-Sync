@@ -7,20 +7,19 @@ import {
   Pressable,
   TextInput,
   StatusBar,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { useSpaces } from '../../hooks/useSpace';
 import { useSpaceStore } from '../../store/spaceStore';
-import { Space } from '../../types';
+import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
 
 export default function SpacesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors: Colors, typography: Typography } = useTheme();
   const { spaces, loading } = useSpaces();
   const { carryoverCourses } = useSpaceStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,38 +29,40 @@ export default function SpacesScreen() {
     s.spaceCode.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  if (loading) return <LoadingSpinner />;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: Colors.background }]}>
       <StatusBar barStyle="dark-content" />
       
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View>
-          <Text style={styles.title}>Spaces</Text>
-          <Text style={styles.subtitle}>{spaces.length} active communities</Text>
+          <Text style={[styles.title, { color: Colors.onSurface, fontFamily: Typography.family.extraBold }]}>Spaces</Text>
+          <Text style={[styles.subtitle, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>{spaces.length} active communities</Text>
         </View>
 
         <View style={styles.headerActions}>
-           <View style={styles.searchCircle}>
-             <LucideIcons.Search size={18} color="#000" />
+           <View style={[styles.searchCircle, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }]}>
+             <LucideIcons.Search size={18} color={Colors.onSurface} />
            </View>
            <Pressable 
              onPress={() => router.push('/join')}
-             style={styles.joinCircle}
+             style={[styles.joinCircle, { backgroundColor: Colors.accentBlue }]}
            >
-             <LucideIcons.Plus size={18} color="white" />
+             <LucideIcons.Plus size={18} color={Colors.white} />
            </Pressable>
         </View>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchWrapper}>
-        <View style={styles.searchBar}>
+        <View style={[styles.searchBar, { backgroundColor: Colors.surfaceVariant }]}>
           <LucideIcons.Search size={16} color={Colors.textTertiary} style={styles.searchIcon} />
           <TextInput 
             placeholder="Search your spaces..."
             placeholderTextColor={Colors.textTertiary}
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: Colors.onSurface, fontFamily: Typography.family.regular }]}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -72,7 +73,7 @@ export default function SpacesScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 104 }}
       >
-        <View style={styles.listContainer}>
+        <View style={[styles.listContainer, { backgroundColor: Colors.surface, borderColor: Colors.separator }]}>
           {filteredSpaces.map((space, index) => {
              const initials = space.name
                .split(' ')
@@ -82,53 +83,54 @@ export default function SpacesScreen() {
                .slice(0, 2);
              
              return (
-               <Pressable 
-                 key={space.id} 
-                 style={({ pressed }) => [
-                   styles.spaceRow,
-                   pressed && { backgroundColor: 'rgba(0,0,0,0.02)' }
-                 ]}
-                 onPress={() => router.push(`/space/${space.id}`)}
-               >
-                 <View style={[
-                   styles.iconTile, 
-                   { backgroundColor: index % 2 === 0 ? Colors.primaryNavy : Colors.accentBlue }
-                 ]}>
-                   <Text style={styles.tileInitials}>{initials}</Text>
-                 </View>
+                <Pressable 
+                  key={space.id} 
+                  style={({ pressed }) => [
+                    styles.spaceRow,
+                    { borderBottomColor: Colors.separator },
+                    pressed && { backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }
+                  ]}
+                  onPress={() => router.push(`/space/${space.id}`)}
+                >
+                  <View style={[
+                    styles.iconTile, 
+                    { backgroundColor: index % 2 === 0 ? Colors.primaryNavy : Colors.accentBlue }
+                  ]}>
+                    <Text style={[styles.tileInitials, { color: Colors.white, fontFamily: Typography.family.bold }]}>{initials}</Text>
+                  </View>
 
-                 <View style={styles.spaceInfo}>
-                    <Text style={styles.courseCode}>{space.spaceCode}</Text>
-                    <Text style={styles.courseName} numberOfLines={1}>{space.name}</Text>
-                    <View style={styles.memberRow}>
-                       <LucideIcons.Users size={12} color={Colors.textTertiary} />
-                       <Text style={styles.memberCount}>{space.memberCount || 0} members</Text>
-                    </View>
-                 </View>
+                  <View style={styles.spaceInfo}>
+                     <Text style={[styles.courseCode, { color: Colors.accentBlue, fontFamily: Typography.family.bold }]}>{space.spaceCode}</Text>
+                     <Text style={[styles.courseName, { color: Colors.onSurface, fontFamily: Typography.family.bold }]} numberOfLines={1}>{space.name}</Text>
+                     <View style={styles.memberRow}>
+                        <LucideIcons.Users size={12} color={Colors.textTertiary} />
+                        <Text style={[styles.memberCount, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>{space.memberCount || 0} members</Text>
+                     </View>
+                  </View>
 
-                 <LucideIcons.ChevronRight size={16} color={Colors.separatorOpaque} />
-               </Pressable>
+                  <LucideIcons.ChevronRight size={16} color={Colors.separatorOpaque} />
+                </Pressable>
              );
           })}
 
           {carryoverCourses.length > 0 && (
-            <View style={styles.carryoverSection}>
-              <Text style={styles.sectionLabel}>Carryover courses</Text>
+            <View style={[styles.carryoverSection, { backgroundColor: Colors.background }]}>
+              <Text style={[styles.sectionLabel, { color: Colors.textTertiary, fontFamily: Typography.family.semiBold }]}>Carryover courses</Text>
               {carryoverCourses.map((course) => (
                 <Pressable 
                   key={course.id} 
-                  style={styles.spaceRow}
+                  style={[styles.spaceRow, { borderBottomColor: Colors.separator }]}
                   onPress={() => router.push(`/space/${course.id}`)}
                 >
                   <View style={[styles.iconTile, { backgroundColor: Colors.carryover }]}>
-                    <Text style={styles.tileInitials}>
+                    <Text style={[styles.tileInitials, { color: Colors.white, fontFamily: Typography.family.bold }]}>
                       {course.courseName.charAt(0).toUpperCase()}
                     </Text>
                   </View>
                   <View style={styles.spaceInfo}>
-                    <Text style={[styles.courseCode, { color: Colors.carryover }]}>{course.fullCode}</Text>
-                    <Text style={styles.courseName}>{course.courseName}</Text>
-                    <Text style={styles.memberCount}>Personal space</Text>
+                    <Text style={[styles.courseCode, { color: Colors.carryover, fontFamily: Typography.family.bold }]}>{course.fullCode}</Text>
+                    <Text style={[styles.courseName, { color: Colors.onSurface, fontFamily: Typography.family.bold }]}>{course.courseName}</Text>
+                    <Text style={[styles.memberCount, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>Personal space</Text>
                   </View>
                   <LucideIcons.ChevronRight size={16} color={Colors.separatorOpaque} />
                 </Pressable>
@@ -138,7 +140,7 @@ export default function SpacesScreen() {
 
           {filteredSpaces.length === 0 && !loading && (
              <View style={styles.emptyState}>
-               <Text style={styles.emptyText}>No spaces found matching "{searchQuery}"</Text>
+               <Text style={[styles.emptyText, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>No spaces found matching "{searchQuery}"</Text>
              </View>
           )}
         </View>
@@ -150,7 +152,6 @@ export default function SpacesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -162,15 +163,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#000',
     letterSpacing: -1,
-    fontFamily: Typography.family.extraBold,
   },
   subtitle: {
     fontSize: 13,
-    color: Colors.textTertiary,
     marginTop: 2,
-    fontFamily: Typography.family.regular,
   },
   headerActions: {
     flexDirection: 'row',
@@ -179,17 +176,14 @@ const styles = StyleSheet.create({
   searchCircle: {
     width: 36,
     height: 36,
-    backgroundColor: 'white',
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.separatorOpaque,
   },
   joinCircle: {
     width: 36,
     height: 36,
-    backgroundColor: Colors.accentBlue,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
@@ -200,7 +194,6 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     height: 38,
-    backgroundColor: '#E3E3E8',
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -212,14 +205,10 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#000',
-    fontFamily: Typography.family.regular,
   },
   listContainer: {
-    backgroundColor: 'white',
     borderTopWidth: 0.5,
     borderBottomWidth: 0.5,
-    borderColor: Colors.separator,
   },
   spaceRow: {
     flexDirection: 'row',
@@ -227,7 +216,6 @@ const styles = StyleSheet.create({
     padding: 14,
     paddingLeft: 18,
     borderBottomWidth: 0.5,
-    borderBottomColor: Colors.separator,
   },
   iconTile: {
     width: 50,
@@ -239,9 +227,7 @@ const styles = StyleSheet.create({
   tileInitials: {
     fontSize: 16,
     fontWeight: '700',
-    color: 'white',
     letterSpacing: -0.5,
-    fontFamily: Typography.family.bold,
   },
   spaceInfo: {
     flex: 1,
@@ -250,16 +236,12 @@ const styles = StyleSheet.create({
   courseCode: {
     fontSize: 10,
     fontWeight: '700',
-    color: Colors.accentBlue,
     marginBottom: 2,
-    fontFamily: Typography.family.bold,
   },
   courseName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000',
     marginBottom: 4,
-    fontFamily: Typography.family.bold,
   },
   memberRow: {
     flexDirection: 'row',
@@ -268,22 +250,17 @@ const styles = StyleSheet.create({
   },
   memberCount: {
     fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: Typography.family.regular,
   },
   carryoverSection: {
     marginTop: 20,
-    backgroundColor: Colors.background,
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: Colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingHorizontal: 18,
     paddingVertical: 10,
-    fontFamily: Typography.family.semiBold,
   },
   emptyState: {
     padding: 40,
@@ -291,8 +268,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
-    color: Colors.textTertiary,
     textAlign: 'center',
-    fontFamily: Typography.family.regular,
   },
 });

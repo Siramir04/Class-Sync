@@ -23,6 +23,7 @@ import { NIGERIAN_UNIVERSITIES, University } from '../../constants/universities'
 import { registerUser, getCurrentUser } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
 import { UserRole } from '../../types';
+import { Validation } from '../../utils/validation';
 
 const { width } = Dimensions.get('window');
 
@@ -82,16 +83,16 @@ export default function RegisterScreen() {
   };
 
   const handleNextStep = () => {
-    if (!fullName.trim() || !email.trim() || !username.trim() || !password) {
-      setError('Please fill in all fields');
+    if (!Validation.email(email)) {
+      setError('Invalid email address format');
       return;
     }
-    if (username.length < 3) {
-      setError('Username must be at least 3 characters');
+    if (!Validation.username(username)) {
+      setError('Username: 3-20 chars, letters/numbers/underscore only');
       return;
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (!Validation.password(password)) {
+      setError('Password must be at least 6 characters');
       return;
     }
     setError('');
@@ -99,8 +100,12 @@ export default function RegisterScreen() {
   };
 
   const handleRegister = async () => {
-    if (!selectedUniversity || !department.trim() || !entryYear.trim()) {
-      setError('Please fill in all details');
+    if (!selectedUniversity || !department.trim()) {
+      setError('Please select your university and department');
+      return;
+    }
+    if (!Validation.entryYear(entryYear)) {
+      setError('Entry year must be between 2020 and 2030');
       return;
     }
 
@@ -119,8 +124,9 @@ export default function RegisterScreen() {
       
       setUser(userData);
       router.replace('/(tabs)');
-    } catch (err: any) {
-      setError(err.message || 'Registration failed');
+    } catch (err: unknown) {
+        const error = err as { message: string };
+        Alert.alert('Registration Error', error.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }

@@ -1,26 +1,34 @@
-import { getApps, initializeApp } from 'firebase/app';
-// @ts-ignore
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { initializeApp } from 'firebase/app';
+import { 
+    initializeAuth, 
+    // @ts-ignore
+    getReactNativePersistence 
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Firebase configuration using environment variables
+// Note: EXPO_PUBLIC_ prefix is required for Expo to expose these in the client bundle
 const firebaseConfig = {
-  apiKey: "AIzaSyDb0d-h1lPXiep8RBo1GB8SkoIRp3AjEKA",
-  authDomain: "class-sync-79c1e.firebaseapp.com",
-  projectId: "class-sync-79c1e",
-  storageBucket: "class-sync-79c1e.firebasestorage.app",
-  messagingSenderId: "889927986862",
-  appId: "1:889927986862:web:d5572d2f3c8d274897873f",
-  measurementId: "G-B56X5G7GJ2",
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+    measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+// Initialize Auth with persistence
+const auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage)
 });
 
-export const db = getFirestore(app);
-export const storage = getStorage(app);
-export default app;
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+export { auth, db, storage };

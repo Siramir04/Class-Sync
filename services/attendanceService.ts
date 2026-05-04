@@ -35,7 +35,7 @@ export const startSession = async (
   totalMembers: number
 ): Promise<string> => {
   const sessionId = doc(collection(db, 'dummy')).id;
-  const code = generateAttendanceCode();
+  const code = await generateAttendanceCode();
   const openedAt = new Date();
   const codeExpiresAt = new Date(openedAt.getTime() + 10 * 60 * 1000); // 10 minutes
 
@@ -313,10 +313,10 @@ export const exportAttendanceToExcel = async (
 
     const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
     const fileName = `Attendance_${courseCode}_${new Date().getTime()}.xlsx`;
-    const uri = (FileSystem.cacheDirectory || '') + fileName;
+    const uri = `${(FileSystem as any).documentDirectory || ''}${fileName}`;
 
     await FileSystem.writeAsStringAsync(uri, wbout, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: 'base64',
     });
 
     await Sharing.shareAsync(uri);

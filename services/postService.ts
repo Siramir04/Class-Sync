@@ -15,11 +15,16 @@ import {
     Timestamp,
     increment,
     runTransaction,
+    QueryDocumentSnapshot,
+    DocumentData,
+    collectionGroup,
+    limit,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Post, PostType, ReadReceipt } from '../types';
 import { sendPushNotification, saveNotificationToFirestore } from './notificationService';
 import { verifySpaceRole } from './spaceService';
+import { logger } from '../utils/logger';
 
 /**
  * Create a post under a course+space, and notify all course members.
@@ -88,7 +93,7 @@ export async function createPost(
             }
         }
     } catch (error) {
-        console.error('Error sending notifications:', error);
+        logger.error('Error sending notifications:', error);
     }
 
     return postRef.id;
@@ -210,7 +215,7 @@ export async function markPostAsRead(
             });
         });
     } catch (error) {
-        console.error('Error marking post as read:', error);
+        logger.error('Error marking post as read:', error);
     }
 }
 
@@ -268,9 +273,24 @@ export async function updatePostImportantStatus(
     });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function docToPost(d: any): Post {
+/**
+ * Converts a Firestore document to a typed Post object.
+ * @param d - Firestore QueryDocumentSnapshot or DocumentSnapshot
+ * @returns Typed Post object
+ */
+const docToPost = (d: QueryDocumentSnapshot<DocumentData> | any): Post => {
     const data = d.data();
+    
+    // Defensive: Firestore Timestamp or plain object
+    const toDate = (field: any): Date => {
+        if (field instanceof Timestamp) return field.toDate();
+        if (field && typeof field === 'object' && 'toDate' in field && typeof field.toDate === 'function') {
+            return field.toDate();
+        }
+        if (field instanceof Date) return field;
+        return new Date(field as string | number);
+    };
+
     return {
         id: d.id,
         spaceId: data.spaceId,
@@ -279,16 +299,16 @@ function docToPost(d: any): Post {
         type: data.type,
         title: data.title,
         description: data.description,
-        authorUid: data.authorUid,
+        authorUid: data.authorUid || data.authorId, // Support both naming conventions
         authorName: data.authorName,
         authorRole: data.authorRole,
-        createdAt: data.createdAt?.toDate?.() ?? new Date(),
-        lectureDate: data.lectureDate?.toDate?.(),
+        createdAt: toDate(data.createdAt),
+        lectureDate: data.lectureDate ? toDate(data.lectureDate) : undefined,
         startTime: data.startTime,
         endTime: data.endTime,
         venue: data.venue,
         lectureStatus: data.lectureStatus,
-        dueDate: data.dueDate?.toDate?.(),
+        dueDate: data.dueDate ? toDate(data.dueDate) : undefined,
         marks: data.marks,
         topics: data.topics,
         linkedPostId: data.linkedPostId,
@@ -297,4 +317,47 @@ function docToPost(d: any): Post {
         isPinned: Boolean(data.isPinned),
         readCount: data.readCount || 0,
     };
+};
+
+/**
+ * Subscribes to the most recent posts by a specific user.
+ * Real-time updates via Firestore onSnapshot.
+ */
+export const subscribeToUserRecentPosts = (
+    userId: string,
+    callback: (posts: Post[]) => void,
+    limitCount: number = 20
+): (() => void) => {
+    if (!userId || typeof userId !== 'string') {
+        throw new Error('subscribeToUserRecentPosts: userId must be a non-empty string');
+    }
+
+    // Using collectionGroup as posts are subcollections, 
+    // or if you have a top-level posts collection, change to collection(db, 'posts')
+    // The audit suggested a top-level query for feed optimization might be needed
+    // but the current structure uses subcollections.
+    const postsRef = collectionGroup(db, 'posts');
+    
+    const q = query(
+        postsRef,
+        where('authorUid', '==', userId),
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+    );
+
+    const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+            const posts = snapshot.docs.map(docToPost);
+            callback(posts);
+        },
+        (error) => {
+            if (__DEV__) {
+                logger.error('[subscribeToUserRecentPosts] Firestore error:', error);
+            }
+            callback([]);
+        }
+    );
+
+    return unsubscribe;
 }

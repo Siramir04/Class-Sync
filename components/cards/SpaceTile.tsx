@@ -16,7 +16,7 @@ interface SpaceTileProps {
  * Material 3 (M3) Space Tile
  * Using tonal containers and smooth scale animations.
  */
-export default function SpaceTile({
+export default React.memo(function SpaceTile({
   name,
   isAdd = false,
   onPress,
@@ -89,7 +89,7 @@ export default function SpaceTile({
       </Pressable>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

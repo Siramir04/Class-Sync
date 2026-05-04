@@ -81,7 +81,7 @@ export async function loginUser(email: string, password: string): Promise<Fireba
         // depending on the policy. For now, we update it but in a production environment
         // we might restrict device changes to once per semester.
         if (userData.deviceId && userData.deviceId !== currentDeviceId && userData.role === 'student') {
-             console.log('User logged in from a different device');
+             // Silent login handling
              await updateDoc(doc(db, 'users', credential.user.uid), { deviceId: currentDeviceId });
         } else if (!userData.deviceId) {
              await updateDoc(doc(db, 'users', credential.user.uid), { deviceId: currentDeviceId });
@@ -134,12 +134,72 @@ export async function resetPassword(email: string): Promise<void> {
 }
 
 /**
- * Change the current user's password.
+ * Changes the user's password after re-authenticating with current password.
+ * Firebase requires recent authentication for password changes.
  */
-export async function changePassword(newPassword: string): Promise<void> {
+export async function changePassword(
+    currentPassword: string,
+    newPassword: string
+): Promise<{ success: boolean; error?: string; code?: string }> {
     const user = auth.currentUser;
-    if (!user) throw new Error('No user logged in');
-    await updatePassword(user, newPassword);
+
+    if (!user || !user.email) {
+        return {
+            success: false,
+            error: 'No authenticated user found. Please log in again.',
+            code: 'auth/no-user',
+        };
+    }
+
+    // Validate new password client-side (Firebase minimum is 6)
+    if (!newPassword || newPassword.length < 6) {
+        return {
+            success: false,
+            error: 'New password must be at least 6 characters.',
+            code: 'auth/weak-password',
+        };
+    }
+
+    try {
+        const { EmailAuthProvider, reauthenticateWithCredential } = await import('firebase/auth');
+        // Step 1: Re-authenticate with current password
+        const credential = EmailAuthProvider.credential(user.email, currentPassword);
+        await reauthenticateWithCredential(user, credential);
+
+        // Step 2: Update to new password
+        await updatePassword(user, newPassword);
+
+        return { success: true };
+
+    } catch (error: any) {
+        // Map known Firebase errors to user-friendly messages
+        switch (error.code) {
+            case 'auth/wrong-password':
+                return {
+                    success: false,
+                    error: 'Current password is incorrect.',
+                    code: 'auth/wrong-password',
+                };
+            case 'auth/requires-recent-login':
+                return {
+                    success: false,
+                    error: 'For security, please log out and log back in before changing your password.',
+                    code: 'auth/requires-recent-login',
+                };
+            case 'auth/weak-password':
+                return {
+                    success: false,
+                    error: 'New password is too weak. Use at least 6 characters.',
+                    code: 'auth/weak-password',
+                };
+            default:
+                return {
+                    success: false,
+                    error: error.message || 'Failed to change password. Please try again.',
+                    code: error.code || 'auth/unknown',
+                };
+        }
+    }
 }
 /**
  * Update the user's Firestore profile.

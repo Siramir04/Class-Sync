@@ -11,20 +11,23 @@ import {
 import { useRouter } from 'expo-router';
 import { isToday, isYesterday } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
-import { Typography } from '../constants/typography';
+import { useTheme } from '../hooks/useTheme';
 import { Spacing } from '../constants/spacing';
 import { useNotifications } from '../hooks/useNotifications';
 import { markAsRead, markAllAsRead } from '../services/notificationService';
 import { useAuthStore } from '../store/authStore';
 import NotificationCard from '../components/cards/NotificationCard';
 import EmptyState from '../components/ui/EmptyState';
+import { LoadingSpinner } from '../components/feedback/LoadingSpinner';
+import { ErrorState } from '../components/feedback/ErrorState';
+import { logger } from '../utils/logger';
 import { AppNotification } from '../types';
 
 export default function NotificationsScreen() {
     const router = useRouter();
+    const { colors: Colors, typography: Typography } = useTheme();
     const { user } = useAuthStore();
-    const { notifications, markRead, markAllRead: markAllReadLocal } = useNotifications();
+    const { notifications, loading, error, refetch, markRead, markAllRead: markAllReadLocal } = useNotifications();
 
     // Group by Today / Yesterday / Earlier
     const grouped: { title: string; data: AppNotification[] }[] = [];
@@ -48,7 +51,7 @@ export default function NotificationsScreen() {
             await markAllAsRead(user.uid);
             markAllReadLocal();
         } catch (error) {
-            console.error(error);
+            logger.error('Failed to mark all notifications as read:', error);
         }
     };
 
@@ -59,7 +62,7 @@ export default function NotificationsScreen() {
                 await markAsRead(user.uid, notification.id);
                 markRead(notification.id);
             } catch (error) {
-                console.error(error);
+                logger.error('Failed to mark notification as read:', error);
             }
         }
         if (notification.postId && notification.spaceId && notification.courseId) {
@@ -71,14 +74,17 @@ export default function NotificationsScreen() {
 
     const anyUnread = notifications.some(n => !n.isRead);
 
+    if (loading) return <LoadingSpinner />;
+    if (error) return <ErrorState message="Failed to load notifications" onRetry={refetch} />;
+
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
             {/* Header */}
-            <View style={styles.header}>
+            <View style={[styles.header, { backgroundColor: Colors.surface, borderBottomColor: Colors.separator }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
                     <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notifications</Text>
+                <Text style={[styles.headerTitle, { color: Colors.textPrimary, fontFamily: Typography.family.bold }]}>Notifications</Text>
                 <TouchableOpacity 
                     onPress={handleMarkAllRead} 
                     disabled={!anyUnread}
@@ -107,15 +113,15 @@ export default function NotificationsScreen() {
                         />
                     )}
                     renderSectionHeader={({ section: { title } }) => (
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>{title}</Text>
+                        <View style={[styles.sectionHeader, { backgroundColor: Colors.background }]}>
+                            <Text style={[styles.sectionTitle, { color: Colors.textTertiary, fontFamily: Typography.family.bold }]}>{title}</Text>
                         </View>
                     )}
                     keyExtractor={(item) => item.id}
                     showsVerticalScrollIndicator={false}
                     stickySectionHeadersEnabled={false}
                     contentContainerStyle={styles.listPadding}
-                    ItemSeparatorComponent={() => <View style={styles.separator} />}
+                    ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: Colors.separator }]} />}
                 />
             )}
         </SafeAreaView>
@@ -125,7 +131,6 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
     },
     header: {
         flexDirection: 'row',
@@ -134,9 +139,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: Platform.OS === 'ios' ? 10 : 20,
         paddingBottom: 16,
-        backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.separator,
     },
     backBtn: {
         width: 44,
@@ -151,20 +154,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerTitle: {
-        fontSize: Typography.size.title3,
-        fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
+        fontSize: 20,
     },
     sectionHeader: {
         paddingHorizontal: Spacing.screenPadding,
         paddingTop: 24,
         paddingBottom: 8,
-        backgroundColor: Colors.background,
     },
     sectionTitle: {
         fontSize: 13,
-        fontFamily: Typography.family.bold,
-        color: Colors.textTertiary,
         textTransform: 'uppercase',
         letterSpacing: 1.2,
     },
@@ -173,7 +171,6 @@ const styles = StyleSheet.create({
     },
     separator: {
         height: 1,
-        backgroundColor: Colors.separator,
         marginLeft: 72, 
     },
     emptyContainer: {

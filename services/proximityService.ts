@@ -1,6 +1,7 @@
 import BleAdvertiser from 'react-native-ble-advertiser';
 import BleManager from 'react-native-ble-manager';
 import * as Network from 'expo-network';
+// @ts-ignore
 import * as Location from 'expo-location';
 import { Platform, NativeEventEmitter, NativeModules, PermissionsAndroid } from 'react-native';
 import { AttendanceBeacon, ProximityScanResult, AttendanceSession } from '../types';
@@ -49,7 +50,7 @@ export const requestProximityPermissions = async (): Promise<boolean> => {
 
     if (allGranted) {
       // Check if Location Services are actually ON (required for SSID and Scanning)
-      const locationEnabled = await Location.hasServicesEnabledAsync();
+      const locationEnabled = await (Location as any).hasServicesEnabledAsync();
       return locationEnabled;
     }
 
@@ -176,7 +177,7 @@ export const scanForBeacon = (
 
 export const getWifiInfo = async (): Promise<{ ssid: string | null; bssid?: string }> => {
   // Check location services first - absolutely required for SSID on Android
-  const locationEnabled = await Location.hasServicesEnabledAsync();
+  const locationEnabled = await (Location as any).hasServicesEnabledAsync();
   if (!locationEnabled) {
       return { ssid: null };
   }

@@ -8,8 +8,7 @@ import {
   TextStyle,
   View
 } from 'react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { Spacing } from '../../constants/spacing';
 import * as LucideIcons from 'lucide-react-native';
 
@@ -36,24 +35,8 @@ export const Button = ({
   icon,
   style 
 }: ButtonProps) => {
+  const { colors: Colors, typography: Typography } = useTheme();
   const IconComponent = icon ? (LucideIcons[icon] as any) : null;
-
-  const getContainerStyle = () => {
-    switch (variant) {
-      case 'filled':
-        return [styles.base, styles.filled, style];
-      case 'tonal':
-        return [styles.base, styles.tonal, style];
-      case 'outlined':
-        return [styles.base, styles.outlined, style];
-      case 'danger':
-        return [styles.base, styles.danger, style];
-      case 'ghost':
-        return [styles.ghost, style];
-      default:
-        return [styles.base, styles.filled, style];
-    }
-  };
 
   const getTextStyle = (): TextStyle => {
     switch (variant) {
@@ -76,14 +59,59 @@ export const Button = ({
     return textStyle.color as string;
   };
 
+  const getContainerStyle = (pressed: boolean): ViewStyle => {
+    let baseStyle: ViewStyle = {
+        height: 44,
+        borderRadius: 100,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+    };
+
+    switch (variant) {
+      case 'filled':
+        baseStyle.backgroundColor = Colors.primary;
+        break;
+      case 'tonal':
+        baseStyle.backgroundColor = Colors.primaryContainer;
+        break;
+      case 'outlined':
+        baseStyle.backgroundColor = 'transparent';
+        baseStyle.borderWidth = 1;
+        baseStyle.borderColor = Colors.outline;
+        break;
+      case 'danger':
+        baseStyle.backgroundColor = Colors.error;
+        break;
+      case 'ghost':
+        baseStyle.backgroundColor = 'transparent';
+        baseStyle.paddingHorizontal = 12;
+        break;
+    }
+
+    if (disabled) {
+        baseStyle.opacity = 0.38;
+        if (variant !== 'outlined' && variant !== 'ghost') {
+            baseStyle.backgroundColor = Colors.onSurface + '1F';
+        }
+    }
+
+    if (pressed && !disabled) {
+        baseStyle.opacity = 0.88;
+        baseStyle.transform = [{ scale: 0.98 }];
+    }
+
+    return baseStyle;
+  };
+
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
-        getContainerStyle(),
-        disabled && styles.disabled,
-        pressed && !disabled && { opacity: 0.88, transform: [{ scale: 0.98 }] }
+        getContainerStyle(pressed),
+        style
       ]}
     >
       {loading ? (
@@ -97,7 +125,7 @@ export const Button = ({
               style={{ marginRight: 8 }} 
             />
           )}
-          <Text style={[styles.label, getTextStyle()]}>
+          <Text style={[styles.label, getTextStyle(), { fontFamily: Typography.family.medium }]}>
             {label}
           </Text>
         </View>
@@ -107,49 +135,14 @@ export const Button = ({
 };
 
 const styles = StyleSheet.create({
-  base: {
-    height: 44, // M3 Standard height
-    borderRadius: 100, // M3 Stadium shape
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  filled: {
-    backgroundColor: Colors.primary,
-  },
-  tonal: {
-    backgroundColor: Colors.primaryContainer,
-  },
-  outlined: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.outline,
-  },
-  danger: {
-    backgroundColor: Colors.error,
-  },
-  ghost: {
-    height: 44,
-    backgroundColor: 'transparent',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
   label: {
     fontSize: 14,
-    fontFamily: Typography.family.medium,
     fontWeight: '500',
     letterSpacing: 0.1,
-  },
-  disabled: {
-    opacity: 0.38,
-    backgroundColor: Colors.onSurface + '1F', // 12% opacity
   },
 });

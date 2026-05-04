@@ -10,6 +10,16 @@ import {
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { User, UserRole } from '../types';
+import * as Device from 'expo-device';
+
+/**
+ * Get a unique identifier for the current device.
+ */
+export async function getDeviceId(): Promise<string> {
+    // On Android, this is usually constant per installation.
+    // On iOS, this is constant per vendor.
+    return Device.osInternalBuildId || Device.modelName || 'unknown_device';
+}
 
 /**
  * Check if a username is already taken in Firestore.
@@ -36,6 +46,9 @@ export async function registerUser(
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     const uid = credential.user.uid;
 
+    // Phase 1: Capture device ID for binding
+    const deviceId = await getDeviceId();
+
     // 2. Write user doc to Firestore IMMEDIATELY
     await setDoc(doc(db, 'users', uid), {
         uid,
@@ -46,6 +59,7 @@ export async function registerUser(
         role,
         createdAt: serverTimestamp(),
         fcmToken: null,
+        deviceId, // Bind user to this device
     });
 
     return credential.user;
@@ -56,6 +70,24 @@ export async function registerUser(
  */
 export async function loginUser(email: string, password: string): Promise<FirebaseUser> {
     const credential = await signInWithEmailAndPassword(auth, email, password);
+
+    // Check if the user is a student and if they've changed devices
+    const userDoc = await getDoc(doc(db, 'users', credential.user.uid));
+    if (userDoc.exists()) {
+        const userData = userDoc.data() as User;
+        const currentDeviceId = await getDeviceId();
+
+        // If deviceId exists and doesn't match, we might want to flag it or update it
+        // depending on the policy. For now, we update it but in a production environment
+        // we might restrict device changes to once per semester.
+        if (userData.deviceId && userData.deviceId !== currentDeviceId && userData.role === 'student') {
+             console.log('User logged in from a different device');
+             await updateDoc(doc(db, 'users', credential.user.uid), { deviceId: currentDeviceId });
+        } else if (!userData.deviceId) {
+             await updateDoc(doc(db, 'users', credential.user.uid), { deviceId: currentDeviceId });
+        }
+    }
+
     return credential.user;
 }
 

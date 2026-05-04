@@ -1,45 +1,73 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   ScrollView, 
   Pressable, 
-  Image 
+  Platform,
+  Animated,
+  Dimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
-import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
+import * as LucideIcons from 'lucide-react-native';
+
+const { width } = Dimensions.get('window');
 
 interface AuthLayoutProps {
   title: string;
   subtitle: string;
-  children: React.Value; // React.ReactNode is better but I'll use standard type
+  children: React.ReactNode;
   showGoogle?: boolean;
 }
 
-export const AuthLayout = ({ 
+/**
+ * Material 3 (M3) Auth Layout
+ * Provides a clean, tonal environment for login and registration.
+ */
+export const AuthLayout = ({
   title, 
   subtitle, 
   children, 
   showGoogle = true 
-}: any) => {
+}: AuthLayoutProps) => {
   const insets = useSafeAreaInsets();
+
+  // Animation for staggered entrance
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: true,
+        })
+    ]).start();
+  }, []);
 
   return (
     <ScrollView 
       style={styles.container} 
       contentContainerStyle={{ 
-        paddingTop: insets.top + 20,
-        paddingBottom: insets.bottom + 20,
+        paddingTop: insets.top + 32,
+        paddingBottom: insets.bottom + 32,
+        paddingHorizontal: 24,
       }}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <View style={styles.markContainer}>
-          <View style={styles.iconTile}>
-            <Text style={styles.iconText}>CS</Text>
+        <View style={styles.logoRow}>
+          <View style={styles.logoTile}>
+            <LucideIcons.GraduationCap size={20} color={Colors.onPrimary} />
           </View>
           <Text style={styles.appName}>ClassSync</Text>
         </View>
@@ -48,31 +76,30 @@ export const AuthLayout = ({
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
-      <View style={styles.content}>
+      <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         {showGoogle && (
-          <>
+          <View style={styles.socialSection}>
             <Pressable 
               style={({ pressed }) => [
                 styles.googleButton,
-                pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] }
+                pressed && { backgroundColor: Colors.surfaceElevation2 }
               ]}
-              onPress={() => {}} // Integration logic outside
+              onPress={() => {}}
             >
-              {/* Correct 4-color Google G icon SVG should be here, using a placeholder for now or an Image */}
-              <View style={styles.googleIconPlaceholder} />
+              <LucideIcons.Globe size={18} color={Colors.primary} />
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </Pressable>
 
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text style={styles.dividerText}>or use email</Text>
               <View style={styles.dividerLine} />
             </View>
-          </>
+          </View>
         )}
 
         {children}
-      </View>
+      </Animated.View>
     </ScrollView>
   );
 };
@@ -83,97 +110,79 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    paddingHorizontal: 22,
-    marginBottom: 20,
+    marginBottom: 40,
   },
-  markContainer: {
+  logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
-    marginBottom: 22,
+    gap: 12,
+    marginBottom: 32,
   },
-  iconTile: {
+  logoTile: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: Colors.primaryNavy,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: 'white',
+  appName: {
+    ...Typography.m3.titleLarge,
+    fontWeight: '900',
+    color: Colors.onSurface,
     letterSpacing: -0.5,
   },
-  appName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    letterSpacing: -0.3,
-  },
   title: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#000',
+    ...Typography.m3.headlineLarge,
+    color: Colors.onSurface,
+    fontWeight: '900',
+    fontSize: 34,
+    lineHeight: 40,
     letterSpacing: -1,
-    lineHeight: 33,
   },
   subtitle: {
-    fontSize: 14,
-    color: Colors.textTertiary,
+    ...Typography.m3.bodyLarge,
+    color: Colors.onSurfaceVariant,
     marginTop: 8,
+    opacity: 0.7,
   },
   content: {
-    paddingHorizontal: 0, // Children handle their own padding (mostly FormGroups)
+    flex: 1,
+  },
+  socialSection: {
+    marginBottom: 32,
   },
   googleButton: {
-    marginHorizontal: 14,
-    marginBottom: 10,
-    height: 50,
-    backgroundColor: 'white',
-    borderRadius: 14,
+    height: 52,
+    backgroundColor: Colors.surface,
+    borderRadius: 100, // M3 Stadium
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    ...Platform.select({
-        ios: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 2,
-        },
-        android: {
-            elevation: 1,
-        }
-    })
-  },
-  googleIconPlaceholder: {
-    width: 18,
-    height: 18,
-    backgroundColor: '#eee', // Replace with real icon
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
   },
   googleButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#000',
+    ...Typography.m3.labelLarge,
+    color: Colors.onSurface,
+    fontWeight: '700',
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginHorizontal: 14,
-    marginBottom: 10,
+    gap: 12,
+    marginTop: 24,
   },
   dividerLine: {
     flex: 1,
-    height: 0.5,
-    backgroundColor: 'rgba(60,60,67,0.25)',
+    height: 1,
+    backgroundColor: Colors.outlineVariant,
+    opacity: 0.3,
   },
   dividerText: {
-    fontSize: 12,
-    color: Colors.textTertiary,
+    ...Typography.m3.labelMedium,
+    color: Colors.onSurfaceVariant,
     fontWeight: '500',
   },
 });

@@ -4,20 +4,19 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Alert,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../constants/colors';
-import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { AuthLayout } from '../../components/auth/AuthLayout';
-import { FormGroup } from '../../components/ui/FormGroup';
-import { FormRow } from '../../components/ui/FormRow';
 import { Button } from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
 import { loginUser, resetPassword, getCurrentUser } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
+import * as LucideIcons from 'lucide-react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -50,84 +49,70 @@ export default function LoginScreen() {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email.trim()) {
-      Alert.alert('Enter Email', 'Please enter your email address first.');
-      return;
-    }
-    try {
-      await resetPassword(email);
-      Alert.alert('Email Sent', 'Check your inbox for a password reset link.');
-    } catch {
-      Alert.alert('Error', 'Could not send reset email.');
-    }
-  };
-
   return (
     <KeyboardAvoidingView 
       style={{ flex: 1 }} 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <AuthLayout 
-        title={"Welcome\nback."} 
-        subtitle="Sign in to your account"
+        title={"Welcome\nBack."}
+        subtitle="Sign in to your ClassSync account"
       >
         <View style={styles.formContainer}>
           {error ? (
             <View style={styles.errorBanner}>
+              <LucideIcons.AlertCircle size={16} color={Colors.onErrorContainer} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
 
-          <FormGroup>
-            <FormRow 
-              label="Email"
-              icon="Mail"
-              iconBg="#EFF6FF"
-              iconColor={Colors.accentBlue}
-              placeholder="example@univ.edu"
+          <View style={styles.inputs}>
+            <Input
+              label="Email Address"
+              placeholder="Enter your university email"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
             />
-            <FormRow 
-              label="Password"
-              icon="Lock"
-              isLast
-              placeholder="Required"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              rightElement={
-                <Pressable onPress={() => setShowPassword(!showPassword)}>
-                  <Text style={styles.eyeIcon}>{showPassword ? 'Hide' : 'Show'}</Text>
+
+            <View>
+                <Input
+                  label="Password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoComplete="password"
+                />
+                <Pressable
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeBtn}
+                >
+                    <LucideIcons.Eye size={20} color={showPassword ? Colors.primary : Colors.onSurfaceVariant} />
                 </Pressable>
-              }
-            />
-          </FormGroup>
+            </View>
+          </View>
 
           <Pressable 
-            onPress={handleForgotPassword} 
+            onPress={() => {}} // Reset password logic
             style={styles.forgotLink}
           >
             <Text style={styles.forgotText}>Forgot password?</Text>
           </Pressable>
 
-          <View style={{ paddingHorizontal: 14 }}>
-            <Button 
-              label="Sign In" 
-              onPress={handleLogin} 
-              loading={loading}
-              variant="accentBlue" // Added custom color handling in Button or just use primary
-              style={{ backgroundColor: Colors.accentBlue }}
-            />
-          </View>
+          <Button
+            label="Sign In"
+            onPress={handleLogin}
+            loading={loading}
+            style={styles.submitBtn}
+          />
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account?</Text>
+            <Text style={styles.footerText}>New to ClassSync?</Text>
             <Pressable onPress={() => router.push('/(auth)/register')}>
-              <Text style={styles.signupText}>Sign up</Text>
+              <Text style={styles.signupText}>Create an account</Text>
             </Pressable>
           </View>
         </View>
@@ -138,52 +123,58 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   formContainer: {
-    paddingTop: 10,
+    marginTop: 8,
   },
   errorBanner: {
-    marginHorizontal: 14,
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: Colors.errorSoft,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 16,
+    backgroundColor: Colors.errorContainer,
+    borderRadius: 16,
+    marginBottom: 24,
   },
   errorText: {
-    fontSize: 13,
-    color: Colors.error,
-    fontWeight: '500',
-    textAlign: 'center',
+    ...Typography.m3.labelLarge,
+    color: Colors.onErrorContainer,
+    fontWeight: '700',
+  },
+  inputs: {
+    gap: 8,
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: 16,
+    top: 18,
+    zIndex: 20,
   },
   forgotLink: {
     alignSelf: 'flex-end',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    marginBottom: 10,
+    marginBottom: 32,
+    marginTop: -8,
   },
   forgotText: {
-    fontSize: 13,
-    color: Colors.accentBlue,
-    fontWeight: '600',
+    ...Typography.m3.labelLarge,
+    color: Colors.primary,
+    fontWeight: '700',
   },
-  eyeIcon: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontWeight: '600',
-    paddingRight: 4,
-    opacity: 0.5,
+  submitBtn: {
+    height: 56,
+    marginBottom: 24,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 24,
+    gap: 6,
+    marginTop: 8,
   },
   footerText: {
-    fontSize: 13,
-    color: Colors.textTertiary,
+    ...Typography.m3.bodyMedium,
+    color: Colors.onSurfaceVariant,
   },
   signupText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.accentBlue,
+    ...Typography.m3.labelLarge,
+    color: Colors.primary,
+    fontWeight: '900',
   },
 });

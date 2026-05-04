@@ -5,7 +5,8 @@ import {
   Pressable, 
   ActivityIndicator, 
   ViewStyle, 
-  TextStyle 
+  TextStyle,
+  View
 } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
@@ -15,17 +16,21 @@ import * as LucideIcons from 'lucide-react-native';
 interface ButtonProps {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'navy' | 'ghost';
+  variant?: 'filled' | 'tonal' | 'outlined' | 'ghost' | 'danger';
   disabled?: boolean;
   loading?: boolean;
   icon?: keyof typeof LucideIcons;
   style?: ViewStyle;
 }
 
-export const Button = ({ 
+/**
+ * Material 3 (M3) Button Component
+ * Features fully rounded stadium shapes and tonal color mappings.
+ */
+export const Button = ({
   label, 
   onPress, 
-  variant = 'primary', 
+  variant = 'filled',
   disabled = false, 
   loading = false,
   icon,
@@ -35,27 +40,40 @@ export const Button = ({
 
   const getContainerStyle = () => {
     switch (variant) {
-      case 'primary':
-        return [styles.base, styles.primary, style];
-      case 'navy':
-        return [styles.base, styles.navy, style];
+      case 'filled':
+        return [styles.base, styles.filled, style];
+      case 'tonal':
+        return [styles.base, styles.tonal, style];
+      case 'outlined':
+        return [styles.base, styles.outlined, style];
+      case 'danger':
+        return [styles.base, styles.danger, style];
       case 'ghost':
         return [styles.ghost, style];
       default:
-        return [styles.base, styles.primary, style];
+        return [styles.base, styles.filled, style];
     }
   };
 
-  const getTextStyle = () => {
+  const getTextStyle = (): TextStyle => {
     switch (variant) {
-      case 'primary':
-      case 'navy':
-        return styles.textWhite;
+      case 'filled':
+        return { color: Colors.onPrimary };
+      case 'tonal':
+        return { color: Colors.onPrimaryContainer };
+      case 'outlined':
       case 'ghost':
-        return styles.textGhost;
+        return { color: Colors.primary };
+      case 'danger':
+        return { color: Colors.onError };
       default:
-        return styles.textWhite;
+        return { color: Colors.onPrimary };
     }
+  };
+
+  const getIconColor = () => {
+    const textStyle = getTextStyle();
+    return textStyle.color as string;
   };
 
   return (
@@ -65,24 +83,24 @@ export const Button = ({
       style={({ pressed }) => [
         getContainerStyle(),
         disabled && styles.disabled,
-        pressed && !disabled && { opacity: 0.9, transform: [{ scale: 0.97 }] }
+        pressed && !disabled && { opacity: 0.88, transform: [{ scale: 0.98 }] }
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'ghost' ? Colors.accentBlue : 'white'} />
+        <ActivityIndicator color={getIconColor()} size="small" />
       ) : (
-        <>
+        <View style={styles.content}>
           {IconComponent && (
             <IconComponent 
               size={18} 
-              color={variant === 'ghost' ? Colors.accentBlue : 'white'} 
+              color={getIconColor()}
               style={{ marginRight: 8 }} 
             />
           )}
-          <Text style={[getTextStyle(), variant === 'ghost' ? styles.labelGhost : styles.labelBase]}>
+          <Text style={[styles.label, getTextStyle()]}>
             {label}
           </Text>
-        </>
+        </View>
       )}
     </Pressable>
   );
@@ -90,18 +108,31 @@ export const Button = ({
 
 const styles = StyleSheet.create({
   base: {
-    height: Spacing.buttonHeight,
-    borderRadius: Spacing.buttonRadius,
+    height: 44, // M3 Standard height
+    borderRadius: 100, // M3 Stadium shape
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
-  primary: {
-    backgroundColor: Colors.accentBlue,
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  navy: {
-    backgroundColor: Colors.primaryNavy,
+  filled: {
+    backgroundColor: Colors.primary,
+  },
+  tonal: {
+    backgroundColor: Colors.primaryContainer,
+  },
+  outlined: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: Colors.outline,
+  },
+  danger: {
+    backgroundColor: Colors.error,
   },
   ghost: {
     height: 44,
@@ -109,25 +140,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 12,
   },
-  textWhite: {
-    color: 'white',
-    fontFamily: Typography.family.bold,
-    fontSize: 16,
-    letterSpacing: -0.2,
-  },
-  textGhost: {
-    color: Colors.accentBlue,
-    fontFamily: Typography.family.medium,
+  label: {
     fontSize: 14,
-  },
-  labelBase: {
-    fontFamily: Typography.family.bold,
-  },
-  labelGhost: {
     fontFamily: Typography.family.medium,
+    fontWeight: '500',
+    letterSpacing: 0.1,
   },
   disabled: {
-    opacity: 0.45,
+    opacity: 0.38,
+    backgroundColor: Colors.onSurface + '1F', // 12% opacity
   },
 });

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,14 @@ import {
   Dimensions,
   Pressable,
   StatusBar,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../constants/colors';
 import { Typography } from '../constants/typography';
 import * as LucideIcons from 'lucide-react-native';
+import { Button } from '../components/ui/Button';
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,6 +22,8 @@ interface Slide {
   icon: keyof typeof LucideIcons;
   headline: string;
   body: string;
+  color: string;
+  containerColor: string;
 }
 
 const slides: Slide[] = [
@@ -27,16 +31,22 @@ const slides: Slide[] = [
     icon: 'Bell',
     headline: "Never miss\na class.",
     body: "Get instant notifications for lectures, assignments, and cancellations the moment they're posted.",
+    color: Colors.primary,
+    containerColor: Colors.primaryContainer,
   },
   {
     icon: 'LayoutGrid',
     headline: "One Space\nfor your class.",
     body: "Your Monitor creates a Space for your level. Join once and stay connected to every course automatically.",
+    color: Colors.secondary,
+    containerColor: Colors.secondaryContainer,
   },
   {
     icon: 'Users',
     headline: "Your class,\nalways in sync.",
     body: "Schedules, announcements, and deadlines — all in one place for your entire class.",
+    color: Colors.tertiary,
+    containerColor: Colors.tertiaryContainer,
   },
 ];
 
@@ -44,6 +54,18 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const flatListRef = useRef<FlatList>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  // Animation for the background transition
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const handleComplete = async () => {
     await AsyncStorage.setItem('hasSeenOnboarding', 'true');
@@ -55,23 +77,26 @@ export default function OnboardingScreen() {
     router.replace('/(auth)/login');
   };
 
-  const handleSkip = async () => {
-    await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-    router.replace('/(auth)/login');
-  };
-
-  const renderSlide = ({ item }: { item: Slide }) => {
+  const renderSlide = ({ item, index }: { item: Slide, index: number }) => {
     const IconComponent = LucideIcons[item.icon] as any;
+
     return (
       <View style={styles.slide}>
         <View style={styles.topSection}>
-          <View style={styles.iconGlyph}>
+          <Animated.View
+            style={[
+                styles.iconGlyph,
+                {
+                    backgroundColor: item.containerColor,
+                }
+            ]}
+          >
             <IconComponent 
-              size={44} 
-              color="white" 
-              strokeWidth={1.4}
+              size={56}
+              color={item.color}
+              strokeWidth={2}
             />
-          </View>
+          </Animated.View>
           <View style={styles.textBlock}>
             <Text style={styles.headline}>{item.headline}</Text>
             <Text style={styles.bodyText}>{item.body}</Text>
@@ -83,18 +108,16 @@ export default function OnboardingScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
       
-      {activeIndex < 2 && (
-        <Pressable 
-          style={styles.skipButton} 
-          onPress={handleSkip}
-        >
-          <Text style={styles.skipText}>Skip</Text>
-        </Pressable>
-      )}
+      <Pressable
+        style={styles.skipButton}
+        onPress={handleLogin}
+      >
+        <Text style={styles.skipText}>Skip</Text>
+      </Pressable>
 
-      <FlatList
+      <Animated.FlatList
         ref={flatListRef}
         data={slides}
         renderItem={renderSlide}
@@ -102,6 +125,10 @@ export default function OnboardingScreen() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(_, i) => i.toString()}
+        onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: slideAnim } } }],
+            { useNativeDriver: false }
+        )}
         onMomentumScrollEnd={(e) => {
           const index = Math.round(e.nativeEvent.contentOffset.x / width);
           setActiveIndex(index);
@@ -110,44 +137,55 @@ export default function OnboardingScreen() {
 
       <View style={styles.bottomSection}>
         <View style={styles.dotsContainer}>
-          {slides.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                index === activeIndex ? styles.activeDot : styles.inactiveDot,
-              ]}
-            />
-          ))}
+          {slides.map((_, index) => {
+            const inputScaleRange = [(index - 1) * width, index * width, (index + 1) * width];
+            const dotWidth = slideAnim.interpolate({
+                inputRange: inputScaleRange,
+                outputRange: [8, 24, 8],
+                extrapolate: 'clamp',
+            });
+            const dotColor = slideAnim.interpolate({
+                inputRange: inputScaleRange,
+                outputRange: [Colors.outlineVariant, Colors.primary, Colors.outlineVariant],
+                extrapolate: 'clamp',
+            });
+
+            return (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.dot,
+                  { width: dotWidth, backgroundColor: dotColor }
+                ]}
+              />
+            );
+          })}
         </View>
 
-        {activeIndex === 2 ? (
-          <View style={styles.ctaContainer}>
-            <Pressable 
-              style={({ pressed }) => [
-                styles.primaryButton,
-                pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }
-              ]}
-              onPress={handleComplete}
-            >
-              <Text style={styles.primaryButtonText}>Create Account</Text>
-            </Pressable>
-            
-            <Pressable 
-              style={({ pressed }) => [
-                styles.ghostButton,
-                pressed && { opacity: 0.7 }
-              ]}
-              onPress={handleLogin}
-            >
-              <Text style={styles.ghostButtonText}>
-                Already have an account? <Text style={{ color: 'white' }}>Sign in</Text>
-              </Text>
-            </Pressable>
-          </View>
-        ) : (
-            <View style={{ height: 110 }} /> // Placeholder to keep layout stable
-        )}
+        <View style={styles.ctaContainer}>
+            {activeIndex === 2 ? (
+                <Animated.View style={{ opacity: fadeAnim }}>
+                    <Button
+                        label="Get Started"
+                        onPress={handleComplete}
+                        style={styles.mainBtn}
+                    />
+                    <Button
+                        label="Sign into existing account"
+                        variant="ghost"
+                        onPress={handleLogin}
+                    />
+                </Animated.View>
+            ) : (
+                <Button
+                    label="Next"
+                    onPress={() => {
+                        flatListRef.current?.scrollToIndex({ index: activeIndex + 1 });
+                    }}
+                    style={styles.mainBtn}
+                />
+            )}
+        </View>
       </View>
     </View>
   );
@@ -156,112 +194,76 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A1628',
+    backgroundColor: Colors.background,
   },
   skipButton: {
     position: 'absolute',
-    top: 48,
+    top: 54,
     right: 20,
     zIndex: 10,
     padding: 10,
   },
   skipText: {
-    fontSize: 12,
-    fontFamily: Typography.family.semiBold,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.4)',
+    ...Typography.m3.labelLarge,
+    color: Colors.onSurfaceVariant,
+    fontWeight: '700',
   },
   slide: {
     width,
-    height,
-    flex: 1,
-  },
-  topSection: {
-    flex: 1,
-    paddingTop: 80,
+    height: height * 0.75,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 32,
+  },
+  topSection: {
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    gap: 40,
   },
   iconGlyph: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
-    backgroundColor: 'rgba(37,99,235,0.3)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    width: 120,
+    height: 120,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   textBlock: {
     gap: 16,
+    alignItems: 'center',
   },
   headline: {
-    fontSize: 28,
-    fontFamily: Typography.family.extraBold,
-    fontWeight: '800',
-    color: 'white',
-    letterSpacing: -1,
-    lineHeight: 28 * 1.15,
+    ...Typography.m3.headlineLarge,
+    color: Colors.onSurface,
+    fontWeight: '900',
     textAlign: 'center',
+    fontSize: 32,
   },
   bodyText: {
-    fontSize: 14,
-    fontFamily: Typography.family.regular,
-    fontWeight: '400',
-    color: 'rgba(255,255,255,0.5)',
-    lineHeight: 14 * 1.65,
+    ...Typography.m3.bodyLarge,
+    color: Colors.onSurfaceVariant,
     textAlign: 'center',
+    lineHeight: 24,
+    opacity: 0.8,
   },
   bottomSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 24,
+    paddingBottom: 48,
+    alignItems: 'center',
   },
   dotsContainer: {
     flexDirection: 'row',
-    gap: 5,
+    gap: 8,
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   },
   dot: {
-    height: 5,
-    borderRadius: 3,
-  },
-  activeDot: {
-    width: 22,
-    backgroundColor: 'white',
-  },
-  inactiveDot: {
-    width: 5,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    height: 8,
+    borderRadius: 4,
   },
   ctaContainer: {
+    width: '100%',
     gap: 12,
   },
-  primaryButton: {
-    height: 54,
-    backgroundColor: 'white',
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontFamily: Typography.family.bold,
-    fontWeight: '700',
-    color: '#0A1628',
-    letterSpacing: -0.3,
-  },
-  ghostButton: {
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ghostButtonText: {
-    fontSize: 14,
-    fontFamily: Typography.family.medium,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.45)',
-  },
+  mainBtn: {
+    height: 56,
+  }
 });

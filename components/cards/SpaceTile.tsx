@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, ViewStyle, Animated } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import * as LucideIcons from 'lucide-react-native';
 
 interface SpaceTileProps {
   name: string;
@@ -11,6 +12,10 @@ interface SpaceTileProps {
   style?: ViewStyle;
 }
 
+/**
+ * Material 3 (M3) Space Tile
+ * Using tonal containers and smooth scale animations.
+ */
 export default function SpaceTile({
   name,
   isAdd = false,
@@ -18,11 +23,20 @@ export default function SpaceTile({
   index = 0,
   style,
 }: SpaceTileProps) {
-  const getBackground = () => {
-    if (isAdd) return 'white';
-    if (index === 0) return Colors.primaryNavy;
-    if (index === 1) return '#0F172A';
-    return Colors.accentBlue;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.92,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
   };
 
   const initials = name
@@ -32,71 +46,91 @@ export default function SpaceTile({
     .toUpperCase()
     .slice(0, 2);
 
-  if (isAdd) {
-    return (
-      <Pressable 
-        onPress={onPress}
-        style={({ pressed }) => [
-          styles.container,
-          styles.addTile,
-          style,
-          pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }
-        ]}
-      >
-        <Text style={styles.addIcon}>+</Text>
-      </Pressable>
-    );
-  }
+  const getBackground = () => {
+    if (isAdd) return Colors.surfaceElevation1;
+    // Tonal cycling for M3 variety
+    const colors = [Colors.primaryContainer, Colors.secondaryContainer, Colors.surfaceElevation3];
+    return colors[index % colors.length];
+  };
+
+  const getTextColor = () => {
+    if (isAdd) return Colors.onSurfaceVariant;
+    const colors = [Colors.onPrimaryContainer, Colors.onSecondaryContainer, Colors.onSurface];
+    return colors[index % colors.length];
+  };
 
   return (
-    <Pressable 
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.container,
-        { backgroundColor: getBackground() },
-        style,
-        pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] }
-      ]}
-    >
-      <Text style={styles.initials}>{initials}</Text>
-      <Text style={styles.label} numberOfLines={2}>{name}</Text>
-    </Pressable>
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
+      <Pressable 
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[
+          styles.container,
+          { backgroundColor: getBackground() },
+          isAdd && styles.addTile
+        ]}
+      >
+        {isAdd ? (
+          <View style={styles.addContent}>
+            <LucideIcons.Plus size={24} color={Colors.onSurfaceVariant} />
+            <Text style={styles.addLabel}>Join</Text>
+          </View>
+        ) : (
+          <>
+            <View style={[styles.initialsContainer, { backgroundColor: 'rgba(0,0,0,0.05)' }]}>
+              <Text style={[styles.initials, { color: getTextColor() }]}>{initials}</Text>
+            </View>
+            <Text style={[styles.label, { color: getTextColor() }]} numberOfLines={2}>
+              {name}
+            </Text>
+          </>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    width: 90,
-    height: 90,
-    borderRadius: 18,
+    width: 100,
+    height: 110,
+    borderRadius: 24, // M3 Large radius
     padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addTile: {
-    backgroundColor: 'white',
-    borderWidth: 1.5,
-    borderColor: Colors.separatorOpaque,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
     borderStyle: 'dashed',
   },
-  addIcon: {
-    fontSize: 22,
-    color: Colors.textTertiary,
+  addContent: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  addLabel: {
+    ...Typography.m3.labelSmall,
+    color: Colors.onSurfaceVariant,
+    fontWeight: '700',
+  },
+  initialsContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   initials: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.9)',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-    fontFamily: Typography.family.bold,
+    ...Typography.m3.titleMedium,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   label: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.6)',
+    ...Typography.m3.labelSmall,
     textAlign: 'center',
-    lineHeight: 9 * 1.2,
-    fontFamily: Typography.family.semiBold,
+    fontWeight: '600',
+    lineHeight: 14,
   },
 });

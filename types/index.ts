@@ -9,7 +9,8 @@ export interface User {
     username: string;
     createdAt: Date;
     fcmToken?: string;
-    
+    deviceId?: string; // Phase 1: Anti-fraud device binding
+
     // Denormalized enrollment for Spark-optimized feed queries
     primarySpaceId?: string;
     enrolledCourses: Array<{
@@ -28,6 +29,7 @@ export interface User {
     
     preferences: {
         autoJoinNewCourses: boolean; // Default: true
+        dataSaver: boolean;          // NEW: Task 6 - Prevent auto-downloads on mobile data
         notificationPrefs: Record<string, boolean>; // global or per course/space
     };
 }

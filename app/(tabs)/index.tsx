@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,23 +7,22 @@ import {
   Pressable,
   StatusBar,
   Dimensions,
-  FlatList,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
 import { useAuthStore } from '../../store/authStore';
 import { useRecentPosts } from '../../hooks/usePosts';
 import { useSpaces } from '../../hooks/useSpace';
 import { useNotifications } from '../../hooks/useNotifications';
 import { Avatar } from '../../components/ui/Avatar';
+import Card from '../../components/ui/Card';
 import ClassCard from '../../components/cards/ClassCard';
 import SpaceTile from '../../components/cards/SpaceTile';
 import PostCard from '../../components/cards/PostCard';
-import { getTodayLabel } from '../../utils/formatDate';
 
 const { width } = Dimensions.get('window');
 
@@ -39,8 +38,20 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { unreadCount } = useNotifications();
-  const { posts: recentPosts, loading: postsLoading } = useRecentPosts(10);
+  const { posts: recentPosts, loading: postsLoading } = useRecentPosts(15);
   const { spaces } = useSpaces();
+
+  // Animations
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, [postsLoading]);
 
   const firstName = user?.fullName?.split(' ')[0] || 'there';
   const todayDateStr = new Date().toLocaleDateString('en-US', { 
@@ -49,7 +60,6 @@ export default function HomeScreen() {
     day: 'numeric' 
   });
 
-  // Filter today's lectures
   const today = new Date();
   const todayLectures = recentPosts.filter(
     (p) =>
@@ -58,146 +68,158 @@ export default function HomeScreen() {
       new Date(p.lectureDate).toDateString() === today.toDateString()
   );
 
-  const notifications = unreadCount > 0;
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [120, 64],
+    extrapolate: 'clamp',
+  });
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [60, 100],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const headerLargeTitleOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
       
-      <ScrollView 
+      {/* M3 Adaptive App Bar */}
+      <Animated.View style={[styles.appBar, { height: headerHeight, paddingTop: insets.top }]}>
+          <View style={styles.appBarTop}>
+              <Animated.Text style={[styles.appBarTitle, { opacity: headerTitleOpacity }]}>
+                  ClassSync
+              </Animated.Text>
+              <View style={styles.appBarActions}>
+                  <Pressable
+                    onPress={() => router.push('/notifications')}
+                    style={styles.iconButton}
+                  >
+                    <LucideIcons.Bell size={22} color={Colors.onSurface} />
+                    {unreadCount > 0 && (
+                      <View style={styles.badge} />
+                    )}
+                  </Pressable>
+                  <Pressable onPress={() => router.push('/(tabs)/profile')}>
+                    <Avatar
+                      firstName={firstName}
+                      lastName={user?.fullName?.split(' ')[1] || ''}
+                      size="sm"
+                    />
+                  </Pressable>
+              </View>
+          </View>
+          <Animated.View style={[styles.largeTitleContainer, { opacity: headerLargeTitleOpacity }]}>
+              <Text style={styles.greetingText}>{getGreeting()},</Text>
+              <Text style={styles.userNameText}>{firstName} 👋</Text>
+          </Animated.View>
+      </Animated.View>
+
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ 
-          paddingTop: insets.top + 12,
-          paddingBottom: 104, // Space for tab bar
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+        contentContainerStyle={{
+          paddingTop: 130, // Adjust for app bar
+          paddingBottom: 100,
         }}
       >
-        {/* Header Section */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greetingLabel}>{getGreeting()}</Text>
-            <Text style={styles.userName}>{firstName} 👋</Text>
-            <Text style={styles.dateLabel}>{todayDateStr}</Text>
-          </View>
-
-          <View style={styles.headerActions}>
-            <Pressable 
-              onPress={() => router.push('/notifications')}
-              style={({ pressed }) => [
-                styles.iconButton,
-                pressed && { opacity: 0.7 }
-              ]}
-            >
-              <LucideIcons.Bell size={15} color="#000" />
-              {notifications && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-                </View>
-              )}
-            </Pressable>
-
-            <Pressable 
-              onPress={() => router.push('/(tabs)/profile')}
-              style={({ pressed }) => [
-                pressed && { opacity: 0.7 }
-              ]}
-            >
-              <Avatar 
-                firstName={firstName} 
-                lastName={user?.fullName?.split(' ')[1] || ''} 
-                size="sm" 
-              />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Today's Classes */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Classes</Text>
-            <Pressable onPress={() => router.push('/(tabs)/schedule')}>
-              <Text style={styles.seeAll}>See all</Text>
-            </Pressable>
-          </View>
-
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalContent}
-          >
-            {todayLectures.length > 0 ? (
-              todayLectures.map((item) => (
-                <ClassCard
-                  key={item.id}
-                  courseCode={item.courseCode}
-                  courseName={item.title}
-                  startTime={item.startTime || '10:00'}
-                  endTime={item.endTime || '12:00'}
-                  venue={item.venue || 'TBD'}
-                  isCarryover={item.isCarryover}
-                  onPress={() => router.push(`/post/${item.id}`)}
-                />
-              ))
-            ) : (
-              <View style={styles.emptyStateContainer}>
-                <Text style={styles.emptyStateText}>No classes scheduled for today.</Text>
+        <Animated.View style={{ opacity: fadeAnim }}>
+            {/* Today's Timeline */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Today's Timeline</Text>
+                <Pressable onPress={() => router.push('/(tabs)/schedule')}>
+                  <Text style={styles.seeAll}>View Full Schedule</Text>
+                </Pressable>
               </View>
-            )}
-          </ScrollView>
-        </View>
 
-        {/* My Spaces */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Spaces</Text>
-            <Pressable onPress={() => router.push('/(tabs)/spaces')}>
-              <Text style={styles.seeAll}>See all</Text>
-            </Pressable>
-          </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalScroll}
+              >
+                {todayLectures.length > 0 ? (
+                  todayLectures.map((item) => (
+                    <ClassCard
+                      key={item.id}
+                      courseCode={item.courseCode}
+                      courseName={item.title}
+                      startTime={item.startTime || '10:00'}
+                      endTime={item.endTime || '12:00'}
+                      venue={item.venue || 'TBD'}
+                      isCarryover={item.isCarryover}
+                      onPress={() => router.push(`/post/${item.id}`)}
+                    />
+                  ))
+                ) : (
+                  <Card variant="filled" style={styles.emptyCard}>
+                    <LucideIcons.CalendarCheck2 size={24} color={Colors.onSurfaceVariant} style={{ marginBottom: 8 }} />
+                    <Text style={styles.emptyText}>No more classes today. Relax!</Text>
+                  </Card>
+                )}
+              </ScrollView>
+            </View>
 
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalContent}
-          >
-            {spaces.map((space, index) => (
-              <SpaceTile
-                key={space.id}
-                name={space.name}
-                index={index}
-                onPress={() => router.push(`/space/${space.id}`)}
-              />
-            ))}
-            <SpaceTile 
-              name="Add Space" 
-              isAdd 
-              onPress={() => router.push('/join')} 
-            />
-          </ScrollView>
-        </View>
+            {/* My Spaces Tonal Grid */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>My Academic Spaces</Text>
+                <Pressable onPress={() => router.push('/(tabs)/spaces')}>
+                  <LucideIcons.ArrowRight size={20} color={Colors.primary} />
+                </Pressable>
+              </View>
 
-        {/* Recent Notices */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Notices</Text>
-            {/* "See all" on notices? Prompt says see all for Recent Notices too. */}
-            <Pressable>
-              <Text style={styles.seeAll}>See all</Text>
-            </Pressable>
-          </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalScroll}
+              >
+                {spaces.map((space, index) => (
+                  <SpaceTile
+                    key={space.id}
+                    name={space.name}
+                    index={index}
+                    onPress={() => router.push(`/space/${space.id}`)}
+                  />
+                ))}
+                <SpaceTile
+                  name="Join Space"
+                  isAdd
+                  onPress={() => router.push('/join')}
+                />
+              </ScrollView>
+            </View>
 
-          <View style={styles.noticesList}>
-            {recentPosts.slice(0, 5).map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                isCarryover={post.isCarryover}
-                onPress={() => router.push(`/post/${post.id}`)}
-                style={{ marginBottom: 8 }}
-              />
-            ))}
-          </View>
-        </View>
-      </ScrollView>
+            {/* Recent Notices Feed */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Notices</Text>
+              </View>
+
+              <View style={styles.noticesContainer}>
+                {recentPosts.filter(p => p.type !== 'lecture').slice(0, 8).map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    isCarryover={post.isCarryover}
+                    onPress={() => router.push(`/post/${post.id}`)}
+                    style={{ marginBottom: 12 }}
+                  />
+                ))}
+              </View>
+            </View>
+        </Animated.View>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -207,107 +229,97 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  header: {
+  appBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    backgroundColor: Colors.background,
+    paddingHorizontal: 20,
+    justifyContent: 'flex-start',
+  },
+  appBarTop: {
+    height: 64,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 14,
-    marginBottom: 16,
+    alignItems: 'center',
   },
-  greetingLabel: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    marginBottom: 1,
-    fontFamily: Typography.family.regular,
+  appBarTitle: {
+    ...Typography.m3.titleLarge,
+    color: Colors.onSurface,
   },
-  userName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#000',
-    letterSpacing: -0.5,
-    fontFamily: Typography.family.bold,
-  },
-  dateLabel: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    marginTop: 2,
-    fontFamily: Typography.family.regular,
-  },
-  headerActions: {
+  appBarActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 16,
+  },
+  largeTitleContainer: {
+    marginTop: 12,
+  },
+  greetingText: {
+    ...Typography.m3.bodyLarge,
+    color: Colors.onSurfaceVariant,
+    fontSize: 16,
+  },
+  userNameText: {
+    ...Typography.m3.headlineMedium,
+    color: Colors.onSurface,
+    fontWeight: 'bold',
   },
   iconButton: {
-    width: 36,
-    height: 36,
-    backgroundColor: 'white',
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: Colors.separatorOpaque,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  unreadBadge: {
+  badge: {
     position: 'absolute',
-    top: -3,
-    right: -3,
-    width: 13,
-    height: 13,
+    top: 10,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: Colors.error,
-    borderRadius: 6.5,
-    borderWidth: 2,
-    borderColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeText: {
-    fontSize: 7,
-    fontWeight: '700',
-    color: 'white',
+    borderWidth: 1.5,
+    borderColor: Colors.background,
   },
   section: {
-    marginTop: 16,
+    marginTop: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    marginBottom: 10,
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 14,
+    ...Typography.m3.titleMedium,
+    color: Colors.onSurface,
     fontWeight: '700',
-    color: '#000',
-    fontFamily: Typography.family.bold,
   },
   seeAll: {
-    fontSize: 11,
-    color: Colors.accentBlue,
-    fontWeight: '500',
-    fontFamily: Typography.family.medium,
+    ...Typography.m3.labelLarge,
+    color: Colors.primary,
   },
-  horizontalContent: {
-    paddingHorizontal: 14,
-    gap: 9,
+  horizontalScroll: {
+    paddingHorizontal: 20,
+    gap: 12,
   },
-  noticesList: {
-    paddingHorizontal: 14,
+  noticesContainer: {
+    paddingHorizontal: 20,
   },
-  emptyStateContainer: {
-    width: width - 28,
-    padding: 20,
-    backgroundColor: 'white',
-    borderRadius: 16,
+  emptyCard: {
+    width: width - 40,
+    height: 120,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.separatorOpaque,
+    borderRadius: 28,
   },
-  emptyStateText: {
-    fontSize: 13,
-    color: Colors.textTertiary,
-    fontFamily: Typography.family.regular,
+  emptyText: {
+    ...Typography.m3.bodyMedium,
+    color: Colors.onSurfaceVariant,
   },
 });

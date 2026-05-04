@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Space, Course } from '../types';
 
 interface SpaceState {
@@ -12,17 +14,25 @@ interface SpaceState {
     removeSpace: (spaceId: string) => void;
 }
 
-export const useSpaceStore = create<SpaceState>((set) => ({
-    spaces: [],
-    activeSpaceId: null,
-    carryoverCourses: [],
-    setSpaces: (spaces) => set({ spaces }),
-    setActiveSpaceId: (activeSpaceId) => set({ activeSpaceId }),
-    setCarryoverCourses: (carryoverCourses) => set({ carryoverCourses }),
-    addSpace: (space) =>
-        set((state) => ({ spaces: [...state.spaces, space] })),
-    removeSpace: (spaceId) =>
-        set((state) => ({
-            spaces: state.spaces.filter((s) => s.id !== spaceId),
-        })),
-}));
+export const useSpaceStore = create<SpaceState>()(
+    persist(
+        (set) => ({
+            spaces: [],
+            activeSpaceId: null,
+            carryoverCourses: [],
+            setSpaces: (spaces) => set({ spaces }),
+            setActiveSpaceId: (activeSpaceId) => set({ activeSpaceId }),
+            setCarryoverCourses: (carryoverCourses) => set({ carryoverCourses }),
+            addSpace: (space) =>
+                set((state) => ({ spaces: [...state.spaces, space] })),
+            removeSpace: (spaceId) =>
+                set((state) => ({
+                    spaces: state.spaces.filter((s) => s.id !== spaceId),
+                })),
+        }),
+        {
+            name: 'space-storage',
+            storage: createJSONStorage(() => AsyncStorage),
+        }
+    )
+);

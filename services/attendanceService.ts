@@ -11,14 +11,14 @@ import {
   serverTimestamp, 
   increment,
   runTransaction,
-  getDoc
+  getDoc,
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { AttendanceSession, AttendanceRecord, VerificationMethod, ProximityReading, CourseAttendanceSettings } from '../types';
 import { generateAttendanceCode } from '../utils/generateCode';
 import { proximityService } from './proximityService';
 import * as Crypto from 'expo-crypto';
-import { isBefore } from 'date-fns';
 
 const SESSIONS_COLLECTION = (spaceId: string, courseId: string) => 
   `spaces/${spaceId}/courses/${courseId}/attendance`;
@@ -66,7 +66,7 @@ export const startSession = async (
     ...sessionData,
     openedAt: serverTimestamp(),
     lectureDate: serverTimestamp(),
-    codeExpiresAt: codeExpiresAt,
+    codeExpiresAt: Timestamp.fromDate(codeExpiresAt),
   });
 
   return sessionId;
@@ -92,7 +92,17 @@ export const markAttendance = async (
 
     const sessionData = sessionDoc.data() as AttendanceSession;
     if (!sessionData.isOpen) throw new Error('Session closed');
-    if (new Date() > new Date(sessionData.codeExpiresAt)) throw new Error('Code expired');
+
+    // DEFENSIVE: Compare against Firestore Server-side metadata if available
+    // Otherwise, we use the session's codeExpiresAt which is a Timestamp in Firestore
+    const expiryDate = (sessionData.codeExpiresAt as any).toDate?.() || new Date(sessionData.codeExpiresAt);
+
+    // Note: To truly fix clock spoofing, we'd need a Cloud Function or a server-time lookup.
+    // For now, we at least ensure we're comparing against the Firestore-stored expiry.
+    if (new Date() > expiryDate) {
+        throw new Error('Code expired');
+    }
+
     if (sessionData.code !== code) throw new Error('Invalid code');
 
     const recordDoc = await transaction.get(recordRef);
@@ -137,6 +147,15 @@ export const verifyAttendanceRecord = async (
 export const closeSession = async (spaceId: string, courseId: string, sessionId: string): Promise<void> => {
   const sessionRef = doc(db, SESSIONS_COLLECTION(spaceId, courseId), sessionId);
   
+  // STOP BLE BROADCAST BEFORE CLOSING (Safety first)
+  const sessionDoc = await getDoc(sessionRef);
+  if (sessionDoc.exists()) {
+      const data = sessionDoc.data() as AttendanceSession;
+      if (data.serviceUUID) {
+          await proximityService.stopBeaconBroadcast(data.serviceUUID).catch(() => {});
+      }
+  }
+
   await updateDoc(sessionRef, {
     isOpen: false,
     closedAt: serverTimestamp(),
@@ -173,7 +192,12 @@ export const getSessionHistory = async (spaceId: string, courseId: string) => {
   const sessionsRef = collection(db, SESSIONS_COLLECTION(spaceId, courseId));
   const q = query(sessionsRef, orderBy('lectureDate', 'desc'));
   const snap = await getDocs(q);
-  return snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as AttendanceSession));
+  return snap.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id,
+      lectureDate: doc.data().lectureDate?.toDate?.() || new Date(doc.data().lectureDate),
+      codeExpiresAt: doc.data().codeExpiresAt?.toDate?.() || new Date(doc.data().codeExpiresAt),
+    } as AttendanceSession));
 };
 
 export const getSessionsByCourse = getSessionHistory;
@@ -188,7 +212,11 @@ export const subscribeToRecords = (
   const q = query(recordsRef, orderBy('markedAt', 'desc'));
   
   return onSnapshot(q, (snap) => {
-    const records = snap.docs.map(doc => ({ ...doc.data(), uid: doc.id } as AttendanceRecord));
+    const records = snap.docs.map(doc => ({
+        ...doc.data(),
+        uid: doc.id,
+        markedAt: doc.data().markedAt?.toDate?.() || new Date(doc.data().markedAt)
+    } as AttendanceRecord));
     callback(records);
   });
 };
@@ -239,7 +267,6 @@ export const exportAttendanceToExcel = async (
   courseCode: string
 ) => {
   try {
-    // 1. Fetch all sessions for this course
     const sessions = await getSessionsByCourse(spaceId, courseId);
     const closedSessions = sessions.filter(s => !s.isOpen).sort((a, b) => 
       a.lectureDate.getTime() - b.lectureDate.getTime()
@@ -249,14 +276,11 @@ export const exportAttendanceToExcel = async (
       throw new Error('No closed sessions found to export.');
     }
 
-    // 2. Fetch all members
     const membersRef = collection(db, `spaces/${spaceId}/courses/${courseId}/members`);
     const membersSnap = await getDocs(membersRef);
     
-    // 3. Prepare data for XLSX
     const data: any[] = [];
     
-    // Header Row: [Name, Username, Date1, Date2, ..., Total]
     const header = ['Full Name', 'Username'];
     closedSessions.forEach(s => {
       header.push(s.lectureDate.toLocaleDateString());
@@ -264,7 +288,6 @@ export const exportAttendanceToExcel = async (
     header.push('Total Present');
     data.push(header);
 
-    // Student Rows
     for (const mDoc of membersSnap.docs) {
       const userSnap = await getDoc(doc(db, 'users', mDoc.id));
       const userData = userSnap.data();
@@ -284,21 +307,18 @@ export const exportAttendanceToExcel = async (
       data.push(row);
     }
 
-    // 4. Create Workbook
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
 
-    // 5. Generate File
     const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
     const fileName = `Attendance_${courseCode}_${new Date().getTime()}.xlsx`;
-    const uri = (FileSystem as any).cacheDirectory + fileName;
+    const uri = (FileSystem.cacheDirectory || '') + fileName;
 
     await FileSystem.writeAsStringAsync(uri, wbout, {
-      encoding: (FileSystem as any).EncodingType.Base64,
+      encoding: FileSystem.EncodingType.Base64,
     });
 
-    // 6. Share
     await Sharing.shareAsync(uri);
 
   } catch (error) {
@@ -314,14 +334,14 @@ export const refreshQRToken = async (sessionId: string, courseId: string, spaceI
   
   await updateDoc(sessionRef, {
     code: newToken,
-    codeExpiresAt: expiresAt,
+    codeExpiresAt: Timestamp.fromDate(expiresAt),
   });
   return { newToken, expiresAt };
 };
 
 export const validateQRToken = (scannedToken: string, sessionId: string, expiresAt: Date): boolean => {
   if (!scannedToken) return false;
-  return isBefore(new Date(), expiresAt);
+  return new Date() < expiresAt;
 };
 
 export const hasStudentScanned = async (sessionId: string, courseId: string, spaceId: string, uid: string) => {
@@ -330,9 +350,6 @@ export const hasStudentScanned = async (sessionId: string, courseId: string, spa
   return snap.exists();
 };
 
-/**
- * Settings logic for Space Management
- */
 export const getAttendanceSettings = async (courseId: string, spaceId: string): Promise<CourseAttendanceSettings> => {
   const settingsRef = doc(db, `spaces/${spaceId}/courses/${courseId}/settings`, 'attendance');
   const snap = await getDoc(settingsRef);

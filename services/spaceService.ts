@@ -18,6 +18,20 @@ import { db } from '../config/firebase';
 import { Space, CourseMember, UserRole } from '../types';
 
 /**
+ * Utility to verify if a user has administrative rights in a space.
+ */
+export async function verifySpaceRole(
+    spaceId: string,
+    uid: string,
+    allowedRoles: UserRole[] = ['monitor', 'assistant_monitor']
+): Promise<boolean> {
+    const memberSnap = await getDoc(doc(db, 'spaces', spaceId, 'members', uid));
+    if (!memberSnap.exists()) return false;
+    const role = memberSnap.data().role as UserRole;
+    return allowedRoles.includes(role);
+}
+
+/**
  * Create a new space and add the creator as the monitor member.
  */
 export async function createSpace(
@@ -171,8 +185,6 @@ export function subscribeToUserSpaces(
     uid: string,
     callback: (spaces: Space[]) => void
 ): Unsubscribe {
-    // We query spaces where the user is monitor or has a member doc
-    // For simplicity, we query all spaces and filter client-side with member sub-check
     const spacesRef = collection(db, 'spaces');
     return onSnapshot(spacesRef, async (snapshot) => {
         const spaces: Space[] = [];
@@ -223,8 +235,12 @@ export async function getUserSpaces(uid: string): Promise<Space[]> {
  */
 export async function updateSpace(
     spaceId: string,
+    uid: string,
     updates: Partial<Pick<Space, 'name' | 'department' | 'programme'>>
 ): Promise<void> {
+    const hasPermission = await verifySpaceRole(spaceId, uid, ['monitor']);
+    if (!hasPermission) throw new Error('Permission denied: Monitor role required');
+
     await updateDoc(doc(db, 'spaces', spaceId), updates);
 }
 
@@ -236,6 +252,9 @@ export async function transferOwnership(
     newMonitorUid: string,
     oldMonitorUid: string
 ): Promise<void> {
+    const hasPermission = await verifySpaceRole(spaceId, oldMonitorUid, ['monitor']);
+    if (!hasPermission) throw new Error('Permission denied: Monitor role required');
+
     const batch = writeBatch(db);
 
     // Update space document
@@ -257,7 +276,10 @@ export async function transferOwnership(
 /**
  * Delete a space and all its subcollections.
  */
-export async function deleteSpace(spaceId: string): Promise<void> {
+export async function deleteSpace(spaceId: string, uid: string): Promise<void> {
+    const hasPermission = await verifySpaceRole(spaceId, uid, ['monitor']);
+    if (!hasPermission) throw new Error('Permission denied: Monitor role required');
+
     // Delete all member docs
     const membersSnap = await getDocs(collection(db, 'spaces', spaceId, 'members'));
     const batch = writeBatch(db);
@@ -329,10 +351,14 @@ export async function getSpaceMembers(spaceId: string): Promise<CourseMember[]> 
  */
 export async function removeSpaceMember(
     spaceId: string,
-    uid: string
+    uidToRemove: string,
+    adminUid: string
 ): Promise<void> {
+    const hasPermission = await verifySpaceRole(spaceId, adminUid, ['monitor', 'assistant_monitor']);
+    if (!hasPermission) throw new Error('Permission denied');
+
     const batch = writeBatch(db);
-    batch.delete(doc(db, 'spaces', spaceId, 'members', uid));
+    batch.delete(doc(db, 'spaces', spaceId, 'members', uidToRemove));
     batch.update(doc(db, 'spaces', spaceId), { memberCount: increment(-1) });
 
     // Also remove from all courses
@@ -345,7 +371,7 @@ export async function removeSpaceMember(
             'courses',
             courseDoc.id,
             'members',
-            uid
+            uidToRemove
         );
         const memberSnap = await getDoc(memberRef);
         if (memberSnap.exists()) {
@@ -361,11 +387,15 @@ export async function removeSpaceMember(
  */
 export async function promoteToAssistantMonitor(
     spaceId: string,
-    uid: string
+    uidToPromote: string,
+    adminUid: string
 ): Promise<void> {
+    const hasPermission = await verifySpaceRole(spaceId, adminUid, ['monitor']);
+    if (!hasPermission) throw new Error('Permission denied: Monitor role required');
+
     const batch = writeBatch(db);
-    batch.update(doc(db, 'spaces', spaceId), { assistantMonitorUid: uid });
-    batch.update(doc(db, 'spaces', spaceId, 'members', uid), {
+    batch.update(doc(db, 'spaces', spaceId), { assistantMonitorUid: uidToPromote });
+    batch.update(doc(db, 'spaces', spaceId, 'members', uidToPromote), {
         role: 'assistant_monitor',
     });
     await batch.commit();

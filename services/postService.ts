@@ -9,7 +9,6 @@ import {
     query,
     where,
     orderBy,
-    limit,
     onSnapshot,
     serverTimestamp,
     Unsubscribe,
@@ -20,6 +19,7 @@ import {
 import { db } from '../config/firebase';
 import { Post, PostType, ReadReceipt } from '../types';
 import { sendPushNotification, saveNotificationToFirestore } from './notificationService';
+import { verifySpaceRole } from './spaceService';
 
 /**
  * Create a post under a course+space, and notify all course members.
@@ -29,6 +29,10 @@ export async function createPost(
     courseId: string,
     post: Omit<Post, 'id' | 'createdAt'>
 ): Promise<string> {
+    // Phase 1: Verify Role before write
+    const hasPermission = await verifySpaceRole(spaceId, post.authorUid, ['monitor', 'assistant_monitor', 'lecturer']);
+    if (!hasPermission) throw new Error('Permission denied: You cannot post in this space.');
+
     const postRef = doc(
         collection(db, 'spaces', spaceId, 'courses', courseId, 'posts')
     );
@@ -40,14 +44,12 @@ export async function createPost(
         createdAt: serverTimestamp(),
     };
 
-    // Convert Dates to Timestamps for Firestore
     const firestoreData: Record<string, unknown> = { ...postData };
     if (post.lectureDate) firestoreData.lectureDate = Timestamp.fromDate(post.lectureDate);
     if (post.dueDate) firestoreData.dueDate = Timestamp.fromDate(post.dueDate);
 
     await setDoc(postRef, firestoreData);
 
-    // Notify all course members
     try {
         const membersSnap = await getDocs(
             collection(db, 'spaces', spaceId, 'courses', courseId, 'members')
@@ -58,10 +60,9 @@ export async function createPost(
         const emoji = getPostTypeEmoji(post.type);
 
         for (const memberDoc of membersSnap.docs) {
-            if (memberDoc.id === post.authorUid) continue; // Don't notify author
+            if (memberDoc.id === post.authorUid) continue;
             const memberData = memberDoc.data();
 
-            // 1. In-app notification
             await saveNotificationToFirestore(memberDoc.id, {
                 title: `${courseName} ${emoji} ${postTitle}`,
                 body: post.description || postTitle,
@@ -73,9 +74,6 @@ export async function createPost(
                 isImportant: Boolean(post.isImportant),
             });
 
-            // 2. Push notification attempt (if token exists)
-            // Note: In production, this should ideally be handled by a Cloud Function
-            // Fetching user doc to get fcmToken
             const userDoc = await getDoc(doc(db, 'users', memberDoc.id));
             if (userDoc.exists()) {
                 const userData = userDoc.data();
@@ -110,21 +108,14 @@ function getPostTypeEmoji(type: PostType): string {
 }
 
 /**
- * Get all posts for a course, ordered by createdAt descending.
+ * Get all posts for a course.
  */
 export function subscribeToPostsByCourse(
     spaceId: string,
     courseId: string,
     callback: (posts: Post[]) => void
 ): Unsubscribe {
-    const postsRef = collection(
-        db,
-        'spaces',
-        spaceId,
-        'courses',
-        courseId,
-        'posts'
-    );
+    const postsRef = collection(db, 'spaces', spaceId, 'courses', courseId, 'posts');
     const q = query(postsRef, orderBy('createdAt', 'desc'));
 
     return onSnapshot(q, (snapshot) => {
@@ -134,95 +125,18 @@ export function subscribeToPostsByCourse(
 }
 
 /**
- * Get all posts across all courses in a space.
- */
-export async function getPostsBySpace(spaceId: string): Promise<Post[]> {
-    const coursesSnap = await getDocs(
-        collection(db, 'spaces', spaceId, 'courses')
-    );
-    const allPosts: Post[] = [];
-
-    for (const courseDoc of coursesSnap.docs) {
-        const postsSnap = await getDocs(
-            query(
-                collection(
-                    db,
-                    'spaces',
-                    spaceId,
-                    'courses',
-                    courseDoc.id,
-                    'posts'
-                ),
-                orderBy('createdAt', 'desc')
-            )
-        );
-        postsSnap.docs.forEach((d) => allPosts.push(docToPost(d)));
-    }
-
-    allPosts.sort(
-        (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-    );
-
-    return allPosts;
-}
-
-/**
- * Real-time listener for the most recent posts across all user's spaces and courses.
- */
-export function subscribeToUserRecentPosts(
-    uid: string,
-    callback: (posts: Post[]) => void,
-    maxPosts: number = 10
-): Unsubscribe {
-    // This is complex for a single listener. We'll listen to the user's spaces and for each, 
-    // listen to courses, then for each course listen to posts.
-    // For MVP, we'll keep it as a managed set of unsubscribes.
-    
-    let unsubscribes: Unsubscribe[] = [];
-    const postsMap: Record<string, Post[]> = {};
-
-    const updateAggregate = () => {
-        const allPosts = Object.values(postsMap).flat();
-        allPosts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        callback(allPosts.slice(0, maxPosts));
-    };
-
-    const spacesUnsub = onSnapshot(collection(db, 'spaces'), async (spacesSnap) => {
-        // Clear previous sub-unsubscribes if spaces change significantly
-        // (Simple version: just manage the growth)
-        for (const spaceDoc of spacesSnap.docs) {
-            const memberSnap = await getDoc(doc(db, 'spaces', spaceDoc.id, 'members', uid));
-            if (memberSnap.exists()) {
-                const coursesUnsub = onSnapshot(collection(db, 'spaces', spaceDoc.id, 'courses'), (coursesSnap) => {
-                    for (const courseDoc of coursesSnap.docs) {
-                        const postsUnsub = subscribeToPostsByCourse(spaceDoc.id, courseDoc.id, (coursePosts) => {
-                            postsMap[`${spaceDoc.id}_${courseDoc.id}`] = coursePosts;
-                            updateAggregate();
-                        });
-                        unsubscribes.push(postsUnsub);
-                    }
-                });
-                unsubscribes.push(coursesUnsub);
-            }
-        }
-    });
-
-    unsubscribes.push(spacesUnsub);
-
-    return () => {
-        unsubscribes.forEach(unsub => unsub());
-    };
-}
-
-/**
  * Update a post.
  */
 export async function updatePost(
     spaceId: string,
     courseId: string,
     postId: string,
+    uid: string,
     updates: Partial<Post>
 ): Promise<void> {
+    const hasPermission = await verifySpaceRole(spaceId, uid, ['monitor', 'assistant_monitor', 'lecturer']);
+    if (!hasPermission) throw new Error('Permission denied');
+
     const updateData: Record<string, unknown> = { ...updates };
     if (updates.lectureDate) updateData.lectureDate = Timestamp.fromDate(updates.lectureDate);
     if (updates.dueDate) updateData.dueDate = Timestamp.fromDate(updates.dueDate);
@@ -241,8 +155,12 @@ export async function updatePost(
 export async function deletePost(
     spaceId: string,
     courseId: string,
-    postId: string
+    postId: string,
+    uid: string
 ): Promise<void> {
+    const hasPermission = await verifySpaceRole(spaceId, uid, ['monitor', 'assistant_monitor', 'lecturer']);
+    if (!hasPermission) throw new Error('Permission denied');
+
     await deleteDoc(
         doc(db, 'spaces', spaceId, 'courses', courseId, 'posts', postId)
     );
@@ -279,7 +197,7 @@ export async function markPostAsRead(
     try {
         await runTransaction(db, async (transaction) => {
             const receiptSnap = await transaction.get(receiptRef);
-            if (receiptSnap.exists()) return; // Already read
+            if (receiptSnap.exists()) return;
 
             transaction.set(receiptRef, {
                 uid,
@@ -321,8 +239,12 @@ export async function updatePostPinStatus(
     spaceId: string,
     courseId: string,
     postId: string,
+    uid: string,
     isPinned: boolean
 ): Promise<void> {
+    const hasPermission = await verifySpaceRole(spaceId, uid, ['monitor', 'assistant_monitor']);
+    if (!hasPermission) throw new Error('Permission denied');
+
     await updateDoc(doc(db, 'spaces', spaceId, 'courses', courseId, 'posts', postId), {
         isPinned,
     });
@@ -335,8 +257,12 @@ export async function updatePostImportantStatus(
     spaceId: string,
     courseId: string,
     postId: string,
+    uid: string,
     isImportant: boolean
 ): Promise<void> {
+    const hasPermission = await verifySpaceRole(spaceId, uid, ['monitor', 'assistant_monitor', 'lecturer']);
+    if (!hasPermission) throw new Error('Permission denied');
+
     await updateDoc(doc(db, 'spaces', spaceId, 'courses', courseId, 'posts', postId), {
         isImportant,
     });

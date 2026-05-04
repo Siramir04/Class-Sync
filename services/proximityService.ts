@@ -1,8 +1,9 @@
 import BleAdvertiser from 'react-native-ble-advertiser';
 import BleManager from 'react-native-ble-manager';
 import * as Network from 'expo-network';
-import { Platform, NativeEventEmitter, NativeModules, PermissionsAndroid, Alert } from 'react-native';
-import { AttendanceBeacon, ProximityScanResult, ProximityReading, AttendanceSession, VerificationMethod } from '../types';
+import * as Location from 'expo-location';
+import { Platform, NativeEventEmitter, NativeModules, PermissionsAndroid } from 'react-native';
+import { AttendanceBeacon, ProximityScanResult, AttendanceSession } from '../types';
 
 // ─────────────────────────────────────────
 // CONSTANTS
@@ -16,13 +17,15 @@ const RSSI_STRONG = -65;   // Very close (same room, near Monitor)
 const RSSI_MEDIUM = -80;   // Same room but far
 const RSSI_WEAK   = -90;   // Edge of range — prompt to move closer
 
+// Keep track of active broadcast to ensure cleanup
+let activeBroadcastUUID: string | null = null;
+
 // ─────────────────────────────────────────
 // PERMISSION REQUESTS
 // ─────────────────────────────────────────
 
 export const requestProximityPermissions = async (): Promise<boolean> => {
   if (Platform.OS === 'android') {
-    // Check Android version
     const apiLevel = Platform.Version as number;
     
     const permissions = [
@@ -38,21 +41,20 @@ export const requestProximityPermissions = async (): Promise<boolean> => {
       );
     }
 
-    const rationale = {
-      title: "Location Permission for Attendance",
-      message: "ClassSync needs location permission to detect the attendance beacon. This is required by Android for Bluetooth scanning — we don't track your location.",
-      buttonPositive: "Grant Permission",
-      buttonNegative: "Cancel"
-    };
-
     const results = await PermissionsAndroid.requestMultiple(permissions);
 
-    // Filter to ensure all are granted
-    return Object.values(results).every(
+    const allGranted = Object.values(results).every(
       result => result === PermissionsAndroid.RESULTS.GRANTED
     );
+
+    if (allGranted) {
+      // Check if Location Services are actually ON (required for SSID and Scanning)
+      const locationEnabled = await Location.hasServicesEnabledAsync();
+      return locationEnabled;
+    }
+
+    return false;
   }
-  // iOS permissions are handled via Info.plist — return true
   return true;
 };
 
@@ -62,9 +64,14 @@ export const requestProximityPermissions = async (): Promise<boolean> => {
 
 export const startBeaconBroadcast = async (beacon: AttendanceBeacon): Promise<void> => {
   const hasPermission = await requestProximityPermissions();
-  if (!hasPermission) throw new Error('Bluetooth permission denied');
+  if (!hasPermission) throw new Error('Bluetooth or Location services are disabled');
 
-  // Encode sessionId into manufacturer data (first 16 bytes of UUID, hex encoded)
+  // Cleanup any previous broadcast before starting new one
+  if (activeBroadcastUUID) {
+    await stopBeaconBroadcast(activeBroadcastUUID);
+  }
+
+  // Encode sessionId into manufacturer data
   const sessionBytes = beacon.serviceUUID.replace(/-/g, '').substring(0, 16);
 
   await BleAdvertiser.setCompanyId(BLE_COMPANY_ID);
@@ -79,10 +86,28 @@ export const startBeaconBroadcast = async (beacon: AttendanceBeacon): Promise<vo
       includeDeviceName: false,
     }
   );
+
+  activeBroadcastUUID = beacon.serviceUUID;
 };
 
 export const stopBeaconBroadcast = async (serviceUUID: string): Promise<void> => {
-  await (BleAdvertiser as any).stopBroadcast(serviceUUID);
+  try {
+    await (BleAdvertiser as any).stopBroadcast(serviceUUID);
+    if (activeBroadcastUUID === serviceUUID) {
+        activeBroadcastUUID = null;
+    }
+  } catch (e) {
+    console.warn('Stop broadcast error:', e);
+  }
+};
+
+/**
+ * Emergency stop for all broadcasts, useful for app state changes or logouts
+ */
+export const stopAllBroadcasts = async (): Promise<void> => {
+    if (activeBroadcastUUID) {
+        await stopBeaconBroadcast(activeBroadcastUUID);
+    }
 };
 
 // ─────────────────────────────────────────
@@ -107,7 +132,6 @@ export const scanForBeacon = (
     const bleManagerEmitter = new NativeEventEmitter(NativeModules.BleManager);
     let found = false;
 
-    // Listen for discovered peripherals
     const discoverSubscription = bleManagerEmitter.addListener(
       'BleManagerDiscoverPeripheral',
       (peripheral: any) => {
@@ -151,30 +175,37 @@ export const scanForBeacon = (
 // ─────────────────────────────────────────
 
 export const getWifiInfo = async (): Promise<{ ssid: string | null; bssid?: string }> => {
+  // Check location services first - absolutely required for SSID on Android
+  const locationEnabled = await Location.hasServicesEnabledAsync();
+  if (!locationEnabled) {
+      return { ssid: null };
+  }
+
   const networkState = await Network.getNetworkStateAsync();
   
   if (!networkState.isConnected || networkState.type !== Network.NetworkStateType.WIFI) {
     return { ssid: null };
   }
 
-  // expo-network provides SSID on both platforms in some versions
-  // Using type assertion to bypass lint if we're sure it exists in the user's environment
-  return {
-    ssid: (networkState as any).ssid ?? null,
-  };
+  const ssid = (networkState as any).ssid;
+
+  // Handle common hidden or unknown SSID cases
+  if (!ssid || ssid === '<unknown ssid>' || ssid === '0x') {
+      return { ssid: null };
+  }
+
+  return { ssid };
 };
 
 export const matchWifiNetworks = async (
-  monitorSsid: string | null,
-  monitorBssid?: string
+  monitorSsid: string | null
 ): Promise<ProximityScanResult> => {
-  if (!monitorSsid) return { detected: false };
+  if (!monitorSsid || monitorSsid === '<unknown ssid>') return { detected: false };
 
   const studentWifi = await getWifiInfo();
   
   if (!studentWifi.ssid) return { detected: false };
 
-  // Match on SSID (same network name = same campus WiFi)
   const ssidMatch = studentWifi.ssid === monitorSsid;
 
   if (ssidMatch) {
@@ -207,18 +238,12 @@ export const checkProximity = async (
     matchWifiNetworks(session.monitorSsid ?? null),
   ]);
 
-  // Return best result: BLE > WiFi > not detected
   if (bleResult.detected) return bleResult;
   if (wifiResult.detected) return wifiResult;
   return { detected: false };
 };
 
-// ─────────────────────────────────────────
-// SIGNAL STRENGTH HELPERS
-// ─────────────────────────────────────────
-
 export const rssiToSignalBars = (rssi: number): number => {
-  // Returns 0–4 bars
   if (rssi >= RSSI_STRONG) return 4;
   if (rssi >= -70) return 3;
   if (rssi >= RSSI_MEDIUM) return 2;
@@ -237,6 +262,7 @@ export const proximityService = {
   requestProximityPermissions,
   startBeaconBroadcast,
   stopBeaconBroadcast,
+  stopAllBroadcasts,
   scanForBeacon,
   getWifiInfo,
   matchWifiNetworks,

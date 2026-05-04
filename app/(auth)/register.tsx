@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  Animated,
+  ScrollView
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../constants/colors';
-import { Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { AuthLayout } from '../../components/auth/AuthLayout';
-import { FormGroup } from '../../components/ui/FormGroup';
-import { FormRow } from '../../components/ui/FormRow';
 import { Button } from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
 import { Tag } from '../../components/ui/Tag';
 import * as LucideIcons from 'lucide-react-native';
 import { NIGERIAN_UNIVERSITIES, University } from '../../constants/universities';
@@ -32,6 +32,7 @@ export default function RegisterScreen() {
 
   // Step state
   const [step, setStep] = useState(1);
+  const slideAnim = useRef(new Animated.Value(0)).current;
 
   // Step 1 state
   const [fullName, setFullName] = useState('');
@@ -50,6 +51,15 @@ export default function RegisterScreen() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: step === 1 ? 0 : -width,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 40
+    }).start();
+  }, [step]);
 
   const handleUniversitySearch = (text: string) => {
     setUniversityQuery(text);
@@ -116,215 +126,113 @@ export default function RegisterScreen() {
     }
   };
 
-  const renderStepIndicator = () => (
-    <View style={styles.stepIndicator}>
-      <View style={[styles.stepCircle, step >= 1 ? styles.stepCircleActive : styles.stepCircleIdle]}>
-        {step > 1 ? (
-          <LucideIcons.Check size={14} color="white" />
-        ) : (
-          <Text style={[styles.stepNumber, step === 1 ? styles.stepNumberActive : styles.stepNumberIdle]}>1</Text>
-        )}
-      </View>
-      <View style={[styles.stepLine, step > 1 ? styles.stepLineActive : styles.stepLineIdle]} />
-      <View style={[styles.stepCircle, step === 2 ? styles.stepCircleActive : styles.stepCircleIdle]}>
-        <Text style={[styles.stepNumber, step === 2 ? styles.stepNumberActive : styles.stepNumberIdle]}>2</Text>
-      </View>
-    </View>
-  );
-
-  const highlightMatch = (text: string, query: string) => {
-    if (!query) return <Text>{text}</Text>;
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
-    return (
-      <Text>
-        {parts.map((part, i) => 
-          part.toLowerCase() === query.toLowerCase() ? 
-          <Text key={i} style={{ fontWeight: '700', color: Colors.accentBlue }}>{part}</Text> : 
-          part
-        )}
-      </Text>
-    );
-  };
-
   return (
     <KeyboardAvoidingView 
       style={{ flex: 1 }} 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <AuthLayout 
-        title={step === 1 ? "Create your\naccount." : "Your university\ndetails."}
-        subtitle={step === 1 ? "Step 1 of 2" : "Step 2 of 2"}
+        title={step === 1 ? "Start your\njourney." : "Almost\nthere."}
+        subtitle={step === 1 ? "Step 1: Your Profile" : "Step 2: University Details"}
       >
         <View style={styles.formContainer}>
-          {renderStepIndicator()}
+          {/* M3 Progress Indicator */}
+          <View style={styles.progressContainer}>
+              <View style={[styles.progressDot, step >= 1 && styles.progressDotActive]} />
+              <View style={[styles.progressLine, step >= 2 && styles.progressLineActive]} />
+              <View style={[styles.progressDot, step >= 2 && styles.progressDotActive]} />
+          </View>
 
           {error ? (
             <View style={styles.errorBanner}>
-              <Text style={styles.errorText}>{error}</Text>
+               <LucideIcons.AlertCircle size={16} color={Colors.onErrorContainer} />
+               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
 
-          {step === 1 ? (
-            <>
-              <FormGroup>
-                <FormRow 
-                  placeholder="Full name"
-                  icon="User"
-                  iconBg="#EFF6FF"
-                  iconColor={Colors.accentBlue}
-                  value={fullName}
-                  onChangeText={setFullName}
-                />
-                <FormRow 
-                  placeholder="Email address"
-                  icon="Mail"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                <FormRow 
-                  placeholder="Username (e.g. john_doe)"
-                  icon="AtSign"
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                />
-                <FormRow 
-                  placeholder="Min. 8 characters"
-                  icon="Lock"
-                  isLast
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  rightElement={
-                    <Pressable onPress={() => setShowPassword(!showPassword)}>
-                      <LucideIcons.Eye 
-                        size={20} 
-                        color={Colors.textTertiary} 
-                        style={{ opacity: 0.3 }} 
-                      />
-                    </Pressable>
-                  }
-                />
-              </FormGroup>
+          <Animated.View style={[styles.stepsWrapper, { transform: [{ translateX: slideAnim }] }]}>
+            {/* STEP 1 */}
+            <View style={styles.stepPage}>
+               <View style={styles.inputs}>
+                  <Input label="Full Name" placeholder="e.g. John Doe" value={fullName} onChangeText={setFullName} />
+                  <Input label="Email Address" placeholder="university@email.edu" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                  <Input label="Username" placeholder="e.g. john_sync" value={username} onChangeText={setUsername} autoCapitalize="none" />
+                  <View>
+                      <Input label="Password" placeholder="Min. 8 characters" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} />
+                      <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                        <LucideIcons.Eye size={20} color={showPassword ? Colors.primary : Colors.onSurfaceVariant} />
+                      </Pressable>
+                  </View>
+               </View>
 
-              <View style={{ paddingHorizontal: 14, marginTop: 20 }}>
-                <Button 
-                  label="Continue →" 
-                  onPress={handleNextStep}
-                />
-              </View>
+               <Button label="Continue" onPress={handleNextStep} style={styles.submitBtn} />
 
-              <View style={styles.footer}>
+               <View style={styles.footer}>
                 <Text style={styles.footerText}>Already have an account?</Text>
                 <Pressable onPress={() => router.push('/(auth)/login')}>
                   <Text style={styles.signupText}>Sign in</Text>
                 </Pressable>
               </View>
-            </>
-          ) : (
-            <>
-              <Pressable 
-                onPress={() => setStep(1)} 
-                style={styles.backButtonRow}
-              >
-                <View style={styles.backButton}>
-                  <LucideIcons.ChevronLeft size={20} color={Colors.accentBlue} />
-                </View>
-                <Text style={styles.backLabel}>Back</Text>
-              </Pressable>
+            </View>
 
-              <View style={styles.searchContainer}>
-                <View style={[styles.searchField, { borderColor: Colors.accentBlue }]}>
-                  <View style={styles.searchIconOuter}>
-                    <LucideIcons.Search size={18} color={Colors.accentBlue} />
+            {/* STEP 2 */}
+            <View style={styles.stepPage}>
+               <Pressable onPress={() => setStep(1)} style={styles.backLink}>
+                  <LucideIcons.ArrowLeft size={16} color={Colors.primary} />
+                  <Text style={styles.backLinkText}>Go back to step 1</Text>
+               </Pressable>
+
+               <View style={styles.inputs}>
+                  <View style={styles.searchSection}>
+                     <Input
+                        label="University Name"
+                        placeholder="Search your school..."
+                        value={universityQuery}
+                        onChangeText={handleUniversitySearch}
+                     />
+                     {universityResults.length > 0 && (
+                        <View style={styles.dropdown}>
+                           {universityResults.map((u, i) => (
+                              <Pressable key={i} style={styles.resultRow} onPress={() => handleSelectUniversity(u)}>
+                                 <Text style={styles.resultName}>{u.name}</Text>
+                                 <Tag label={u.type} type={u.type as any} />
+                              </Pressable>
+                           ))}
+                        </View>
+                     )}
                   </View>
-                  <FormRow 
-                    placeholder="Search your university..."
-                    value={universityQuery}
-                    onChangeText={handleUniversitySearch}
-                    style={{ flex: 1, backgroundColor: 'transparent' }}
-                    // Custom search field doesn't use standard FormRow labels but uses its body
-                  />
-                </View>
 
-                {universityResults.length > 0 && (
-                  <View style={styles.resultsDropdown}>
-                    {universityResults.map((u, i) => (
-                      <Pressable 
-                        key={i} 
-                        style={styles.resultRow}
-                        onPress={() => handleSelectUniversity(u)}
-                      >
-                        <Text style={styles.resultName}>{highlightMatch(u.name, universityQuery)}</Text>
-                        <Tag 
-                          label={u.type} 
-                          type={u.type === 'federal' ? 'federal' : u.type === 'state' ? 'state' : 'private'} 
-                        />
-                      </Pressable>
-                    ))}
+                  <Input label="Department" placeholder="e.g. Computer Science" value={department} onChangeText={setDepartment} />
+
+                  <View style={styles.roleSection}>
+                     <Text style={styles.roleLabel}>I am a...</Text>
+                     <View style={styles.roleGrid}>
+                        {['student', 'monitor', 'lecturer'].map((r) => (
+                           <Pressable
+                              key={r}
+                              onPress={() => setRole(r as any)}
+                              style={[styles.rolePill, role === r && styles.rolePillActive]}
+                           >
+                              <Text style={[styles.rolePillText, role === r && styles.rolePillTextActive]}>
+                                 {r.charAt(0).toUpperCase() + r.slice(1)}
+                              </Text>
+                           </Pressable>
+                        ))}
+                     </View>
                   </View>
-                )}
-              </View>
 
-              <Text style={styles.sectionLabel}>Role & year</Text>
-              <FormGroup>
-                <FormRow 
-                  label="Department"
-                  icon="BookOpen"
-                  placeholder="e.g. Computer Science"
-                  value={department}
-                  onChangeText={setDepartment}
-                />
-                <View style={styles.roleSelectorRow}>
-                  <Pressable 
-                    onPress={() => setRole('student')}
-                    style={[styles.rolePill, role === 'student' && styles.rolePillActive]}
-                  >
-                    <Text style={[styles.rolePillText, role === 'student' && styles.rolePillTextActive]}>Student</Text>
-                  </Pressable>
-                  <Pressable 
-                    onPress={() => setRole('monitor')}
-                    style={[styles.rolePill, role === 'monitor' && styles.rolePillActive]}
-                  >
-                    <Text style={[styles.rolePillText, role === 'monitor' && styles.rolePillTextActive]}>Monitor</Text>
-                  </Pressable>
-                  <Pressable 
-                    onPress={() => setRole('lecturer')}
-                    style={[styles.rolePill, role === 'lecturer' && styles.rolePillActive]}
-                  >
-                    <Text style={[styles.rolePillText, role === 'lecturer' && styles.rolePillTextActive]}>Lecturer</Text>
-                  </Pressable>
-                </View>
-                <FormRow 
-                  label="Entry year"
-                  icon="Calendar"
-                  isLast
-                  placeholder="e.g. 2023"
-                  value={entryYear}
-                  onChangeText={setEntryYear}
-                  keyboardType="numeric"
-                  maxLength={4}
-                />
-              </FormGroup>
+                  <Input label="Entry Year" placeholder="e.g. 2024" value={entryYear} onChangeText={setEntryYear} keyboardType="numeric" maxLength={4} />
+               </View>
 
-              <View style={{ paddingHorizontal: 14, marginTop: 24 }}>
-                <Button 
-                  label="Create my account" 
-                  onPress={handleRegister} 
-                  loading={loading}
-                  variant="navy"
-                />
-              </View>
+               <Button label="Create Account" onPress={handleRegister} loading={loading} style={styles.submitBtn} />
 
-              <View style={styles.termsFooter}>
+               <View style={styles.termsFooter}>
                 <Text style={styles.termsText}>
                   By continuing you agree to our <Text style={styles.linkText}>Terms of Service</Text> and <Text style={styles.linkText}>Privacy Policy</Text>
                 </Text>
               </View>
-            </>
-          )}
+            </View>
+          </Animated.View>
         </View>
       </AuthLayout>
     </KeyboardAvoidingView>
@@ -333,204 +241,172 @@ export default function RegisterScreen() {
 
 const styles = StyleSheet.create({
   formContainer: {
-    paddingTop: 0,
+    marginTop: 0,
+    overflow: 'hidden',
   },
-  stepIndicator: {
+  progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 14,
-    marginBottom: 14,
-  },
-  stepCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 32,
+    gap: 8,
   },
-  stepCircleActive: {
-    backgroundColor: Colors.accentBlue,
+  progressDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.outlineVariant,
   },
-  stepCircleIdle: {
-    backgroundColor: '#E5E5EA',
+  progressDotActive: {
+    backgroundColor: Colors.primary,
+    width: 24,
   },
-  stepNumber: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  stepNumberActive: {
-    color: 'white',
-  },
-  stepNumberIdle: {
-    color: Colors.textTertiary,
-  },
-  stepLine: {
-    flex: 1,
+  progressLine: {
+    width: 40,
     height: 2,
+    backgroundColor: Colors.outlineVariant,
   },
-  stepLineActive: {
-    backgroundColor: Colors.accentBlue,
-  },
-  stepLineIdle: {
-    backgroundColor: '#E5E5EA',
+  progressLineActive: {
+    backgroundColor: Colors.primary,
   },
   errorBanner: {
-    marginHorizontal: 14,
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: Colors.errorSoft,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 16,
+    backgroundColor: Colors.errorContainer,
+    borderRadius: 16,
+    marginBottom: 24,
+    marginHorizontal: 4,
   },
   errorText: {
-    fontSize: 13,
-    color: Colors.error,
-    fontWeight: '500',
-    textAlign: 'center',
+    ...Typography.m3.labelLarge,
+    color: Colors.onErrorContainer,
+    fontWeight: '700',
+  },
+  stepsWrapper: {
+    flexDirection: 'row',
+    width: width * 2,
+  },
+  stepPage: {
+    width: width - 48, // Accounting for AuthLayout padding
+    marginRight: 48,
+  },
+  inputs: {
+    gap: 8,
+    marginBottom: 24,
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: 16,
+    top: 18,
+    zIndex: 20,
+  },
+  submitBtn: {
+    height: 56,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 24,
+    gap: 6,
+    marginTop: 32,
   },
   footerText: {
-    fontSize: 13,
-    color: Colors.textTertiary,
+    ...Typography.m3.bodyMedium,
+    color: Colors.onSurfaceVariant,
   },
   signupText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.accentBlue,
+    ...Typography.m3.labelLarge,
+    color: Colors.primary,
+    fontWeight: '900',
   },
-  backButtonRow: {
+  backLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 22,
-    marginBottom: 14,
+    gap: 8,
+    marginBottom: 24,
   },
-  backButton: {
-    width: 32,
-    height: 32,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  backLinkText: {
+    ...Typography.m3.labelLarge,
+    color: Colors.primary,
+    fontWeight: '700',
   },
-  backLabel: {
-    fontSize: 14,
-    color: Colors.accentBlue,
-    fontWeight: '500',
-  },
-  searchContainer: {
-    marginHorizontal: 14,
-    marginBottom: 20,
+  searchSection: {
     zIndex: 100,
   },
-  searchField: {
-    height: 50,
-    backgroundColor: 'white',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 0,
-    overflow: 'hidden',
-  },
-  searchIconOuter: {
-    width: 44,
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
-  },
-  resultsDropdown: {
+  dropdown: {
     position: 'absolute',
-    top: 50,
+    top: 60,
     left: 0,
     right: 0,
-    backgroundColor: 'white',
-    borderRadius: 14,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    borderTopWidth: 0.5,
-    borderTopColor: Colors.separator,
-    maxHeight: 200,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      }
-    })
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    elevation: 4,
+    zIndex: 1000,
   },
   resultRow: {
-    padding: 14,
+    padding: 16,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     borderBottomWidth: 0.5,
-    borderBottomColor: Colors.separator,
+    borderBottomColor: Colors.outlineVariant,
   },
   resultName: {
-    fontSize: 14,
-    color: '#000',
+    ...Typography.m3.bodyMedium,
+    color: Colors.onSurface,
     flex: 1,
-    marginRight: 10,
+    marginRight: 8,
   },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textTertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 6,
-    paddingLeft: 18,
+  roleSection: {
+    marginVertical: 8,
   },
-  roleSelectorRow: {
+  roleLabel: {
+    ...Typography.m3.labelLarge,
+    color: Colors.onSurfaceVariant,
+    marginBottom: 12,
+    fontWeight: '700',
+  },
+  roleGrid: {
     flexDirection: 'row',
-    height: 50,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.surface,
+    gap: 8,
   },
   rolePill: {
     flex: 1,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.surfaceSecondary,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: Colors.surfaceElevation1,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
   },
   rolePillActive: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: Colors.primaryContainer,
+    borderColor: Colors.primary,
   },
   rolePillText: {
-    fontSize: 13,
-    color: Colors.textTertiary,
-    fontWeight: '500',
+    ...Typography.m3.labelLarge,
+    color: Colors.onSurfaceVariant,
   },
   rolePillTextActive: {
-    color: Colors.accentBlue,
-    fontWeight: '600',
+    color: Colors.onPrimaryContainer,
+    fontWeight: '900',
   },
   termsFooter: {
-    padding: 24,
+    marginTop: 32,
     alignItems: 'center',
   },
   termsText: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    lineHeight: 18,
+    ...Typography.m3.bodySmall,
+    color: Colors.onSurfaceVariant,
     textAlign: 'center',
+    lineHeight: 18,
   },
   linkText: {
-    color: Colors.accentBlue,
-    fontWeight: '600',
+    color: Colors.primary,
+    fontWeight: '700',
   },
 });

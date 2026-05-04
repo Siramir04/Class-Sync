@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Colors } from '../../constants/colors';
+import { Typography } from '../../constants/typography';
 
 export type TagType = 
   | 'lecture' | 'assignment' | 'test' | 'note' | 'announcement' 
   | 'cancellation' | 'carryover' | 'monitor' | 'lecturer'
-  | 'federal' | 'state' | 'private';
+  | 'federal' | 'state' | 'private' | 'attendance';
 
 interface TagProps {
   label: string;
@@ -13,28 +14,41 @@ interface TagProps {
   style?: ViewStyle;
 }
 
-const TYPE_MAP: Record<TagType, { bg: string; text: string }> = {
-  lecture:      { bg: '#EFF6FF', text: '#2563EB' },
-  assignment:   { bg: '#FEF3C7', text: '#D97706' },
-  test:         { bg: '#FEE2E2', text: '#DC2626' },
-  note:         { bg: '#F0FDF4', text: '#16A34A' },
-  announcement: { bg: '#EDE9FE', text: '#7C3AED' },
-  cancellation: { bg: '#FEE2E2', text: '#DC2626' },
-  carryover:    { bg: '#EDE9FE', text: '#7C3AED' },
-  monitor:      { bg: '#EFF6FF', text: '#1A3C6E' },
-  lecturer:     { bg: '#F0FDF4', text: '#16A34A' },
-  federal:      { bg: Colors.federal, text: Colors.federalText },
-  state:        { bg: Colors.state, text: Colors.stateText },
-  private:      { bg: Colors.private, text: Colors.privateText },
-};
-
+/**
+ * Material 3 (M3) Tag / Filter Chip
+ * Uses tonal palettes and rounded stadium shapes.
+ */
 export const Tag = ({ label, type = 'lecture', style }: TagProps) => {
-  const colors = TYPE_MAP[type] || TYPE_MAP.lecture;
+  const getM3Styles = (): { bg: string; text: string } => {
+    switch (type) {
+      case 'lecture':
+      case 'monitor':
+      case 'federal':
+        return { bg: Colors.primaryContainer, text: Colors.onPrimaryContainer };
+      case 'assignment':
+      case 'note':
+      case 'state':
+        return { bg: Colors.secondaryContainer, text: Colors.onSecondaryContainer };
+      case 'test':
+      case 'cancellation':
+        return { bg: Colors.errorContainer, text: Colors.onErrorContainer };
+      case 'announcement':
+      case 'carryover':
+      case 'private':
+        return { bg: Colors.tertiaryContainer, text: Colors.onTertiaryContainer };
+      case 'attendance':
+        return { bg: Colors.primaryContainer, text: Colors.primary };
+      default:
+        return { bg: Colors.surfaceVariant, text: Colors.onSurfaceVariant };
+    }
+  };
+
+  const m3 = getM3Styles();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }, style]}>
-      <Text style={[styles.text, { color: colors.text }]}>
-        {label.toUpperCase()}
+    <View style={[styles.container, { backgroundColor: m3.bg }, style]}>
+      <Text style={[styles.text, { color: m3.text }]}>
+        {label.charAt(0).toUpperCase() + label.slice(1)}
       </Text>
     </View>
   );
@@ -42,14 +56,16 @@ export const Tag = ({ label, type = 'lecture', style }: TagProps) => {
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 100,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
+    borderRadius: 8, // M3 Small component radius
+    paddingVertical: 4,
+    paddingHorizontal: 10,
     alignSelf: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   text: {
-    fontSize: 9,
+    ...Typography.m3.labelSmall,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.1,
   },
 });

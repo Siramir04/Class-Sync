@@ -12,8 +12,7 @@ import {
   ScrollView
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { Button } from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -29,6 +28,7 @@ const { width } = Dimensions.get('window');
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { colors: Colors, typography } = useTheme();
   const setUser = useAuthStore((s) => s.setUser);
 
   // Step state
@@ -131,6 +131,8 @@ export default function RegisterScreen() {
       setLoading(false);
     }
   };
+
+  const styles = createStyles(Colors, typography);
 
   return (
     <KeyboardAvoidingView 
@@ -245,7 +247,7 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: any, typography: any) => StyleSheet.create({
   formContainer: {
     marginTop: 0,
     overflow: 'hidden',
@@ -286,7 +288,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   errorText: {
-    ...Typography.m3.labelLarge,
+    ...typography.m3.labelLarge,
     color: Colors.onErrorContainer,
     fontWeight: '700',
   },
@@ -318,11 +320,11 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   footerText: {
-    ...Typography.m3.bodyMedium,
+    ...typography.m3.bodyMedium,
     color: Colors.onSurfaceVariant,
   },
   signupText: {
-    ...Typography.m3.labelLarge,
+    ...typography.m3.labelLarge,
     color: Colors.primary,
     fontWeight: '900',
   },
@@ -333,7 +335,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   backLinkText: {
-    ...Typography.m3.labelLarge,
+    ...typography.m3.labelLarge,
     color: Colors.primary,
     fontWeight: '700',
   },
@@ -361,7 +363,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.outlineVariant,
   },
   resultName: {
-    ...Typography.m3.bodyMedium,
+    ...typography.m3.bodyMedium,
     color: Colors.onSurface,
     flex: 1,
     marginRight: 8,
@@ -370,7 +372,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   roleLabel: {
-    ...Typography.m3.labelLarge,
+    ...typography.m3.labelLarge,
     color: Colors.onSurfaceVariant,
     marginBottom: 12,
     fontWeight: '700',
@@ -394,7 +396,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   rolePillText: {
-    ...Typography.m3.labelLarge,
+    ...typography.m3.labelLarge,
     color: Colors.onSurfaceVariant,
   },
   rolePillTextActive: {
@@ -406,7 +408,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   termsText: {
-    ...Typography.m3.bodySmall,
+    ...typography.m3.labelSmall,
     color: Colors.onSurfaceVariant,
     textAlign: 'center',
     lineHeight: 18,

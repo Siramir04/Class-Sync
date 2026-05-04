@@ -20,8 +20,20 @@ import { useRecentPosts } from '../../hooks/usePosts';
 import * as attendanceService from '../../services/attendanceService';
 import { Button } from '../../components/ui/Button';
 import { getSpaceMembers } from '../../services/spaceService';
+import { FeatureGate } from '../../utils/platform';
+import WebFeaturePrompt from '../../components/web/WebFeaturePrompt';
 
 export default function NewAttendanceSessionScreen() {
+    // Platform gate: show web fallback if native attendance features are unavailable
+    if (!FeatureGate.bleAttendance && !FeatureGate.qrScan) {
+        return (
+            <WebFeaturePrompt
+                feature="Proximity & QR attendance"
+                appStoreUrl="https://classsync.app/download"
+            />
+        );
+    }
+
     const { spaceId, courseId: initialCourseId } = useLocalSearchParams<{
         spaceId: string;
         courseId: string;

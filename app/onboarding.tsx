@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors } from '../constants/colors';
-import { Typography } from '../constants/typography';
+import { useTheme } from '../hooks/useTheme';
 import * as LucideIcons from 'lucide-react-native';
 import { Button } from '../components/ui/Button';
 
@@ -26,34 +25,35 @@ interface Slide {
   containerColor: string;
 }
 
-const slides: Slide[] = [
-  {
-    icon: 'Bell',
-    headline: "Never miss\na class.",
-    body: "Get instant notifications for lectures, assignments, and cancellations the moment they're posted.",
-    color: Colors.primary,
-    containerColor: Colors.primaryContainer,
-  },
-  {
-    icon: 'LayoutGrid',
-    headline: "One Space\nfor your class.",
-    body: "Your Monitor creates a Space for your level. Join once and stay connected to every course automatically.",
-    color: Colors.secondary,
-    containerColor: Colors.secondaryContainer,
-  },
-  {
-    icon: 'Users',
-    headline: "Your class,\nalways in sync.",
-    body: "Schedules, announcements, and deadlines — all in one place for your entire class.",
-    color: Colors.tertiary,
-    containerColor: Colors.tertiaryContainer,
-  },
-];
-
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { colors: Colors, typography: Typography } = useTheme();
   const flatListRef = useRef<FlatList>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const slides: Slide[] = useMemo(() => [
+    {
+      icon: 'Bell',
+      headline: "Never miss\na class.",
+      body: "Get instant notifications for lectures, assignments, and cancellations the moment they're posted.",
+      color: Colors.primary,
+      containerColor: Colors.primaryContainer,
+    },
+    {
+      icon: 'LayoutGrid',
+      headline: "One Space\nfor your class.",
+      body: "Your Monitor creates a Space for your level. Join once and stay connected to every course automatically.",
+      color: Colors.primary, // Using primary for secondary if secondary not in palette
+      containerColor: Colors.secondaryContainer,
+    },
+    {
+      icon: 'Users',
+      headline: "Your class,\nalways in sync.",
+      body: "Schedules, announcements, and deadlines — all in one place for your entire class.",
+      color: Colors.carryover, // Using carryover as tertiary equivalent
+      containerColor: Colors.tertiaryContainer,
+    },
+  ], [Colors]);
 
   // Animation for the background transition
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -105,6 +105,8 @@ export default function OnboardingScreen() {
       </View>
     );
   };
+
+  const styles = createStyles(Colors, Typography);
 
   return (
     <View style={styles.container}>
@@ -191,7 +193,7 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: any, Typography: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -231,7 +233,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headline: {
-    ...Typography.m3.headlineLarge,
+    ...Typography.m3.headlineMedium,
     color: Colors.onSurface,
     fontWeight: '900',
     textAlign: 'center',

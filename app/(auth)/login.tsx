@@ -7,10 +7,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { Button } from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -20,6 +20,7 @@ import * as LucideIcons from 'lucide-react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { colors: Colors, typography } = useTheme();
   const setUser = useAuthStore((s) => s.setUser);
 
   const [email, setEmail] = useState('');
@@ -49,6 +50,8 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+  const styles = createStyles(Colors, typography);
 
   return (
     <KeyboardAvoidingView 
@@ -134,7 +137,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: any, typography: any) => StyleSheet.create({
   formContainer: {
     marginTop: 8,
   },
@@ -148,7 +151,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   errorText: {
-    ...Typography.m3.labelLarge,
+    ...typography.m3.labelLarge,
     color: Colors.onErrorContainer,
     fontWeight: '700',
   },
@@ -167,7 +170,7 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   forgotText: {
-    ...Typography.m3.labelLarge,
+    ...typography.m3.labelLarge,
     color: Colors.primary,
     fontWeight: '700',
   },
@@ -182,11 +185,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   footerText: {
-    ...Typography.m3.bodyMedium,
+    ...typography.m3.bodyMedium,
     color: Colors.onSurfaceVariant,
   },
   signupText: {
-    ...Typography.m3.labelLarge,
+    ...typography.m3.labelLarge,
     color: Colors.primary,
     fontWeight: '900',
   },

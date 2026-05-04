@@ -10,8 +10,7 @@ import {
   Dimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import * as LucideIcons from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
@@ -33,7 +32,9 @@ export const AuthLayout = ({
   children, 
   showGoogle = true 
 }: AuthLayoutProps) => {
+  const { colors: Colors, typography: Typography } = useTheme();
   const insets = useSafeAreaInsets();
+  const styles = createStyles(Colors, Typography);
 
   // Animation for staggered entrance
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -104,7 +105,7 @@ export const AuthLayout = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: any, Typography: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   title: {
-    ...Typography.m3.headlineLarge,
+    ...Typography.m3.headlineMedium,
     color: Colors.onSurface,
     fontWeight: '900',
     fontSize: 34,
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   dividerText: {
-    ...Typography.m3.labelMedium,
+    ...Typography.m3.labelLarge,
     color: Colors.onSurfaceVariant,
     fontWeight: '500',
   },

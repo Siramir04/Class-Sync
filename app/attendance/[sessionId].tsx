@@ -13,7 +13,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import * as attendanceService from '../../services/attendanceService';
 import { proximityService } from '../../services/proximityService';

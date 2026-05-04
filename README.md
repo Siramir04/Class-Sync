@@ -59,4 +59,4 @@ This project follows strict iOS-native design guidelines. All styles use the cen
 
 ## 📄 License
 
-MIT
+SIMPLR LABS STUDIO

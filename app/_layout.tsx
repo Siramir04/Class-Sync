@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -20,6 +20,32 @@ import { usePushNotificationsSafe } from '../hooks/usePushNotificationsSafe';
 import { useCarryoverAutoAcceptSafe } from '../hooks/useCarryoverAutoAcceptSafe';
 import { registerBackgroundTasksSafe } from '../utils/registerBackgroundTasksSafe';
 
+class RenderErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#FF3B30' }}>
+          <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18 }}>RENDER ERROR</Text>
+          <Text style={{ color: 'white', marginTop: 12 }}>{this.state.error?.message}</Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function RootLayout() {
     const { isAuthenticated, isLoading } = useAuth();
     const segments = useSegments();
@@ -27,10 +53,46 @@ export default function RootLayout() {
     const { colors: Colors, isDark } = useTheme();
     const { isDesktop } = useResponsive();
 
-    // Phase 7 — Push Notifications (no-op on web)
-    const { expoPushToken } = usePushNotificationsSafe();
+    // --- Fix 1b: Auth hydration gate ---
+    const [appReady, setAppReady] = useState(false);
 
-    // Phase 8 — Carryover Auto-Accept (no-op on web)
+    useEffect(() => {
+        let unsubscribe: (() => void) | null = null;
+
+        unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                try {
+                    const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+                    if (userDoc.exists()) {
+                        useAuthStore.getState().setUser({
+                            uid: firebaseUser.uid,
+                            ...userDoc.data(),
+                            createdAt: userDoc.data().createdAt?.toDate?.() || new Date()
+                        } as User);
+                    } else {
+                        useAuthStore.getState().setUser(null);
+                    }
+                } catch (err) {
+                    logger.error('Error fetching user data:', err);
+                    useAuthStore.getState().setUser(null);
+                }
+            } else {
+                useAuthStore.getState().clearUser();
+            }
+            setAppReady(true);
+        });
+
+        const timeout = setTimeout(() => {
+            setAppReady(true);
+        }, 5000);
+
+        return () => {
+            clearTimeout(timeout);
+            unsubscribe?.();
+        };
+    }, []);
+
+    const { expoPushToken } = usePushNotificationsSafe();
     const {
         pendingCourses,
         showSheet,
@@ -47,38 +109,11 @@ export default function RootLayout() {
     });
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
-                try {
-                    const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-                    if (userDoc.exists()) {
-                        useAuthStore.getState().setUser({ 
-                            uid: firebaseUser.uid, 
-                            ...userDoc.data(),
-                            createdAt: userDoc.data().createdAt?.toDate?.() || new Date()
-                        } as User);
-                    } else {
-                        useAuthStore.getState().setUser(null);
-                    }
-                } catch (err) {
-                    logger.error('Error fetching user data:', err);
-                    useAuthStore.getState().setUser(null);
-                }
-            } else {
-                useAuthStore.getState().clearUser();
-            }
-        });
-
-        return () => unsubscribe();
-    }, []);
-
-    // Phase 3 — Background Proximity Scanning (native only)
-    useEffect(() => {
         registerBackgroundTasksSafe();
     }, []);
 
     useEffect(() => {
-        if (isLoading || !fontsLoaded) return;
+        if (!appReady || !fontsLoaded) return;
 
         const inAuthGroup = segments[0] === '(auth)';
         const isIndex = !segments[0];
@@ -91,17 +126,21 @@ export default function RootLayout() {
         } else if (isAuthenticated && inAuthGroup) {
             router.replace('/(tabs)');
         }
-    }, [isAuthenticated, segments, isLoading, fontsLoaded]);
+    }, [isAuthenticated, segments, appReady, fontsLoaded]);
 
-    if (!fontsLoaded || isLoading) {
+    if (!appReady || !fontsLoaded) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
-                <ActivityIndicator size="large" color={Colors.accentBlue} />
+                <ActivityIndicator size="large" color={Colors.primary} />
             </View>
         );
     }
 
-    const content = <Slot />;
+    const content = (
+        <RenderErrorBoundary>
+            <Slot />
+        </RenderErrorBoundary>
+    );
 
     const wrappedContent = isWeb && isDesktop ? (
         <View style={{ flex: 1, maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
@@ -109,7 +148,6 @@ export default function RootLayout() {
         </View>
     ) : content;
 
-    // Dynamically render native components
     let NativeComponents = null;
     if (isNative && currentCourse) {
         // eslint-disable-next-line @typescript-eslint/no-var-requires

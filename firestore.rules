@@ -26,12 +26,22 @@ service cloud.firestore {
       return isSpaceMember(spaceId) && getUserRole(spaceId) in ['monitor', 'assistant_monitor', 'lecturer'];
     }
     
+    function isAssistantMonitor(spaceId) {
+      return isSpaceMember(spaceId) && getUserRole(spaceId) == 'assistant_monitor';
+    }
+    
     function isLecturer(spaceId) {
       return isSpaceMember(spaceId) && getUserRole(spaceId) == 'lecturer';
     }
     
     function isAdmin(spaceId) {
       return isSpaceMember(spaceId) && getUserRole(spaceId) == 'monitor';
+    }
+    
+    // Check if an attendance session is currently open
+    // Actual path: spaces/{spaceId}/courses/{courseId}/attendance/{sessionId}
+    function isSessionOpen(spaceId, courseId, sessionId) {
+      return get(/databases/$(database)/documents/spaces/$(spaceId)/courses/$(courseId)/attendance/$(sessionId)).data.isOpen == true;
     }
     
     // ============================================
@@ -79,6 +89,62 @@ service cloud.firestore {
       match /courses/{courseId} {
         allow read: if isSpaceMember(spaceId);
         allow write: if isMonitor(spaceId);
+        
+        // ============================================
+        // ATTENDANCE SESSIONS
+        // Actual path: spaces/{spaceId}/courses/{courseId}/attendance/{sessionId}
+        // ============================================
+        match /attendance/{sessionId} {
+          allow read: if isAuthenticated() && isSpaceMember(spaceId);
+          
+          // Only monitors/assistant monitors can start and manage sessions
+          allow create, update: if isAuthenticated() && (
+            isMonitor(spaceId) || isAssistantMonitor(spaceId)
+          );
+          
+          // Never delete attendance sessions — audit trail
+          allow delete: if false;
+          
+          // ============================================
+          // ATTENDANCE RECORDS
+          // Actual path: spaces/{spaceId}/courses/{courseId}/attendance/{sessionId}/records/{uid}
+          // ============================================
+          match /records/{uid} {
+            allow read: if isAuthenticated() && (
+              isMonitor(spaceId) ||
+              request.auth.uid == uid
+            );
+            
+            // CRITICAL: student can only mark their OWN attendance
+            // AND only in an open session
+            allow create: if isAuthenticated()
+              && request.auth.uid == uid
+              && isSpaceMember(spaceId)
+              && isSessionOpen(spaceId, courseId, sessionId);
+            
+            // Monitors can also create records (e.g. marking absent students on close)
+            allow create: if isAuthenticated() && isMonitor(spaceId);
+            
+            // Only monitors can update records (e.g. verify flagged entries)
+            allow update: if isAuthenticated() && isMonitor(spaceId);
+            
+            // Never delete attendance records — audit trail
+            allow delete: if false;
+          }
+        }
+        
+        // Course members subcollection
+        match /members/{memberId} {
+          allow read: if isSpaceMember(spaceId);
+          allow write: if isMonitor(spaceId);
+          allow create: if isUser(memberId) && isSpaceMember(spaceId);
+        }
+        
+        // Course settings subcollection
+        match /settings/{settingId} {
+          allow read: if isSpaceMember(spaceId);
+          allow write: if isMonitor(spaceId);
+        }
       }
       
       // Posts subcollection
@@ -86,29 +152,6 @@ service cloud.firestore {
         allow read: if isSpaceMember(spaceId);
         allow create: if isSpaceMember(spaceId); // Any member can post (adjust if needed)
         allow update, delete: if isMonitor(spaceId) || request.auth.uid == resource.data.authorId;
-      }
-      
-      // Attendance sessions
-      match /attendanceSessions/{sessionId} {
-        allow read: if isSpaceMember(spaceId);
-        allow create, update, delete: if isMonitor(spaceId);
-      }
-      
-      // Attendance records
-      match /attendanceRecords/{recordId} {
-        // Students can read their own records
-        allow read: if isSpaceMember(spaceId) && 
-          (resource.data.studentId == request.auth.uid || isMonitor(spaceId));
-        
-        // Monitors can create records; students can ONLY create their own
-        // AND only if the session hasn't expired (server-side timestamp validation)
-        allow create: if isSpaceMember(spaceId) && (
-          isMonitor(spaceId) || 
-          (request.auth.uid == request.resource.data.studentId && 
-           getAfter(/databases/$(database)/documents/spaces/$(spaceId)/attendanceSessions/$(request.resource.data.sessionId)).data.codeExpiresAt > request.time)
-        );
-        
-        allow update, delete: if isMonitor(spaceId);
       }
     }
     
@@ -120,6 +163,13 @@ service cloud.firestore {
       // User can only read their own notifications
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create, update, delete: if false; // Server-only via Cloud Functions or admin SDK
+    }
+    
+    // Notification subcollection pattern (if used)
+    match /notifications/{uid}/items/{notificationId} {
+      allow read, update: if isAuthenticated() && request.auth.uid == uid;
+      allow create: if isAuthenticated();
+      allow delete: if false;
     }
   }
 }

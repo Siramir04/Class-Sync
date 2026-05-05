@@ -57,6 +57,13 @@ ClassSync is a modern, real-time class management and notification mobile applic
 
 This project follows strict iOS-native design guidelines. All styles use the centralized `constants/colors.ts` and `constants/typography.ts`.
 
+## 🌐 Web Companion Support (v2.6+)
+
+ClassSync now features web support via Expo Web.
+- **Stable Routing:** Guaranteed initial route resolution via fallbacks and declarative redirects.
+- **Hydration Safety:** Native-only components dynamically wrap to prevent web compilation errors.
+- **Backend Health:** REST API connectivity verified; rules and database access fully functional.
+
 ## 📄 License
 
 SIMPLR LABS STUDIO

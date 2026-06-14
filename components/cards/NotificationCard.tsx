@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { Spacing } from '../../constants/spacing';
 import { AppNotification } from '../../types';
 import { formatRelativeTime } from '../../utils/formatDate';
@@ -12,51 +12,54 @@ interface NotificationCardProps {
     onPress?: () => void;
 }
 
-const typeConfig: Record<string, { color: string; icon: string }> = {
-    lecture: { color: Colors.primaryBlue, icon: 'book' },
+const getTypeConfig = (Colors: any): Record<string, { color: string; icon: string }> => ({
+    lecture: { color: Colors.primary, icon: 'book' },
     assignment: { color: Colors.warning, icon: 'document-text' },
     test: { color: Colors.error, icon: 'clipboard' },
     note: { color: Colors.success, icon: 'bookmark' },
-    announcement: { color: Colors.accentBlue, icon: 'megaphone' },
+    announcement: { color: Colors.info, icon: 'megaphone' },
     cancellation: { color: Colors.error, icon: 'close-circle' },
-    course_added: { color: Colors.primaryBlue, icon: 'add-circle' },
+    course_added: { color: Colors.primary, icon: 'add-circle' },
     course_auto_added: { color: Colors.carryover, icon: 'refresh-circle' },
     lecturer_assigned: { color: Colors.success, icon: 'person-add' },
-};
+});
 
 export default function NotificationCard({ notification, onPress }: NotificationCardProps) {
-    const config = typeConfig[notification.type] || { color: Colors.primaryBlue, icon: 'notifications' };
+    const { colors: Colors } = useTheme();
+    const themedStyles = styles(Colors);
+    const typeConfig = getTypeConfig(Colors);
+    const config = typeConfig[notification.type] || { color: Colors.primary, icon: 'notifications' };
 
     return (
         <TouchableOpacity
             style={[
-                styles.card,
-                !notification.isRead && styles.unread,
+                themedStyles.card,
+                !notification.isRead && themedStyles.unread,
             ]}
             onPress={onPress}
             activeOpacity={0.7}
         >
-            <View style={styles.container}>
-                <View style={[styles.iconContainer, { backgroundColor: config.color + '15' }]}>
+            <View style={themedStyles.container}>
+                <View style={[themedStyles.iconContainer, { backgroundColor: config.color + '15' }]}>
                     <Ionicons name={config.icon as any} size={20} color={config.color} />
                 </View>
-                <View style={styles.content}>
-                    <View style={styles.headerRow}>
-                        <Text style={styles.title} numberOfLines={1}>
+                <View style={themedStyles.content}>
+                    <View style={themedStyles.headerRow}>
+                        <Text style={themedStyles.title} numberOfLines={1}>
                             {notification.title}
                         </Text>
-                        {!notification.isRead && <View style={styles.unreadDot} />}
+                        {!notification.isRead && <View style={themedStyles.unreadDot} />}
                     </View>
-                    <Text style={styles.body} numberOfLines={2}>
+                    <Text style={themedStyles.body} numberOfLines={2}>
                         {notification.body}
                     </Text>
-                    <View style={styles.footer}>
-                        <Text style={styles.time}>
+                    <View style={themedStyles.footer}>
+                        <Text style={themedStyles.time}>
                             {formatRelativeTime(notification.createdAt)}
                         </Text>
                         {notification.isCarryover && (
-                            <View style={styles.carryoverBadge}>
-                                <Text style={styles.carryoverText}>CARRYOVER</Text>
+                            <View style={themedStyles.carryoverBadge}>
+                                <Text style={themedStyles.carryoverText}>CARRYOVER</Text>
                             </View>
                         )}
                     </View>
@@ -66,14 +69,16 @@ export default function NotificationCard({ notification, onPress }: Notification
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     card: {
         paddingHorizontal: Spacing.screenPadding,
         paddingVertical: 14,
         backgroundColor: Colors.background,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.separator,
     },
     unread: {
-        backgroundColor: Colors.primaryBlue + '05',
+        backgroundColor: Colors.primary + '05',
     },
     container: {
         flexDirection: 'row',
@@ -98,8 +103,7 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     title: {
-        fontSize: 16,
-        fontFamily: 'DMSans_700Bold',
+        ...Typography.headline,
         color: Colors.textPrimary,
         flex: 1,
         marginRight: 8,
@@ -108,11 +112,11 @@ const styles = StyleSheet.create({
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: Colors.primaryBlue,
+        backgroundColor: Colors.primary,
     },
     body: {
+        ...Typography.body,
         fontSize: 14,
-        fontFamily: 'DMSans_400Regular',
         color: Colors.textSecondary,
         lineHeight: 18,
         marginBottom: 8,
@@ -123,8 +127,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     time: {
-        fontSize: 11,
-        fontFamily: 'DMSans_500Medium',
+        ...Typography.caption1,
         color: Colors.textTertiary,
     },
     carryoverBadge: {
@@ -135,7 +138,7 @@ const styles = StyleSheet.create({
     },
     carryoverText: {
         fontSize: 9,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.carryover,
     },
 });

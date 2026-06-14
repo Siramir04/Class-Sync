@@ -10,19 +10,29 @@ import {
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const { width } = Dimensions.get('window');
 
 /**
  * Material 3 (M3) Bottom Navigation Bar
  * Features the pill-shaped active indicator and smooth spring animations.
+ * Hidden on desktop web — DesktopSidebar takes over navigation.
  */
 export default function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const { colors: Colors } = useTheme();
+  const { isDesktop } = useResponsive();
+  const themedStyles = styles(Colors);
+
+  // On desktop web, hide the bottom tab bar (DesktopSidebar handles nav)
+  if (Platform.OS === 'web' && isDesktop) {
+    return null;
+  }
   return (
-    <View style={styles.outerContainer}>
-        <View style={styles.tabBar}>
+    <View style={themedStyles.outerContainer}>
+        <View style={themedStyles.tabBar}>
             {state.routes.map((route, index) => {
                 const { options } = descriptors[route.key];
                 const isFocused = state.index === index;
@@ -62,6 +72,8 @@ interface TabItemProps {
 }
 
 const TabItem = ({ route, isFocused, onPress, label }: TabItemProps) => {
+    const { colors: Colors, typography: Typography } = useTheme();
+    const themedStyles = styles(Colors);
     const animation = useRef(new Animated.Value(isFocused ? 1 : 0)).current;
     const scale = useRef(new Animated.Value(1)).current;
 
@@ -124,13 +136,13 @@ const TabItem = ({ route, isFocused, onPress, label }: TabItemProps) => {
             onPress={onPress}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
-            style={styles.tabItem}
+            style={themedStyles.tabItem}
         >
-            <Animated.View style={[styles.iconWrapper, { transform: [{ scale }] }]}>
+            <Animated.View style={[themedStyles.iconWrapper, { transform: [{ scale }] }]}>
                 {/* M3 Active Indicator Pill */}
                 <Animated.View
                     style={[
-                        styles.activeIndicator,
+                        themedStyles.activeIndicator,
                         {
                             width: indicatorWidth,
                             opacity: indicatorOpacity,
@@ -145,7 +157,7 @@ const TabItem = ({ route, isFocused, onPress, label }: TabItemProps) => {
             </Animated.View>
             <Text
                 style={[
-                    styles.label,
+                    themedStyles.label,
                     {
                         color: iconColor,
                         fontFamily: isFocused ? Typography.family.bold : Typography.family.medium,
@@ -158,11 +170,11 @@ const TabItem = ({ route, isFocused, onPress, label }: TabItemProps) => {
     );
 };
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
   outerContainer: {
     backgroundColor: Colors.background,
     borderTopWidth: 1,
-    borderTopColor: Colors.surfaceVariant,
+    borderTopColor: Colors.separator,
     paddingBottom: Platform.OS === 'ios' ? 24 : 8,
     paddingTop: 8,
   },
@@ -194,6 +206,5 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     marginTop: 2,
-    fontFamily: Typography.family.medium,
   },
 });

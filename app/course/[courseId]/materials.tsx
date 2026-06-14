@@ -11,9 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../../constants/colors';
-import { Typography } from '../../../constants/typography';
-import { Spacing } from '../../../constants/spacing';
+import { useTheme } from '../../../hooks/useTheme';
 import { useAuthStore } from '../../../store/authStore';
 import { useSpaceRole } from '../../../hooks/useSpaceRole';
 import * as materialService from '../../../services/materialService';
@@ -24,6 +22,7 @@ import EmptyState from '../../../components/ui/EmptyState';
 import { formatBytes } from '../../../utils/formatBytes';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
+import { Spacing } from '../../../constants/spacing';
 
 export default function CourseMaterialsScreen() {
     const { spaceId, courseId, courseCode } = useLocalSearchParams<{
@@ -32,12 +31,15 @@ export default function CourseMaterialsScreen() {
         courseCode: string;
     }>();
     const router = useRouter();
+    const { colors: Colors, typography: Typography } = useTheme();
     const { user } = useAuthStore();
 
     const [materials, setMaterials] = useState<CourseMaterial[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     
+    const themedStyles = styles(Colors, Typography);
+
     // RBAC
     const { canUploadMaterials } = useSpaceRole(spaceId!);
 
@@ -128,26 +130,26 @@ export default function CourseMaterialsScreen() {
 
     const renderItem = ({ item }: { item: CourseMaterial }) => (
         <TouchableOpacity 
-            style={styles.materialCard} 
+            style={themedStyles.materialCard} 
             onPress={() => handleDownload(item)}
             activeOpacity={0.7}
         >
-            <View style={[styles.fileIcon, { backgroundColor: getFileColor(item.fileType) + '15' }]}>
+            <View style={[themedStyles.fileIcon, { backgroundColor: getFileColor(item.fileType) + '15' }]}>
                 <Ionicons 
                     name={getFileIcon(item.fileType) as any} 
                     size={24} 
                     color={getFileColor(item.fileType)} 
                 />
             </View>
-            <View style={styles.materialInfo}>
-                <Text style={styles.materialTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.materialMeta}>
+            <View style={themedStyles.materialInfo}>
+                <Text style={themedStyles.materialTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={themedStyles.materialMeta}>
                     {formatBytes(item.fileSize)} · {item.uploadedByName}
                 </Text>
             </View>
-            <View style={styles.actions}>
+            <View style={themedStyles.actions}>
                 {item.isPinned && (
-                    <Ionicons name="pin" size={16} color={Colors.accentBlue} style={{ marginRight: 8 }} />
+                    <Ionicons name="pin" size={16} color={Colors.primary} style={{ marginRight: 8 }} />
                 )}
                 {canUploadMaterials && (
                     <TouchableOpacity 
@@ -155,12 +157,12 @@ export default function CourseMaterialsScreen() {
                             e.stopPropagation();
                             handleDelete(item);
                         }}
-                        style={styles.deleteBtn}
+                        style={themedStyles.deleteBtn}
                     >
                         <Ionicons name="trash-outline" size={18} color={Colors.error} />
                     </TouchableOpacity>
                 )}
-                <Ionicons name="download-outline" size={20} color={Colors.textTertiary} />
+                <Ionicons name="download-outline" size={20} color={Colors.onSurfaceVariant} />
             </View>
         </TouchableOpacity>
     );
@@ -168,25 +170,25 @@ export default function CourseMaterialsScreen() {
     if (loading) return <LoadingSpinner fullScreen />;
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+        <SafeAreaView style={themedStyles.container}>
+            <View style={themedStyles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={themedStyles.headerButton}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
                 </TouchableOpacity>
-                <View style={styles.headerTitleContainer}>
-                    <Text style={styles.headerTitle}>Course Materials</Text>
-                    <Text style={styles.headerSubtitle}>{courseCode}</Text>
+                <View style={themedStyles.headerTitleContainer}>
+                    <Text style={themedStyles.headerTitle}>Course Materials</Text>
+                    <Text style={themedStyles.headerSubtitle}>{courseCode}</Text>
                 </View>
                 {canUploadMaterials ? (
                     <TouchableOpacity 
                         onPress={handleUpload} 
-                        style={styles.headerButton}
+                        style={themedStyles.headerButton}
                         disabled={uploading}
                     >
                         {uploading ? (
-                            <ActivityIndicator size="small" color={Colors.accentBlue} />
+                            <ActivityIndicator size="small" color={Colors.primary} />
                         ) : (
-                            <Ionicons name="cloud-upload-outline" size={24} color={Colors.accentBlue} />
+                            <Ionicons name="cloud-upload-outline" size={24} color={Colors.primary} />
                         )}
                     </TouchableOpacity>
                 ) : (
@@ -198,9 +200,9 @@ export default function CourseMaterialsScreen() {
                 data={materials}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={themedStyles.listContent}
                 ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
+                    <View style={themedStyles.emptyContainer}>
                         <EmptyState
                             icon="document-outline"
                             title="No materials yet"
@@ -225,7 +227,7 @@ function getFileColor(mimeType: string) {
     return '#6B7280'; // Gray
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any, Typography: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
@@ -237,7 +239,7 @@ const styles = StyleSheet.create({
         height: 56,
         backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.separator,
+        borderBottomColor: Colors.outlineVariant,
     },
     headerButton: {
         width: 44,
@@ -252,12 +254,12 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 17,
         fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
     },
     headerSubtitle: {
         fontSize: 12,
         fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
     },
     listContent: {
         padding: Spacing.screenPadding,
@@ -271,7 +273,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: Colors.separator,
+        borderColor: Colors.outlineVariant,
     },
     fileIcon: {
         width: 48,
@@ -287,13 +289,13 @@ const styles = StyleSheet.create({
     materialTitle: {
         fontSize: 15,
         fontFamily: Typography.family.semiBold,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
         marginBottom: 2,
     },
     materialMeta: {
         fontSize: 12,
         fontFamily: Typography.family.regular,
-        color: Colors.textTertiary,
+        color: Colors.onSurfaceVariant,
     },
     actions: {
         flexDirection: 'row',

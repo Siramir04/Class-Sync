@@ -130,6 +130,20 @@ export function subscribeToPostsByCourse(
 }
 
 /**
+ * Get all posts for a space.
+ */
+export async function getPostsBySpace(spaceId: string): Promise<Post[]> {
+    const postsRef = collectionGroup(db, 'posts');
+    const q = query(
+        postsRef,
+        where('spaceId', '==', spaceId),
+        orderBy('createdAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(docToPost);
+}
+
+/**
  * Update a post.
  */
 export async function updatePost(

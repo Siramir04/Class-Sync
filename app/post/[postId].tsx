@@ -15,7 +15,7 @@ import * as LucideIcons from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import { getPostById, deletePost, markPostAsRead, updatePostImportantStatus } from '../../services/postService';
-import Tag, { getPostTypeVariant } from '../../components/ui/Tag';
+import { Tag } from '../../components/ui/Tag';
 import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { logger } from '../../utils/logger';
@@ -43,7 +43,7 @@ export default function PostDetailScreen() {
     }>();
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { colors: Colors, typography: Typography } = useTheme();
+    const { colors: Colors, typography: Typography, isDark } = useTheme();
     const { user } = useAuthStore();
 
     const [post, setPost] = useState<Post | null>(null);
@@ -90,10 +90,10 @@ export default function PostDetailScreen() {
     };
 
     const handleToggleImportance = async () => {
-        if (!post) return;
+        if (!post || !user) return;
         const newStatus = !post.isImportant;
         try {
-            await updatePostImportantStatus(spaceId!, courseId!, postId!, newStatus);
+            await updatePostImportantStatus(spaceId!, courseId!, postId!, user.uid, newStatus);
             setPost({ ...post, isImportant: newStatus });
             Alert.alert('Success', `Post marked as ${newStatus ? 'Important' : 'Normal'}`);
         } catch (err) {
@@ -110,7 +110,8 @@ export default function PostDetailScreen() {
                 style: 'destructive',
                 onPress: async () => {
                     try {
-                        await deletePost(spaceId!, courseId!, postId!);
+                        if (!user) return;
+                        await deletePost(spaceId!, courseId!, postId!, user.uid);
                         router.back();
                     } catch (err) {
                         logger.error('Failed to delete post:', err);
@@ -140,21 +141,21 @@ export default function PostDetailScreen() {
 
     return (
       <View style={[styles.container, { backgroundColor: Colors.background }]}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
         
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: Colors.background, borderBottomColor: Colors.separator }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: Colors.background, borderBottomColor: Colors.outlineVariant }]}>
            <Pressable onPress={() => router.back()} style={styles.headerButton}>
              <LucideIcons.ChevronLeft size={24} color={Colors.onSurface} />
            </Pressable>
 
            <View style={styles.headerTitleContainer}>
              <Text style={[styles.headerTitle, { color: Colors.onSurface, fontFamily: Typography.family.extraBold }]}>{post.courseCode}</Text>
-             <Text style={[styles.headerSubtitle, { color: Colors.textTertiary, fontFamily: Typography.family.semiBold }]}>{typeLabels[post.type]}</Text>
+             <Text style={[styles.headerSubtitle, { color: Colors.onSurfaceVariant, fontFamily: Typography.family.semiBold }]}>{typeLabels[post.type]}</Text>
            </View>
 
            <View style={styles.headerActions}>
-             <Pressable onPress={handleShare} style={[styles.iconCircle, { backgroundColor: Colors.surface }]}>
+             <Pressable onPress={handleShare} style={[styles.iconCircle, { backgroundColor: Colors.surfaceVariant }]}>
                <LucideIcons.Share size={18} color={Colors.onSurface} />
              </Pressable>
              <Pressable 
@@ -172,7 +173,7 @@ export default function PostDetailScreen() {
                    }
                    Alert.alert('Post Options', '', options);
                }}
-               style={[styles.iconCircle, { backgroundColor: Colors.surface }]}
+               style={[styles.iconCircle, { backgroundColor: Colors.surfaceVariant }]}
              >
                <LucideIcons.MoreHorizontal size={18} color={Colors.onSurface} />
              </Pressable>
@@ -185,7 +186,7 @@ export default function PostDetailScreen() {
         >
           <View style={styles.hero}>
              <View style={styles.badgeRow}>
-                <Tag label={typeLabels[post.type]} variant={getPostTypeVariant(post.type)} />
+                <Tag label={typeLabels[post.type]} type={post.type} />
                 {post.isImportant && (
                   <View style={[styles.importantBadge, { backgroundColor: Colors.error }]}>
                     <LucideIcons.AlertCircle size={10} color="white" />
@@ -196,12 +197,12 @@ export default function PostDetailScreen() {
              <Text style={[styles.mainTitle, { color: Colors.onSurface, fontFamily: Typography.family.extraBold }]}>{post.title}</Text>
              
              <View style={styles.authorRow}>
-                <View style={[styles.authorAvatar, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }]}>
-                  <Text style={[styles.avatarText, { color: Colors.textSecondary, fontFamily: Typography.family.bold }]}>{post.authorName.charAt(0)}</Text>
+                <View style={[styles.authorAvatar, { backgroundColor: Colors.surfaceVariant, borderColor: Colors.outlineVariant }]}>
+                  <Text style={[styles.avatarText, { color: Colors.onSurfaceVariant, fontFamily: Typography.family.bold }]}>{post.authorName.charAt(0)}</Text>
                 </View>
                 <View>
                   <Text style={[styles.authorName, { color: Colors.onSurface, fontFamily: Typography.family.semiBold }]}>{post.authorName}</Text>
-                  <Text style={[styles.postMeta, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>
+                  <Text style={[styles.postMeta, { color: Colors.onSurfaceVariant, fontFamily: Typography.family.regular }]}>
                     {post.authorRole.charAt(0).toUpperCase() + post.authorRole.slice(1)} · {formatRelativeTime(post.createdAt)}
                   </Text>
                 </View>
@@ -217,27 +218,27 @@ export default function PostDetailScreen() {
 
           <View style={styles.content}>
              {(post.venue || post.lectureDate || post.startTime || post.dueDate) && (
-               <View style={styles.infoGrid}>
-                 <Text style={[styles.sectionLabel, { color: Colors.textTertiary, fontFamily: Typography.family.semiBold }]}>Schedule & Details</Text>
-                 <View style={[styles.detailsGroup, { backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : '#F9F9FB' }]}>
+               <View style={styles.infoBlock}>
+                 <Text style={[styles.sectionLabel, { color: Colors.primary, fontFamily: Typography.family.semiBold }]}>Schedule & Details</Text>
+                 <View style={[styles.detailsGroup, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F9F9FB' }]}>
                     {post.venue && (
                       <View style={styles.detailItem}>
-                        <View style={[styles.detailIcon, { backgroundColor: Colors.isDark ? 'rgba(0,122,255,0.2)' : '#EFF6FF' }]}>
-                          <LucideIcons.MapPin size={16} color={Colors.accentBlue} />
+                        <View style={[styles.detailIcon, { backgroundColor: isDark ? 'rgba(0,122,255,0.2)' : '#EFF6FF' }]}>
+                          <LucideIcons.MapPin size={16} color={Colors.primary} />
                         </View>
                         <View>
-                          <Text style={[styles.detailLabel, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>Location</Text>
+                          <Text style={[styles.detailLabel, { color: Colors.onSurfaceVariant, fontFamily: Typography.family.regular }]}>Location</Text>
                           <Text style={[styles.detailValue, { color: Colors.onSurface, fontFamily: Typography.family.bold }]}>{post.venue}</Text>
                         </View>
                       </View>
                     )}
                     {(post.lectureDate || post.dueDate) && (
                       <View style={styles.detailItem}>
-                        <View style={[styles.detailIcon, { backgroundColor: Colors.isDark ? 'rgba(52,199,89,0.2)' : '#F0FDF4' }]}>
-                          <LucideIcons.Calendar size={16} color={Colors.success} />
+                        <View style={[styles.detailIcon, { backgroundColor: isDark ? 'rgba(52,199,89,0.2)' : '#F0FDF4' }]}>
+                          <LucideIcons.Calendar size={16} color={Colors.primary} />
                         </View>
                         <View>
-                          <Text style={[styles.detailLabel, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>{post.type === 'assignment' ? 'Due Date' : 'Date'}</Text>
+                          <Text style={[styles.detailLabel, { color: Colors.onSurfaceVariant, fontFamily: Typography.family.regular }]}>{post.type === 'assignment' ? 'Due Date' : 'Date'}</Text>
                           <Text style={[styles.detailValue, { color: Colors.onSurface, fontFamily: Typography.family.bold }]}>
                             {formatPostDate(new Date(post.type === 'assignment' ? post.dueDate! : post.lectureDate!))}
                           </Text>
@@ -246,11 +247,11 @@ export default function PostDetailScreen() {
                     )}
                     {post.startTime && (
                       <View style={styles.detailItem}>
-                        <View style={[styles.detailIcon, { backgroundColor: Colors.isDark ? 'rgba(255,204,0,0.2)' : '#FEF3C7' }]}>
-                          <LucideIcons.Clock size={16} color={Colors.warning} />
+                        <View style={[styles.detailIcon, { backgroundColor: isDark ? 'rgba(255,204,0,0.2)' : '#FEF3C7' }]}>
+                          <LucideIcons.Clock size={16} color={Colors.primary} />
                         </View>
                         <View>
-                          <Text style={[styles.detailLabel, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>Time</Text>
+                          <Text style={[styles.detailLabel, { color: Colors.onSurfaceVariant, fontFamily: Typography.family.regular }]}>Time</Text>
                           <Text style={[styles.detailValue, { color: Colors.onSurface, fontFamily: Typography.family.bold }]}>{post.startTime} {post.endTime ? `– ${post.endTime}` : ''}</Text>
                         </View>
                       </View>
@@ -262,41 +263,41 @@ export default function PostDetailScreen() {
              {post.type === 'lecture' && !isCancelled && (
                <Pressable 
                  onPress={() => setAlarmSheetVisible(true)}
-                 style={[styles.actionRow, { borderBottomColor: Colors.separator }]}
+                 style={[styles.actionRow, { borderBottomColor: Colors.outlineVariant }]}
                >
-                 <View style={[styles.detailIcon, { backgroundColor: isAlarmSet(post.id) ? 'rgba(0,122,255,0.1)' : Colors.surface }]}>
-                    <LucideIcons.Bell size={16} color={isAlarmSet(post.id) ? Colors.accentBlue : Colors.textTertiary} />
+                 <View style={[styles.detailIcon, { backgroundColor: isAlarmSet(post.id) ? 'rgba(0,122,255,0.1)' : Colors.surfaceVariant }]}>
+                    <LucideIcons.Bell size={16} color={isAlarmSet(post.id) ? Colors.primary : Colors.onSurfaceVariant} />
                  </View>
                  <Text style={[styles.actionLabel, { color: Colors.onSurface, fontFamily: Typography.family.semiBold }]}>Lecture Alarm</Text>
-                 <Text style={[styles.actionValue, { color: Colors.textTertiary, fontFamily: Typography.family.regular }, isAlarmSet(post.id) && { color: Colors.accentBlue }]}>
+                 <Text style={[styles.actionValue, { color: Colors.onSurfaceVariant, fontFamily: Typography.family.regular }, isAlarmSet(post.id) && { color: Colors.primary }]}>
                    {isAlarmSet(post.id) ? 'Active' : 'Set alarm'}
                  </Text>
-                 <LucideIcons.ChevronRight size={16} color={Colors.separatorOpaque} />
+                 <LucideIcons.ChevronRight size={16} color={Colors.onSurfaceVariant} />
                </Pressable>
              )}
 
              {isMonitor && post.isImportant && (
-               <Pressable onPress={() => setReceiptsVisible(true)} style={[styles.actionRow, { borderBottomColor: Colors.separator }]}>
-                 <View style={[styles.detailIcon, { backgroundColor: Colors.isDark ? 'rgba(0,122,255,0.2)' : '#EFF6FF' }]}>
-                    <LucideIcons.Users size={16} color={Colors.accentBlue} />
+               <Pressable onPress={() => setReceiptsVisible(true)} style={[styles.actionRow, { borderBottomColor: Colors.outlineVariant }]}>
+                 <View style={[styles.detailIcon, { backgroundColor: isDark ? 'rgba(0,122,255,0.2)' : '#EFF6FF' }]}>
+                    <LucideIcons.Users size={16} color={Colors.primary} />
                  </View>
                  <Text style={[styles.actionLabel, { color: Colors.onSurface, fontFamily: Typography.family.semiBold }]}>Read Receipts</Text>
-                 <Text style={[styles.actionValue, { color: Colors.textTertiary, fontFamily: Typography.family.regular }]}>{post.readCount || 0}/{memberCount}</Text>
-                 <LucideIcons.ChevronRight size={16} color={Colors.separatorOpaque} />
+                 <Text style={[styles.actionValue, { color: Colors.onSurfaceVariant, fontFamily: Typography.family.regular }]}>{post.readCount || 0}/{memberCount}</Text>
+                 <LucideIcons.ChevronRight size={16} color={Colors.onSurfaceVariant} />
                </Pressable>
              )}
 
              {post.description && (
                <View style={styles.descriptionBlock}>
-                 <Text style={[styles.sectionLabel, { color: Colors.textTertiary, fontFamily: Typography.family.semiBold }]}>Description</Text>
-                 <Text style={[styles.descriptionText, { color: Colors.textPrimary, fontFamily: Typography.family.regular }]}>{post.description}</Text>
+                 <Text style={[styles.sectionLabel, { color: Colors.primary, fontFamily: Typography.family.semiBold }]}>Description</Text>
+                 <Text style={[styles.descriptionText, { color: Colors.onSurface, fontFamily: Typography.family.regular }]}>{post.description}</Text>
                </View>
              )}
 
              {post.topics && (
                <View style={styles.descriptionBlock}>
-                 <Text style={[styles.sectionLabel, { color: Colors.textTertiary, fontFamily: Typography.family.semiBold }]}>Test Topics</Text>
-                 <Text style={[styles.topicsText, { color: Colors.textSecondary, fontFamily: Typography.family.medium }]}>{post.topics}</Text>
+                 <Text style={[styles.sectionLabel, { color: Colors.primary, fontFamily: Typography.family.semiBold }]}>Test Topics</Text>
+                 <Text style={[styles.topicsText, { color: Colors.onSurface, fontFamily: Typography.family.medium }]}>{post.topics}</Text>
                </View>
              )}
           </View>
@@ -442,11 +443,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 12,
   },
+  infoBlock: {
+    marginBottom: 24,
+  },
   detailsGroup: {
     borderRadius: 20,
     padding: 16,
     gap: 16,
-    marginBottom: 24,
   },
   detailItem: {
     flexDirection: 'row',

@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { Spacing } from '../../constants/spacing';
 import { Post } from '../../types';
 import { useRouter } from 'expo-router';
@@ -14,24 +14,26 @@ interface DueSoonWidgetProps {
 }
 
 export default function DueSoonWidget({ deadlines, loading }: DueSoonWidgetProps) {
+    const { colors: Colors } = useTheme();
+    const themedStyles = styles(Colors);
     const router = useRouter();
 
     if (loading && deadlines.length === 0) return null;
     if (deadlines.length === 0) return null;
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Due Soon</Text>
+        <View style={themedStyles.container}>
+            <View style={themedStyles.header}>
+                <Text style={themedStyles.title}>Due Soon</Text>
                 <TouchableOpacity onPress={() => router.push('/tracker')}>
-                    <Text style={styles.seeAll}>View All</Text>
+                    <Text style={themedStyles.seeAll}>View All</Text>
                 </TouchableOpacity>
             </View>
 
             <ScrollView 
                 horizontal 
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={themedStyles.scrollContent}
             >
                 {deadlines.map((item) => {
                     const isUrgent = item.dueDate && (item.dueDate.getTime() - Date.now() < 24 * 60 * 60 * 1000);
@@ -39,39 +41,39 @@ export default function DueSoonWidget({ deadlines, loading }: DueSoonWidgetProps
                     return (
                         <TouchableOpacity
                             key={item.id}
-                            style={[styles.card, isUrgent && styles.urgentCard]}
+                            style={[themedStyles.card, isUrgent && themedStyles.urgentCard]}
                             onPress={() => router.push(`/post/${item.id}?spaceId=${item.spaceId}&courseId=${item.courseId}`)}
                             activeOpacity={0.8}
                         >
-                            <View style={styles.cardHeader}>
-                                <View style={[styles.typeIcon, { backgroundColor: isUrgent ? Colors.white + '20' : Colors.primaryBlue + '10' }]}>
+                            <View style={themedStyles.cardHeader}>
+                                <View style={[themedStyles.typeIcon, { backgroundColor: isUrgent ? 'rgba(255,255,255,0.2)' : Colors.primary + '10' }]}>
                                     <Ionicons 
                                         name={item.type === 'test' ? 'clipboard' : 'document-text'} 
                                         size={16} 
-                                        color={isUrgent ? Colors.white : Colors.primaryBlue} 
+                                        color={isUrgent ? '#FFFFFF' : Colors.primary} 
                                     />
                                 </View>
-                                <Text style={[styles.courseCode, isUrgent && styles.urgentText]}>{item.courseCode}</Text>
+                                <Text style={[themedStyles.courseCode, isUrgent && themedStyles.urgentText]}>{item.courseCode}</Text>
                             </View>
                             
-                            <Text style={[styles.itemTitle, isUrgent && styles.urgentText]} numberOfLines={1}>
+                            <Text style={[themedStyles.itemTitle, isUrgent && themedStyles.urgentText]} numberOfLines={1}>
                                 {item.title}
                             </Text>
                             
-                            <View style={styles.footer}>
+                            <View style={themedStyles.footer}>
                                 <Ionicons 
                                     name="time-outline" 
                                     size={14} 
-                                    color={isUrgent ? Colors.white + '80' : Colors.textTertiary} 
+                                    color={isUrgent ? 'rgba(255,255,255,0.8)' : Colors.textTertiary} 
                                 />
-                                <Text style={[styles.dueText, isUrgent && styles.urgentTextSubtitle]}>
+                                <Text style={[themedStyles.dueText, isUrgent && themedStyles.urgentTextSubtitle]}>
                                     {item.dueDate ? formatDistanceToNow(item.dueDate, { addSuffix: true }) : 'TBD'}
                                 </Text>
                             </View>
 
                             {isUrgent && (
-                                <View style={styles.urgentBadge}>
-                                    <Text style={styles.urgentBadgeText}>URGENT</Text>
+                                <View style={themedStyles.urgentBadge}>
+                                    <Text style={themedStyles.urgentBadgeText}>URGENT</Text>
                                 </View>
                             )}
                         </TouchableOpacity>
@@ -82,9 +84,9 @@ export default function DueSoonWidget({ deadlines, loading }: DueSoonWidgetProps
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     container: {
-        marginBottom: Spacing.xxl,
+        marginBottom: Spacing.xl,
     },
     header: {
         flexDirection: 'row',
@@ -94,13 +96,13 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.md,
     },
     title: {
-        ...Typography.sectionHeader,
+        ...Typography.title3,
         color: Colors.textPrimary,
     },
     seeAll: {
-        ...Typography.bodySmall,
-        color: Colors.primaryBlue,
-        fontWeight: '600',
+        ...Typography.footnote,
+        color: Colors.primary,
+        fontFamily: Typography.family.semiBold,
     },
     scrollContent: {
         paddingLeft: Spacing.screenPadding,
@@ -113,7 +115,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 16,
         borderWidth: 1,
-        borderColor: Colors.border + '15',
+        borderColor: Colors.separator,
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
@@ -145,12 +147,12 @@ const styles = StyleSheet.create({
     },
     courseCode: {
         fontSize: 12,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textSecondary,
     },
     itemTitle: {
         fontSize: 14,
-        fontFamily: 'DMSans_600SemiBold',
+        fontFamily: Typography.family.semiBold,
         color: Colors.textPrimary,
         marginBottom: 12,
     },
@@ -161,11 +163,11 @@ const styles = StyleSheet.create({
     },
     dueText: {
         fontSize: 11,
-        fontFamily: 'DMSans_500Medium',
+        fontFamily: Typography.family.medium,
         color: Colors.textTertiary,
     },
     urgentText: {
-        color: Colors.white,
+        color: '#FFFFFF',
     },
     urgentTextSubtitle: {
         color: 'rgba(255,255,255,0.8)',
@@ -180,8 +182,8 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     urgentBadgeText: {
-        color: Colors.white,
+        color: '#FFFFFF',
         fontSize: 8,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
     },
 });

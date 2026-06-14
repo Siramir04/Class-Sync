@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 
 interface AttendanceRowProps {
     username: string;
@@ -18,6 +18,8 @@ export default function AttendanceRow({
     totalSessions,
     onPress
 }: AttendanceRowProps) {
+    const { colors: Colors } = useTheme();
+    const themedStyles = styles(Colors);
     const rate = totalSessions > 0 ? (attendedCount / totalSessions) * 100 : 0;
 
     const getStatusColor = () => {
@@ -30,20 +32,20 @@ export default function AttendanceRow({
 
     return (
         <TouchableOpacity
-            style={styles.container}
+            style={themedStyles.container}
             onPress={onPress}
             activeOpacity={0.7}
         >
-            <View style={styles.leftInfo}>
-                <Text style={styles.name} numberOfLines={1}>{studentName}</Text>
-                <Text style={styles.username}>{username ? `@${username}` : ''}</Text>
+            <View style={themedStyles.leftInfo}>
+                <Text style={themedStyles.name} numberOfLines={1}>{studentName}</Text>
+                <Text style={themedStyles.username}>{username ? `@${username}` : ''}</Text>
             </View>
 
-            <View style={styles.rightInfo}>
-                <View style={styles.statsContainer}>
-                    <Text style={styles.fraction}>{attendedCount}/{totalSessions}</Text>
-                    <View style={[styles.badge, { backgroundColor: statusColor + '20' }]}>
-                        <Text style={[styles.percentage, { color: statusColor }]}>
+            <View style={themedStyles.rightInfo}>
+                <View style={themedStyles.statsContainer}>
+                    <Text style={themedStyles.fraction}>{attendedCount}/{totalSessions}</Text>
+                    <View style={[themedStyles.badge, { backgroundColor: statusColor + '20' }]}>
+                        <Text style={[themedStyles.percentage, { color: statusColor }]}>
                             {Math.round(rate)}%
                         </Text>
                     </View>
@@ -53,15 +55,15 @@ export default function AttendanceRow({
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: 16,
-        backgroundColor: 'white',
+        backgroundColor: Colors.background,
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
+        borderBottomColor: Colors.separator,
     },
     leftInfo: {
         flex: 1,
@@ -70,13 +72,13 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 15,
         fontFamily: Typography.family.bold,
-        color: '#333',
+        color: Colors.textPrimary,
         marginBottom: 2,
     },
     username: {
         fontSize: 12,
         fontFamily: Typography.family.regular,
-        color: '#666',
+        color: Colors.textSecondary,
     },
     rightInfo: {
         alignItems: 'flex-end',
@@ -88,7 +90,7 @@ const styles = StyleSheet.create({
     fraction: {
         fontSize: 12,
         fontFamily: Typography.family.medium,
-        color: '#666',
+        color: Colors.textSecondary,
         marginRight: 8,
     },
     badge: {

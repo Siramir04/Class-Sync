@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 
 interface QRScannerProps {
     onScan: (data: string) => void;
@@ -10,6 +10,8 @@ interface QRScannerProps {
 }
 
 export default function QRScanner({ onScan, isActive }: QRScannerProps) {
+    const { colors: Colors } = useTheme();
+    const themedStyles = styles(Colors);
     const [permission, requestPermission] = useCameraPermissions();
     const [scanned, setScanned] = useState(false);
 
@@ -20,15 +22,15 @@ export default function QRScanner({ onScan, isActive }: QRScannerProps) {
     }, [isActive]);
 
     if (!permission) {
-        return <View style={styles.container} />;
+        return <View style={themedStyles.container} />;
     }
 
     if (!permission.granted) {
         return (
-            <View style={styles.container}>
-                <Text style={styles.text}>We need your permission to show the camera</Text>
-                <TouchableOpacity style={styles.button} onPress={requestPermission}>
-                    <Text style={styles.buttonText}>Grant Permission</Text>
+            <View style={themedStyles.container}>
+                <Text style={themedStyles.text}>We need your permission to show the camera</Text>
+                <TouchableOpacity style={themedStyles.button} onPress={requestPermission}>
+                    <Text style={themedStyles.buttonText}>Grant Permission</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -42,28 +44,28 @@ export default function QRScanner({ onScan, isActive }: QRScannerProps) {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={themedStyles.container}>
             <CameraView
-                style={styles.camera}
+                style={themedStyles.camera}
                 onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
                 barcodeScannerSettings={{
                     barcodeTypes: ['qr'],
                 }}
             >
-                <View style={styles.overlay}>
-                    <View style={styles.unfocusedContainer} />
-                    <View style={styles.focusedRow}>
-                        <View style={styles.unfocusedContainer} />
-                        <View style={styles.focusedContainer}>
-                            <View style={[styles.corner, styles.topLeft]} />
-                            <View style={[styles.corner, styles.topRight]} />
-                            <View style={[styles.corner, styles.bottomLeft]} />
-                            <View style={[styles.corner, styles.bottomRight]} />
+                <View style={themedStyles.overlay}>
+                    <View style={themedStyles.unfocusedContainer} />
+                    <View style={themedStyles.focusedRow}>
+                        <View style={themedStyles.unfocusedContainer} />
+                        <View style={themedStyles.focusedContainer}>
+                            <View style={[themedStyles.corner, themedStyles.topLeft]} />
+                            <View style={[themedStyles.corner, themedStyles.topRight]} />
+                            <View style={[themedStyles.corner, themedStyles.bottomLeft]} />
+                            <View style={[themedStyles.corner, themedStyles.bottomRight]} />
                         </View>
-                        <View style={styles.unfocusedContainer} />
+                        <View style={themedStyles.unfocusedContainer} />
                     </View>
-                    <View style={styles.unfocusedContainer}>
-                        <Text style={styles.instructionText}>
+                    <View style={themedStyles.unfocusedContainer}>
+                        <Text style={themedStyles.instructionText}>
                             Point your camera at the QR code displayed by your lecturer
                         </Text>
                     </View>
@@ -73,7 +75,7 @@ export default function QRScanner({ onScan, isActive }: QRScannerProps) {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: 'black',
@@ -88,15 +90,16 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     button: {
-        backgroundColor: Colors.primaryBlue,
+        backgroundColor: Colors.primary,
         padding: 16,
         borderRadius: 8,
         marginHorizontal: 40,
         alignItems: 'center',
     },
     buttonText: {
-        ...Typography.buttonText,
+        ...Typography.callout,
         color: 'white',
+        fontWeight: '600',
     },
     overlay: {
         flex: 1,
@@ -121,7 +124,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width: 20,
         height: 20,
-        borderColor: Colors.primaryBlue,
+        borderColor: Colors.primary,
         borderWidth: 4,
     },
     topLeft: {
@@ -149,7 +152,7 @@ const styles = StyleSheet.create({
         borderLeftWidth: 0,
     },
     instructionText: {
-        ...Typography.label,
+        ...Typography.footnote,
         color: 'white',
         marginTop: 20,
         textAlign: 'center',

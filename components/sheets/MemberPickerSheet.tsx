@@ -7,8 +7,8 @@ import {
   Pressable,
 } from 'react-native';
 import ActionSheet from '../ui/ActionSheet';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import * as LucideIcons from 'lucide-react-native';
 import { getSpaceMembers } from '../../services/spaceService';
 import { getCurrentUser } from '../../services/authService';
@@ -30,6 +30,8 @@ export default function MemberPickerSheet({
   onSelect,
   title = "Select Lecturer",
 }: MemberPickerSheetProps) {
+  const { colors: Colors } = useTheme();
+  const themedStyles = styles(Colors);
   const [members, setMembers] = useState<{ uid: string; fullName: string; role: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,7 +73,7 @@ export default function MemberPickerSheet({
       onClose={onClose} 
       title={title}
     >
-      <View style={styles.content}>
+      <View style={themedStyles.content}>
         {loading ? (
           <LoadingSpinner />
         ) : (
@@ -81,7 +83,7 @@ export default function MemberPickerSheet({
             renderItem={({ item }) => (
               <Pressable 
                 style={({ pressed }) => [
-                  styles.memberRow,
+                  themedStyles.memberRow,
                   pressed && { backgroundColor: Colors.surfaceSecondary }
                 ]}
                 onPress={() => {
@@ -89,20 +91,20 @@ export default function MemberPickerSheet({
                   onClose();
                 }}
               >
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{item.fullName[0].toUpperCase()}</Text>
+                <View style={themedStyles.avatar}>
+                  <Text style={themedStyles.avatarText}>{item.fullName[0].toUpperCase()}</Text>
                 </View>
-                <View style={styles.textContainer}>
-                  <Text style={styles.memberName}>{item.fullName}</Text>
-                  <Text style={styles.memberRole}>{item.role}</Text>
+                <View style={themedStyles.textContainer}>
+                  <Text style={themedStyles.memberName}>{item.fullName}</Text>
+                  <Text style={themedStyles.memberRole}>{item.role}</Text>
                 </View>
                 <LucideIcons.ChevronRight size={20} color={Colors.textTertiary} />
               </Pressable>
             )}
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <LucideIcons.Users size={48} color={Colors.separatorOpaque} />
-                <Text style={styles.emptyText}>No lecturers found in this space</Text>
+              <View style={themedStyles.emptyContainer}>
+                <LucideIcons.Users size={48} color={Colors.separator} />
+                <Text style={themedStyles.emptyText}>No lecturers found in this space</Text>
               </View>
             }
           />
@@ -112,7 +114,7 @@ export default function MemberPickerSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 16,
@@ -123,13 +125,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.background,
+    borderBottomColor: Colors.separator,
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.accentBlueSoft,
+    backgroundColor: Colors.accentBlue + '15',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -146,7 +148,7 @@ const styles = StyleSheet.create({
   memberName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#000',
+    color: Colors.textPrimary,
     fontFamily: Typography.family.semiBold,
   },
   memberRole: {

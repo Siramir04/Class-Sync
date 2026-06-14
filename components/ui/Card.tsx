@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp, Platform } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../hooks/useResponsive';
 import { Spacing } from '../../constants/spacing';
 
 interface CardProps {
@@ -23,20 +24,23 @@ export default function Card({
     elevation = 1
 }: CardProps) {
     const { colors: Colors } = useTheme();
+    const { isDesktop } = useResponsive();
+    const isDesktopWeb = Platform.OS === 'web' && isDesktop;
 
     const getVariantStyle = () => {
         switch (variant) {
             case 'elevated':
                 // M3 Elevated: Tonal background + subtle shadow
+                // Enhanced shadow on desktop web for visual depth
                 const bg = elevation === 1 ? Colors.surfaceElevation1 :
                            elevation === 2 ? Colors.surfaceElevation2 :
                            Colors.surfaceElevation3;
                 return {
                     backgroundColor: bg,
                     shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.05,
-                    shadowRadius: 2,
+                    shadowOffset: { width: 0, height: isDesktopWeb ? 2 : 1 },
+                    shadowOpacity: isDesktopWeb ? 0.08 : 0.05,
+                    shadowRadius: isDesktopWeb ? 6 : 2,
                     elevation: elevation,
                 };
             case 'filled':

@@ -256,9 +256,15 @@ export const getSessionRecords = async (spaceId: string, courseId: string, sessi
   } as AttendanceRecord));
 };
 
-import * as XLSX from 'xlsx';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
+
+// Native-only imports: xlsx, sharing, filesystem — lazy-loaded to avoid web crashes
+const loadNativeExportDeps = () => {
+  const XLSX = require('xlsx');
+  const Sharing = require('expo-sharing');
+  const FileSystem = require('expo-file-system');
+  return { XLSX, Sharing, FileSystem };
+};
 
 export const exportAttendanceToExcel = async (
   courseId: string, 
@@ -279,14 +285,14 @@ export const exportAttendanceToExcel = async (
     const membersRef = collection(db, `spaces/${spaceId}/courses/${courseId}/members`);
     const membersSnap = await getDocs(membersRef);
     
-    const data: any[] = [];
-    
+    // Build data rows (shared between web and native)
     const header = ['Full Name', 'Username'];
     closedSessions.forEach(s => {
       header.push(s.lectureDate.toLocaleDateString());
     });
     header.push('Total Present');
-    data.push(header);
+
+    const dataRows: string[][] = [header];
 
     for (const mDoc of membersSnap.docs) {
       const userSnap = await getDoc(doc(db, 'users', mDoc.id));
@@ -304,25 +310,45 @@ export const exportAttendanceToExcel = async (
       }
 
       row.push(presentCount.toString());
-      data.push(row);
+      dataRows.push(row);
     }
 
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+    // --- Platform-specific export ---
+    if (Platform.OS === 'web') {
+      // Web: CSV Blob download
+      const csvContent = dataRows
+        .map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Attendance_${courseCode}_${Date.now()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else {
+      // Native: xlsx + sharing
+      const { XLSX, Sharing, FileSystem } = loadNativeExportDeps();
+      const ws = XLSX.utils.aoa_to_sheet(dataRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
 
-    const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-    const fileName = `Attendance_${courseCode}_${new Date().getTime()}.xlsx`;
-    const uri = `${(FileSystem as any).documentDirectory || ''}${fileName}`;
+      const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+      const fileName = `Attendance_${courseCode}_${new Date().getTime()}.xlsx`;
+      const uri = `${(FileSystem as any).documentDirectory || ''}${fileName}`;
 
-    await FileSystem.writeAsStringAsync(uri, wbout, {
-      encoding: 'base64',
-    });
+      await FileSystem.writeAsStringAsync(uri, wbout, {
+        encoding: 'base64',
+      });
 
-    await Sharing.shareAsync(uri);
+      await Sharing.shareAsync(uri);
+    }
 
   } catch (error) {
-    console.error('Excel Export Error:', error);
+    console.error('Export Error:', error);
     throw error;
   }
 };
@@ -366,4 +392,46 @@ export const updateCourseAttendanceSettings = async (
 ) => {
   const settingsRef = doc(db, `spaces/${spaceId}/courses/${courseId}/settings`, 'attendance');
   await setDoc(settingsRef, settings, { merge: true });
+};
+
+export const getStudentAttendanceSummary = async (courseId: string, spaceId: string, uid: string): Promise<any> => {
+    const courseSnap = await getDoc(doc(db, 'spaces', spaceId, 'courses', courseId));
+    const courseData = courseSnap.data();
+    
+    const sessionsRef = collection(db, SESSIONS_COLLECTION(spaceId, courseId));
+    const q = query(sessionsRef, where('isOpen', '==', false), orderBy('lectureDate', 'desc'));
+    const sessionsSnap = await getDocs(q);
+    
+    let attendedCount = 0;
+    const sessionDates: any[] = [];
+    
+    for (const sDoc of sessionsSnap.docs) {
+        const recordRef = doc(db, RECORDS_COLLECTION(spaceId, courseId, sDoc.id), uid);
+        const recordSnap = await getDoc(recordRef);
+        const isPresent = recordSnap.exists() && recordSnap.data().isPresent;
+        
+        const dateObj = sDoc.data().lectureDate?.toDate() ?? new Date();
+        const dateStr = dateObj.toISOString().split('T')[0];
+        
+        sessionDates.push({
+            date: dateStr,
+            isPresent: !!isPresent
+        });
+        
+        if (isPresent) {
+            attendedCount++;
+        }
+    }
+    
+    const totalSessions = sessionsSnap.size;
+    
+    return {
+        courseId,
+        courseName: courseData?.courseName || 'Unknown',
+        courseCode: courseData?.fullCode || 'Unknown',
+        totalSessions,
+        attendedSessions: attendedCount,
+        attendanceRate: totalSessions > 0 ? (attendedCount / totalSessions) * 100 : 0,
+        sessionDates,
+    };
 };

@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../../constants/colors';
 import { Typography } from '../../../constants/typography';
+import { useTheme } from '../../../hooks/useTheme';
 import { Spacing } from '../../../constants/spacing';
 import { startSession } from '../../../services/attendanceService';
 import { proximityService } from '../../../services/proximityService';
@@ -32,9 +32,12 @@ export default function NewSessionScreen() {
         courseCode: string;
         courseName: string;
     }>();
+    const { colors: Colors } = useTheme();
     const router = useRouter();
     const { user } = useAuthStore();
     const [loading, setLoading] = useState(false);
+
+    const themedStyles = styles(Colors);
 
     const handleStartSession = async () => {
         if (!user || !courseId || !spaceId) return;
@@ -80,52 +83,52 @@ export default function NewSessionScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={themedStyles.container}>
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerButton} activeOpacity={0.7}>
+            <View style={themedStyles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={themedStyles.headerButton} activeOpacity={0.7}>
                     <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Start Attendance</Text>
+                <Text style={themedStyles.headerTitle}>Start Attendance</Text>
                 <View style={{ width: 44 }} />
             </View>
 
-            <View style={styles.content}>
-                <View style={styles.infoContainer}>
-                    <Text style={styles.label}>COURSE</Text>
-                    <Text style={styles.courseTitle}>{decodeURIComponent(courseName || 'Selected Course')}</Text>
-                    <Text style={styles.courseCode}>{courseCode}</Text>
+            <View style={themedStyles.content}>
+                <View style={themedStyles.infoContainer}>
+                    <Text style={themedStyles.label}>COURSE</Text>
+                    <Text style={themedStyles.courseTitle}>{decodeURIComponent(courseName || 'Selected Course')}</Text>
+                    <Text style={themedStyles.courseCode}>{courseCode}</Text>
                 </View>
 
-                <Card style={styles.instructionCard}>
-                    <View style={styles.instructionRow}>
-                        <View style={[styles.iconBox, { backgroundColor: Colors.accentBlue + '10' }]}>
+                <Card style={themedStyles.instructionCard}>
+                    <View style={themedStyles.instructionRow}>
+                        <View style={[themedStyles.iconBox, { backgroundColor: Colors.accentBlue + '10' }]}>
                             <Ionicons name="qr-code" size={20} color={Colors.accentBlue} />
                         </View>
-                        <View style={styles.instructionTextContent}>
-                            <Text style={styles.instructionTitle}>Dynamic QR Code</Text>
-                            <Text style={styles.instructionSubtitle}>
+                        <View style={themedStyles.instructionTextContent}>
+                            <Text style={themedStyles.instructionTitle}>Dynamic QR Code</Text>
+                            <Text style={themedStyles.instructionSubtitle}>
                                 A secure QR code refreshing every 60 seconds with proximity verification.
                             </Text>
                         </View>
                     </View>
 
-                    <View style={[styles.instructionRow, { marginTop: 24 }]}>
-                        <View style={[styles.iconBox, { backgroundColor: Colors.success + '10' }]}>
+                    <View style={[themedStyles.instructionRow, { marginTop: 24 }]}>
+                        <View style={[themedStyles.iconBox, { backgroundColor: Colors.success + '10' }]}>
                             <Ionicons name="people" size={20} color={Colors.success} />
                         </View>
-                        <View style={styles.instructionTextContent}>
-                            <Text style={styles.instructionTitle}>Live Updates</Text>
-                            <Text style={styles.instructionSubtitle}>
+                        <View style={themedStyles.instructionTextContent}>
+                            <Text style={themedStyles.instructionTitle}>Live Updates</Text>
+                            <Text style={themedStyles.instructionSubtitle}>
                                 Track student attendance in real-time as they join the session nearby.
                             </Text>
                         </View>
                     </View>
                 </Card>
 
-                <View style={styles.warningBox}>
+                <View style={themedStyles.warningBox}>
                     <Ionicons name="information-circle-outline" size={20} color={Colors.textTertiary} />
-                    <Text style={styles.warningText}>
+                    <Text style={themedStyles.warningText}>
                         Students must be physically present to scan the code from your device.
                     </Text>
                 </View>
@@ -134,14 +137,14 @@ export default function NewSessionScreen() {
                     label="Generate QR & Start Session"
                     onPress={handleStartSession}
                     loading={loading}
-                    style={styles.actionButton}
+                    style={themedStyles.actionButton}
                 />
             </View>
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,

@@ -8,20 +8,24 @@ import {
   StatusBar,
   Dimensions,
   Animated,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
+import { useResponsive } from '../../hooks/useResponsive';
 import { useAuthStore } from '../../store/authStore';
 import { useRecentPosts } from '../../hooks/usePosts';
 import { useSpaces } from '../../hooks/useSpace';
 import { useNotifications } from '../../hooks/useNotifications';
+import { usePersonalCourseStore } from '../../store/personalCourseStore';
 import { Avatar } from '../../components/ui/Avatar';
 import Card from '../../components/ui/Card';
 import ClassCard from '../../components/cards/ClassCard';
 import SpaceTile from '../../components/cards/SpaceTile';
 import PostCard from '../../components/cards/PostCard';
+import PersonalCourseCard from '../../components/cards/PersonalCourseCard';
 import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
 import { ErrorState } from '../../components/feedback/ErrorState';
 
@@ -38,10 +42,13 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors: Colors, typography: Typography } = useTheme();
+  const { isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
   const { user } = useAuthStore();
   const { unreadCount } = useNotifications();
-  const { posts: recentPosts, loading: postsLoading, error: postsError, refetch } = useRecentPosts(15);
+  const { posts: recentPosts, loading: postsLoading } = useRecentPosts(15);
   const { spaces } = useSpaces();
+  const { courses: personalCourses, fetchCourses: fetchPersonalCourses } = usePersonalCourseStore();
 
   // Animations
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -56,6 +63,11 @@ export default function HomeScreen() {
       }).start();
     }
   }, [postsLoading]);
+
+  // Fetch personal courses when user is available
+  useEffect(() => {
+    if (user) fetchPersonalCourses(user.uid);
+  }, [user]);
 
   const firstName = user?.fullName?.split(' ')[0] || 'there';
 
@@ -86,7 +98,6 @@ export default function HomeScreen() {
   });
 
   if (postsLoading) return <LoadingSpinner />;
-  if (postsError) return <ErrorState message="Failed to load feed" onRetry={refetch} />;
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.background }]}>
@@ -168,14 +179,14 @@ export default function HomeScreen() {
                   ))
                 ) : (
                   <Card variant="filled" style={styles.emptyCard}>
-                    <LucideIcons.CalendarCheck2 size={24} color={Colors.onSurfaceVariant} style={{ marginBottom: 8 }} />
+                    <LucideIcons.Calendar size={24} color={Colors.onSurfaceVariant} style={{ marginBottom: 8 }} />
                     <Text style={[styles.emptyText, { color: Colors.onSurfaceVariant, ...Typography.m3.bodyMedium }]}>No more classes today. Relax!</Text>
                   </Card>
                 )}
               </ScrollView>
             </View>
 
-            {/* My Spaces Tonal Grid */}
+            {/* My Spaces — Grid on Desktop, Horizontal Scroll on Mobile */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { color: Colors.onSurface, ...Typography.m3.titleMedium, fontWeight: '700' }]}>My Academic Spaces</Text>
@@ -184,45 +195,92 @@ export default function HomeScreen() {
                 </Pressable>
               </View>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalScroll}
-              >
-                {spaces.map((space, index) => (
+              {isDesktopWeb ? (
+                <View style={styles.desktopGrid}>
+                  {spaces.map((space, index) => (
+                    <View key={space.id} style={styles.desktopGridItem}>
+                      <SpaceTile
+                        name={space.name}
+                        index={index}
+                        onPress={() => router.push(`/space/${space.id}`)}
+                      />
+                    </View>
+                  ))}
+                  <View style={styles.desktopGridItem}>
+                    <SpaceTile
+                      name="Join Space"
+                      isAdd
+                      onPress={() => router.push('/join')}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalScroll}
+                >
+                  {spaces.map((space, index) => (
+                    <SpaceTile
+                      key={space.id}
+                      name={space.name}
+                      index={index}
+                      onPress={() => router.push(`/space/${space.id}`)}
+                    />
+                  ))}
                   <SpaceTile
-                    key={space.id}
-                    name={space.name}
-                    index={index}
-                    onPress={() => router.push(`/space/${space.id}`)}
+                    name="Join Space"
+                    isAdd
+                    onPress={() => router.push('/join')}
                   />
-                ))}
-                <SpaceTile
-                  name="Join Space"
-                  isAdd
-                  onPress={() => router.push('/join')}
-                />
-              </ScrollView>
+                </ScrollView>
+              )}
             </View>
 
-            {/* Recent Notices Feed */}
+            {/* My Personal Courses */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: Colors.onSurface, ...Typography.m3.titleMedium, fontWeight: '700' }]}>My Personal Courses</Text>
+                <Pressable onPress={() => router.push('/personal/create')}>
+                  <Text style={[styles.seeAll, { color: Colors.primary, ...Typography.m3.labelLarge }]}>+ New</Text>
+                </Pressable>
+              </View>
+              <View style={styles.noticesContainer}>
+                {personalCourses.length > 0 ? (
+                  personalCourses.map(course => (
+                    <PersonalCourseCard key={course.id} course={course} />
+                  ))
+                ) : (
+                  <Card variant="filled" style={styles.emptyCard}>
+                    <LucideIcons.BookOpen size={24} color={Colors.onSurfaceVariant} style={{ marginBottom: 8 }} />
+                    <Text style={[styles.emptyText, { color: Colors.onSurfaceVariant, ...Typography.m3.bodyMedium, textAlign: 'center' }]}>
+                      No personal courses yet. Tap '+ New' to create one!
+                    </Text>
+                  </Card>
+                )}
+              </View>
+            </View>
+
+
+            {/* Recent Notices Feed — 2-col grid on Desktop */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { color: Colors.onSurface, ...Typography.m3.titleMedium, fontWeight: '700' }]}>Recent Notices</Text>
               </View>
 
-              <View style={styles.noticesContainer}>
+              <View style={isDesktopWeb ? styles.noticesGrid : styles.noticesContainer}>
                 {recentPosts.filter(p => p.type !== 'lecture').slice(0, 8).map((post) => (
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    isCarryover={post.isCarryover}
-                    onPress={() => router.push({
-                      pathname: `/post/${post.id}`,
-                      params: { spaceId: post.spaceId, courseId: post.courseId }
-                    })}
-                    style={{ marginBottom: 12 }}
-                  />
+                  <View key={post.id} style={isDesktopWeb ? styles.noticesGridItem : undefined}>
+                    <PostCard
+                      post={post}
+                      isCarryover={post.isCarryover}
+                      onPress={() => router.push({
+                        pathname: `/post/${post.id}`,
+                        params: { spaceId: post.spaceId, courseId: post.courseId }
+                      })}
+                      style={{ marginBottom: 12 }}
+                    />
+                  </View>
                 ))}
               </View>
             </View>
@@ -296,6 +354,28 @@ const styles = StyleSheet.create({
   },
   noticesContainer: {
     paddingHorizontal: 20,
+  },
+  // Desktop multi-column grid for spaces
+  desktopGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  desktopGridItem: {
+    width: '31%',
+    minWidth: 160,
+  },
+  // Desktop 2-column grid for notices
+  noticesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  noticesGridItem: {
+    width: '48.5%',
+    minWidth: 280,
   },
   emptyCard: {
     width: width - 40,

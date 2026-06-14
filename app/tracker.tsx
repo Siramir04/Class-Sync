@@ -10,9 +10,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
 import { Typography } from '../constants/typography';
+import { useTheme } from '../hooks/useTheme';
 import { Spacing } from '../constants/spacing';
+import { Post } from '../types';
 import { useTracker } from '../hooks/useTracker';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import EmptyState from '../components/ui/EmptyState';
@@ -20,6 +21,8 @@ import PostCard from '../components/cards/PostCard';
 import { format, isToday, isThisWeek, isAfter, addWeeks } from 'date-fns';
 
 export default function TrackerScreen() {
+    const { colors: Colors } = useTheme();
+    const themedStyles = styles(Colors);
     const router = useRouter();
     const { deadlines, loading } = useTracker();
 
@@ -49,28 +52,28 @@ export default function TrackerScreen() {
     if (loading) return <LoadingSpinner fullScreen />;
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <SafeAreaView style={themedStyles.container}>
+            <View style={themedStyles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={themedStyles.backButton}>
                     <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Assignment Tracker</Text>
+                <Text style={themedStyles.headerTitle}>Assignment Tracker</Text>
                 <View style={{ width: 44 }} />
             </View>
 
             {deadlines.length > 0 ? (
                 <ScrollView 
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}
+                    contentContainerStyle={themedStyles.scrollContent}
                 >
                     {sections.map((section) => (
-                        <View key={section.title} style={styles.section}>
-                            <Text style={styles.sectionTitle}>{section.title}</Text>
+                        <View key={section.title} style={themedStyles.section}>
+                            <Text style={themedStyles.sectionTitle}>{section.title}</Text>
                             {section.data.map((item) => (
                                 <PostCard
                                     key={item.id}
                                     post={item}
-                                    style={styles.card}
+                                    style={themedStyles.card}
                                     onPress={() => router.push(`/post/${item.id}?spaceId=${item.spaceId}&courseId=${item.courseId}`)}
                                 />
                             ))}
@@ -89,7 +92,7 @@ export default function TrackerScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
@@ -101,7 +104,7 @@ const styles = StyleSheet.create({
         height: 56,
         backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '15',
+        borderBottomColor: Colors.separator,
     },
     backButton: {
         width: 44,
@@ -113,7 +116,7 @@ const styles = StyleSheet.create({
         flex: 1,
         textAlign: 'center',
         fontSize: 18,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
     },
     scrollContent: {

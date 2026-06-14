@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 
 interface QRDisplayProps {
     value: string;
@@ -9,24 +9,26 @@ interface QRDisplayProps {
 }
 
 export default function QRDisplay({ value, size = 240 }: QRDisplayProps) {
+    const { colors: Colors } = useTheme();
+    const themedStyles = styles(Colors);
     if (!value) return null;
 
     return (
-        <View style={styles.container}>
+        <View style={themedStyles.container}>
             <QRCode
                 value={value}
                 size={size}
-                color={Colors.primaryBlue}
-                backgroundColor="white"
+                color={Colors.primary}
+                backgroundColor="#FFFFFF"
             />
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     container: {
         padding: 16,
-        backgroundColor: 'white',
+        backgroundColor: '#FFFFFF',
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',

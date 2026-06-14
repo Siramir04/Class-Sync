@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, ViewStyle, Animated } from 'react-native';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import * as LucideIcons from 'lucide-react-native';
 
 interface SpaceTileProps {
@@ -23,6 +23,8 @@ export default React.memo(function SpaceTile({
   index = 0,
   style,
 }: SpaceTileProps) {
+  const { colors: Colors } = useTheme();
+  const themedStyles = styles(Colors);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -47,15 +49,14 @@ export default React.memo(function SpaceTile({
     .slice(0, 2);
 
   const getBackground = () => {
-    if (isAdd) return Colors.surfaceElevation1;
-    // Tonal cycling for M3 variety
-    const colors = [Colors.primaryContainer, Colors.secondaryContainer, Colors.surfaceElevation3];
+    if (isAdd) return Colors.surfaceVariant;
+    const colors = [Colors.primaryContainer, Colors.secondaryContainer, Colors.tertiaryContainer];
     return colors[index % colors.length];
   };
 
   const getTextColor = () => {
     if (isAdd) return Colors.onSurfaceVariant;
-    const colors = [Colors.onPrimaryContainer, Colors.onSecondaryContainer, Colors.onSurface];
+    const colors = [Colors.onPrimaryContainer, Colors.onSecondaryContainer, Colors.onTertiaryContainer];
     return colors[index % colors.length];
   };
 
@@ -66,22 +67,22 @@ export default React.memo(function SpaceTile({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={[
-          styles.container,
+          themedStyles.container,
           { backgroundColor: getBackground() },
-          isAdd && styles.addTile
+          isAdd && themedStyles.addTile
         ]}
       >
         {isAdd ? (
-          <View style={styles.addContent}>
+          <View style={themedStyles.addContent}>
             <LucideIcons.Plus size={24} color={Colors.onSurfaceVariant} />
-            <Text style={styles.addLabel}>Join</Text>
+            <Text style={themedStyles.addLabel}>Join</Text>
           </View>
         ) : (
           <>
-            <View style={[styles.initialsContainer, { backgroundColor: 'rgba(0,0,0,0.05)' }]}>
-              <Text style={[styles.initials, { color: getTextColor() }]}>{initials}</Text>
+            <View style={[themedStyles.initialsContainer, { backgroundColor: 'rgba(0,0,0,0.05)' }]}>
+              <Text style={[themedStyles.initials, { color: getTextColor() }]}>{initials}</Text>
             </View>
-            <Text style={[styles.label, { color: getTextColor() }]} numberOfLines={2}>
+            <Text style={[themedStyles.label, { color: getTextColor() }]} numberOfLines={2}>
               {name}
             </Text>
           </>
@@ -91,7 +92,7 @@ export default React.memo(function SpaceTile({
   );
 });
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
   container: {
     width: 100,
     height: 110,
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
   },
   addTile: {
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: Colors.border,
     borderStyle: 'dashed',
   },
   addContent: {

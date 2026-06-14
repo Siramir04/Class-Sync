@@ -35,7 +35,7 @@ export default function ScheduleScreen() {
   const insets = useSafeAreaInsets();
   const { colors: Colors, typography: Typography } = useTheme();
   const { user } = useAuthStore();
-  const { posts, loading, error, refetch } = useRecentPosts(50);
+  const { posts, loading } = useRecentPosts(50);
 
   const [selectedDate, setSelectedDate] = useState(startOfToday());
   const [showPostTypeSheet, setShowPostTypeSheet] = useState(false);
@@ -70,7 +70,6 @@ export default function ScheduleScreen() {
   }, [selectedDate]);
 
   if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorState message="Failed to load schedule" onRetry={refetch} />;
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.background }]}>
@@ -92,7 +91,7 @@ export default function ScheduleScreen() {
                onPress={() => setShowPostTypeSheet(true)}
                style={[styles.calendarCircle, { backgroundColor: Colors.accentBlue }]}
              >
-               <LucideIcons.CalendarPlus size={18} color={Colors.white} />
+               <LucideIcons.Plus size={18} color={Colors.white} />
              </Pressable>
            ) : (
              <View style={[styles.calendarCircle, { backgroundColor: Colors.accentBlue }]}>
@@ -172,7 +171,7 @@ export default function ScheduleScreen() {
         ) : (
           <View style={styles.emptyState}>
             <View style={[styles.emptyIconCircle, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }]}>
-              <LucideIcons.CalendarX size={32} color={Colors.textTertiary} opacity={0.3} />
+              <LucideIcons.Calendar size={32} color={Colors.textTertiary} opacity={0.3} />
             </View>
             <Text style={[styles.emptyTitle, { color: Colors.onSurface, fontFamily: Typography.family.bold }]}>
               {isSameDay(selectedDate, startOfToday()) ? "No classes today" : "Nothing scheduled"}
@@ -198,6 +197,7 @@ export default function ScheduleScreen() {
         visible={showCreateSheet}
         onClose={() => setShowCreateSheet(false)}
         postType={selectedPostType}
+        courseCode="GENERAL"
         onSubmit={() => setShowCreateSheet(false)}
       />
     </View>

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, SafeAreaView, Platform, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../../constants/colors';
-import { Typography } from '../../../constants/typography';
+import { useTheme } from '../../../hooks/useTheme';
 import AttendanceRow from '../../../components/attendance/AttendanceRow';
 import {
     getSessionsByCourse,
@@ -12,6 +11,7 @@ import {
 import { AttendanceSession, AttendanceRecord } from '../../../types';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
+import { Spacing } from '../../../constants/spacing';
 
 interface StudentReportItem {
     uid: string;
@@ -23,12 +23,15 @@ interface StudentReportItem {
 export default function AttendanceReportScreen() {
     const { courseId, spaceId } = useLocalSearchParams<{ courseId: string; spaceId: string }>();
     const router = useRouter();
+    const { colors: Colors, typography: Typography, isDark } = useTheme();
 
     const [loading, setLoading] = useState(true);
     const [exporting, setExporting] = useState(false);
     const [sessions, setSessions] = useState<AttendanceSession[]>([]);
     const [studentData, setStudentData] = useState<StudentReportItem[]>([]);
     const [courseDetails, setCourseDetails] = useState<{ name: string; code: string } | null>(null);
+
+    const themedStyles = styles(Colors, Typography);
 
     useEffect(() => {
         if (!courseId || !spaceId) return;
@@ -106,51 +109,52 @@ export default function AttendanceReportScreen() {
 
     if (loading) {
         return (
-            <View style={[styles.container, styles.centered]}>
-                <ActivityIndicator size="large" color={Colors.accentBlue} />
-                <Text style={styles.loadingText}>Generating Report...</Text>
+            <View style={[themedStyles.container, themedStyles.centered]}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={themedStyles.loadingText}>Generating Report...</Text>
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={themedStyles.container}>
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn} activeOpacity={0.7}>
-                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+            <View style={themedStyles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={themedStyles.headerBtn} activeOpacity={0.7}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
                 </TouchableOpacity>
-                <View style={styles.headerTitleCol}>
-                    <Text style={styles.headerTitle}>Attendance Report</Text>
-                    <Text style={styles.headerSub}>{courseDetails?.code}</Text>
+                <View style={themedStyles.headerTitleCol}>
+                    <Text style={themedStyles.headerTitle}>Attendance Report</Text>
+                    <Text style={themedStyles.headerSub}>{courseDetails?.code}</Text>
                 </View>
                 <TouchableOpacity
                     onPress={handleExport}
                     disabled={exporting || studentData.length === 0}
-                    style={styles.headerBtn}
+                    style={themedStyles.headerBtn}
                     activeOpacity={0.7}
                 >
                     {exporting ? (
-                        <ActivityIndicator size="small" color={Colors.accentBlue} />
+                        <ActivityIndicator size="small" color={Colors.primary} />
                     ) : (
                         <Ionicons
                             name="download-outline"
                             size={22}
-                            color={studentData.length === 0 ? Colors.textTertiary : Colors.accentBlue}
+                            color={studentData.length === 0 ? Colors.onSurfaceVariant : Colors.primary}
                         />
                     )}
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.summaryBar}>
-                <View style={styles.summaryItem}>
-                    <Text style={styles.summaryValue}>{sessions.length}</Text>
-                    <Text style={styles.summaryLabel}>Sessions</Text>
+            <View style={themedStyles.summaryBar}>
+                <View style={themedStyles.summaryItem}>
+                    <Text style={themedStyles.summaryValue}>{sessions.length}</Text>
+                    <Text style={themedStyles.summaryLabel}>Sessions</Text>
                 </View>
-                <View style={styles.divider} />
-                <View style={styles.summaryItem}>
-                    <Text style={styles.summaryValue}>{studentData.length}</Text>
-                    <Text style={styles.summaryLabel}>Students</Text>
+                <View style={themedStyles.divider} />
+                <View style={themedStyles.summaryItem}>
+                    <Text style={themedStyles.summaryValue}>{studentData.length}</Text>
+                    <Text style={themedStyles.summaryLabel}>Students</Text>
                 </View>
             </View>
 
@@ -166,22 +170,22 @@ export default function AttendanceReportScreen() {
                     />
                 )}
                 ListEmptyComponent={
-                    <View style={styles.emptyView}>
-                        <Ionicons name="people-outline" size={64} color={Colors.textTertiary} />
-                        <Text style={styles.emptyTitle}>No Students Found</Text>
-                        <Text style={styles.emptySub}>There are no students registered for this course.</Text>
+                    <View style={themedStyles.emptyView}>
+                        <Ionicons name="people-outline" size={64} color={Colors.onSurfaceVariant} />
+                        <Text style={themedStyles.emptyTitle}>No Students Found</Text>
+                        <Text style={themedStyles.emptySub}>There are no students registered for this course.</Text>
                     </View>
                 }
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={themedStyles.listContent}
             />
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any, Typography: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: 'white',
+        backgroundColor: Colors.background,
     },
     centered: {
         flex: 1,
@@ -196,7 +200,7 @@ const styles = StyleSheet.create({
         height: 56,
         backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.separator,
+        borderBottomColor: Colors.outlineVariant,
     },
     headerBtn: {
         width: 44,
@@ -211,19 +215,19 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 17,
         fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
     },
     headerSub: {
         fontSize: 11,
         fontFamily: Typography.family.medium,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
     },
     summaryBar: {
         flexDirection: 'row',
-        backgroundColor: Colors.background,
+        backgroundColor: Colors.surface,
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.separator,
+        borderBottomColor: Colors.outlineVariant,
     },
     summaryItem: {
         flex: 1,
@@ -232,16 +236,16 @@ const styles = StyleSheet.create({
     summaryValue: {
         fontSize: 18,
         fontFamily: Typography.family.bold,
-        color: Colors.accentBlue,
+        color: Colors.primary,
     },
     summaryLabel: {
         fontSize: 12,
         fontFamily: Typography.family.medium,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
     },
     divider: {
         width: 1,
-        backgroundColor: Colors.separator,
+        backgroundColor: Colors.outlineVariant,
     },
     listContent: {
         paddingBottom: 100,
@@ -249,7 +253,7 @@ const styles = StyleSheet.create({
     loadingText: {
         fontSize: 15,
         fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
         marginTop: 12,
     },
     emptyView: {
@@ -261,14 +265,14 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 17,
         fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
         marginTop: 16,
         marginBottom: 8,
     },
     emptySub: {
         fontSize: 15,
         fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
         textAlign: 'center',
     },
 });

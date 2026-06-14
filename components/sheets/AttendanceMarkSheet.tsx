@@ -13,14 +13,14 @@ import {
   Dimensions,
 } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { Spacing } from '../../constants/spacing';
 import { AttendanceSession, ProximityScanResult } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import * as attendanceService from '../../services/attendanceService';
 import { proximityService } from '../../services/proximityService';
-import Button from '../ui/Button';
+import { Button } from '../ui/Button';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +31,7 @@ interface AttendanceMarkSheetProps {
 }
 
 export default function AttendanceMarkSheet({ visible, onClose, session }: AttendanceMarkSheetProps) {
+    const { colors: Colors } = useTheme();
     const { user } = useAuthStore();
     const [code, setCode] = useState(['', '', '', '', '', '']);
     const [status, setStatus] = useState<'scanning' | 'detected' | 'fallback' | 'weak' | 'idle'>('idle');
@@ -38,6 +39,8 @@ export default function AttendanceMarkSheet({ visible, onClose, session }: Atten
     const [success, setSuccess] = useState(false);
     const [scanResult, setScanResult] = useState<ProximityScanResult | null>(null);
     const [showCodeInput, setShowCodeInput] = useState(false);
+
+    const themedStyles = styles(Colors);
     
     const ring1 = useRef(new Animated.Value(0)).current;
     const ring2 = useRef(new Animated.Value(0)).current;
@@ -209,87 +212,87 @@ export default function AttendanceMarkSheet({ visible, onClose, session }: Atten
             animationType="fade"
             onRequestClose={onClose}
         >
-            <View style={styles.overlay}>
-                <Pressable style={styles.backdrop} onPress={onClose} />
-                <View style={styles.sheet}>
-                    <View style={styles.handle} />
+            <View style={themedStyles.overlay}>
+                <Pressable style={themedStyles.backdrop} onPress={onClose} />
+                <View style={themedStyles.sheet}>
+                    <View style={themedStyles.handle} />
                     
                     {success ? (
-                        <View style={styles.successView}>
-                            <View style={styles.successCircle}>
+                        <View style={themedStyles.successView}>
+                            <View style={themedStyles.successCircle}>
                                 <LucideIcons.Check size={48} color="white" strokeWidth={3} />
                             </View>
-                            <Text style={styles.successTitle}>Attendance Marked!</Text>
-                            <Text style={styles.successSubtitle}>
+                            <Text style={themedStyles.successTitle}>Attendance Marked!</Text>
+                            <Text style={themedStyles.successSubtitle}>
                                 {session.courseCode} · {new Date().toLocaleDateString()}
                             </Text>
-                            <View style={styles.verifyBadge}>
+                            <View style={themedStyles.verifyBadge}>
                                 <LucideIcons.ShieldCheck size={14} color={Colors.success} />
-                                <Text style={styles.verifyBadgeText}>Verified present</Text>
+                                <Text style={themedStyles.verifyBadgeText}>Verified present</Text>
                             </View>
                         </View>
                     ) : (
                         <>
                             {status === 'scanning' ? (
-                                <View style={styles.content}>
-                                    <View style={styles.headerText}>
-                                        <Text style={styles.title}>Verifying presence</Text>
-                                        <Text style={styles.subtitle}>{session.courseCode} — {session.lectureName}</Text>
+                                <View style={themedStyles.content}>
+                                    <View style={themedStyles.headerText}>
+                                        <Text style={themedStyles.title}>Verifying presence</Text>
+                                        <Text style={themedStyles.subtitle}>{session.courseCode} — {session.lectureName}</Text>
                                     </View>
                                     
-                                    <View style={styles.animBox}>
-                                        <Animated.View style={[styles.ring, { transform: [{ scale: ring1.interpolate({ inputRange:[0,1], outputRange:[1, 2.5] }) }], opacity: ring1.interpolate({ inputRange:[0, 1], outputRange:[0.5, 0] }) }]} />
-                                        <Animated.View style={[styles.ring, { transform: [{ scale: ring2.interpolate({ inputRange:[0,1], outputRange:[1, 2.5] }) }], opacity: ring2.interpolate({ inputRange:[0, 1], outputRange:[0.5, 0] }) }]} />
-                                        <Animated.View style={[styles.ring, { transform: [{ scale: ring3.interpolate({ inputRange:[0,1], outputRange:[1, 2.5] }) }], opacity: ring3.interpolate({ inputRange:[0, 1], outputRange:[0.5, 0] }) }]} />
-                                        <View style={styles.centerIcon}>
+                                    <View style={themedStyles.animBox}>
+                                        <Animated.View style={[themedStyles.ring, { transform: [{ scale: ring1.interpolate({ inputRange:[0,1], outputRange:[1, 2.5] }) }], opacity: ring1.interpolate({ inputRange:[0, 1], outputRange:[0.5, 0] }) }]} />
+                                        <Animated.View style={[themedStyles.ring, { transform: [{ scale: ring2.interpolate({ inputRange:[0,1], outputRange:[1, 2.5] }) }], opacity: ring2.interpolate({ inputRange:[0, 1], outputRange:[0.5, 0] }) }]} />
+                                        <Animated.View style={[themedStyles.ring, { transform: [{ scale: ring3.interpolate({ inputRange:[0,1], outputRange:[1, 2.5] }) }], opacity: ring3.interpolate({ inputRange:[0, 1], outputRange:[0.5, 0] }) }]} />
+                                        <View style={themedStyles.centerIcon}>
                                             <LucideIcons.Bluetooth size={36} color={Colors.accentBlue} />
                                         </View>
                                     </View>
 
-                                    <Text style={styles.statusLabel}>Connecting to classroom beacon...</Text>
+                                    <Text style={themedStyles.statusLabel}>Connecting to classroom beacon...</Text>
                                     <Button 
-                                        title="Enter code manually" 
+                                        label="Enter code manually" 
                                         variant="ghost" 
                                         onPress={() => { setShowCodeInput(true); setStatus('fallback'); }}
                                         style={{ marginTop: 20 }}
                                     />
                                 </View>
                             ) : status === 'weak' ? (
-                                <View style={styles.content}>
-                                    <View style={styles.headerText}>
-                                        <Text style={styles.title}>Move closer</Text>
-                                        <Text style={styles.subtitle}>You're on the edge of the classroom range</Text>
+                                <View style={themedStyles.content}>
+                                    <View style={themedStyles.headerText}>
+                                        <Text style={themedStyles.title}>Move closer</Text>
+                                        <Text style={themedStyles.subtitle}>You're on the edge of the classroom range</Text>
                                     </View>
-                                    <View style={styles.animBox}>
-                                        <View style={[styles.centerIcon, { backgroundColor: '#FEF3C7' }]}>
+                                    <View style={themedStyles.animBox}>
+                                        <View style={[themedStyles.centerIcon, { backgroundColor: '#FEF3C7' }]}>
                                             <LucideIcons.SignalHigh size={36} color={Colors.warning} />
                                         </View>
                                     </View>
-                                    <Text style={[styles.statusLabel, { color: Colors.warning }]}>Walk toward the front of the room</Text>
+                                    <Text style={[themedStyles.statusLabel, { color: Colors.warning }]}>Walk toward the front of the room</Text>
                                     <Button 
-                                        title="Use code fallback" 
-                                        variant="navy" 
+                                        label="Use code fallback" 
+                                        variant="tonal" 
                                         onPress={() => { setStatus('fallback'); setShowCodeInput(true); }}
                                         style={{ marginTop: 32, width: '100%' }}
                                     />
                                 </View>
                             ) : (
-                                <View style={styles.content}>
-                                    <View style={styles.headerText}>
-                                        <Text style={styles.title}>{showCodeInput ? 'Enter session code' : 'Beacon not found'}</Text>
-                                        <Text style={styles.subtitle}>
+                                <View style={themedStyles.content}>
+                                    <View style={themedStyles.headerText}>
+                                        <Text style={themedStyles.title}>{showCodeInput ? 'Enter session code' : 'Beacon not found'}</Text>
+                                        <Text style={themedStyles.subtitle}>
                                             {showCodeInput ? 'Ask your Monitor for the 6-digit code' : 'Bluetooth verification failed. Try again or use code.'}
                                         </Text>
                                     </View>
 
                                     {showCodeInput ? (
-                                        <View style={styles.codeContainer}>
-                                            <View style={styles.codeInputs}>
+                                        <View style={themedStyles.codeContainer}>
+                                            <View style={themedStyles.codeInputs}>
                                                 {code.map((digit, i) => (
                                                     <TextInput
                                                         key={i}
                                                         ref={(ref) => { inputs.current[i] = ref!; }}
-                                                        style={[styles.digitInput, digit !== '' && styles.digitInputFilled]}
+                                                        style={[themedStyles.digitInput, digit !== '' && themedStyles.digitInputFilled]}
                                                         value={digit}
                                                         onChangeText={(text) => handleCodeChange(text, i)}
                                                         onKeyPress={(e) => handleKeyPress(e, i)}
@@ -300,21 +303,21 @@ export default function AttendanceMarkSheet({ visible, onClose, session }: Atten
                                                 ))}
                                             </View>
                                             <Button 
-                                                title="Mark Attendance" 
+                                                label="Mark Attendance" 
                                                 onPress={handleMarkAttendance}
                                                 loading={loading}
-                                                style={styles.submitButton}
+                                                style={themedStyles.submitButton}
                                             />
-                                            <View style={styles.alertBox}>
+                                            <View style={themedStyles.alertBox}>
                                                 <LucideIcons.AlertCircle size={14} color={Colors.textTertiary} />
-                                                <Text style={styles.alertText}>Code-only attendance will be flagged for review</Text>
+                                                <Text style={themedStyles.alertText}>Code-only attendance will be flagged for review</Text>
                                             </View>
                                         </View>
                                     ) : (
-                                        <View style={styles.errorView}>
-                                            <Button title="Scan Again" onPress={startScan} style={{ width: '100%' }} />
+                                        <View style={themedStyles.errorView}>
+                                            <Button label="Scan Again" onPress={startScan} style={{ width: '100%' }} />
                                             <Button 
-                                                title="Enter code manually" 
+                                                label="Enter code manually" 
                                                 variant="ghost" 
                                                 onPress={() => setShowCodeInput(true)} 
                                                 style={{ marginTop: 12 }}
@@ -331,7 +334,7 @@ export default function AttendanceMarkSheet({ visible, onClose, session }: Atten
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     overlay: {
         flex: 1,
         justifyContent: 'flex-end',
@@ -341,7 +344,7 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
     },
     sheet: {
-        backgroundColor: 'white',
+        backgroundColor: Colors.surface,
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
         paddingHorizontal: 24,
@@ -352,7 +355,7 @@ const styles = StyleSheet.create({
     handle: {
         width: 38,
         height: 5,
-        backgroundColor: '#E5E5EA',
+        backgroundColor: Colors.separator,
         borderRadius: 3,
         alignSelf: 'center',
         marginBottom: 24,
@@ -367,7 +370,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: '800',
-        color: '#000',
+        color: Colors.textPrimary,
         letterSpacing: -0.5,
         fontFamily: Typography.family.extraBold,
     },
@@ -391,15 +394,15 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: 'rgba(0,122,255,0.15)',
+        backgroundColor: Colors.primary + '25',
         borderWidth: 1,
-        borderColor: 'rgba(0,122,255,0.3)',
+        borderColor: Colors.primary + '4D',
     },
     centerIcon: {
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: 'rgba(0,122,255,0.08)',
+        backgroundColor: Colors.primary + '15',
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1,
@@ -421,19 +424,19 @@ const styles = StyleSheet.create({
     digitInput: {
         width: (width - 48 - 60) / 6,
         height: 60,
-        backgroundColor: '#F2F2F7',
+        backgroundColor: Colors.surfaceSecondary,
         borderRadius: 14,
         fontSize: 28,
         fontWeight: '800',
         textAlign: 'center',
-        color: '#000',
+        color: Colors.textPrimary,
         fontFamily: Typography.family.extraBold,
         borderWidth: 1.5,
         borderColor: 'transparent',
     },
     digitInputFilled: {
         borderColor: Colors.accentBlue,
-        backgroundColor: 'white',
+        backgroundColor: Colors.surface,
     },
     submitButton: {
         width: '100%',
@@ -477,7 +480,7 @@ const styles = StyleSheet.create({
     successTitle: {
         fontSize: 24,
         fontWeight: '800',
-        color: '#000',
+        color: Colors.textPrimary,
         marginBottom: 8,
         fontFamily: Typography.family.extraBold,
     },
@@ -490,7 +493,7 @@ const styles = StyleSheet.create({
     verifyBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.successSoft,
+        backgroundColor: Colors.success + '15',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 100,

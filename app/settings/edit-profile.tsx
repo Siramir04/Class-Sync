@@ -10,21 +10,23 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
+import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import { updateUserProfile } from '../../services/authService';
 import Input from '../../components/ui/Input';
-import Button from '../../components/ui/Button';
+import { Button } from '../../components/ui/Button';
+import { Spacing } from '../../constants/spacing';
 
 export default function EditProfileScreen() {
     const router = useRouter();
+    const { colors: Colors, typography: Typography } = useTheme();
     const { user, setUser } = useAuthStore();
     
     const [fullName, setFullName] = useState(user?.fullName || '');
     const [university, setUniversity] = useState(user?.university || '');
     const [loading, setLoading] = useState(false);
+
+    const themedStyles = styles(Colors, Typography);
 
     const handleSave = async () => {
         if (!fullName.trim()) {
@@ -60,16 +62,16 @@ export default function EditProfileScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerButton} activeOpacity={0.7}>
-                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+        <SafeAreaView style={themedStyles.container}>
+            <View style={themedStyles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={themedStyles.headerButton} activeOpacity={0.7}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
                 </TouchableOpacity>
-                <Text style={styles.title}>Edit Profile</Text>
+                <Text style={themedStyles.title}>Edit Profile</Text>
                 <View style={{ width: 44 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
+            <ScrollView contentContainerStyle={themedStyles.content}>
                 <Input
                     label="Full Name"
                     value={fullName}
@@ -84,9 +86,9 @@ export default function EditProfileScreen() {
                     placeholder="Enter university name"
                 />
 
-                <View style={styles.footer}>
+                <View style={themedStyles.footer}>
                     <Button
-                        title="Save Changes"
+                        label="Save Changes"
                         onPress={handleSave}
                         loading={loading}
                     />
@@ -96,7 +98,7 @@ export default function EditProfileScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any, Typography: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
@@ -108,7 +110,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         height: 56,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '30',
+        borderBottomColor: Colors.outlineVariant,
         backgroundColor: Colors.surface,
     },
     headerButton: {
@@ -119,8 +121,8 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 17,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
+        fontFamily: Typography.family.bold,
+        color: Colors.onSurface,
     },
     content: {
         padding: Spacing.lg,

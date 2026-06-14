@@ -45,7 +45,7 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
     } catch (err: unknown) {
         const error = err as { message: string };
-        Alert.alert('Login Error', error.message || 'Invalid email or password');
+        setError(error.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }

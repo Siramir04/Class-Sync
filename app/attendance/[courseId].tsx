@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import AttendanceCalendar from '../../components/attendance/AttendanceCalendar';
 import AttendanceRateCard from '../../components/attendance/AttendanceRateCard';
 import { getStudentAttendanceSummary } from '../../services/attendanceService';
-import { StudentAttendanceSummary } from '../../types/attendance';
+import { StudentAttendanceSummary } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 
 export default function AttendanceHistoryScreen() {
     const { courseId, spaceId } = useLocalSearchParams<{ courseId: string; spaceId: string }>();
+    const { colors: Colors, typography: Typography, isDark } = useTheme();
     const router = useRouter();
     const { user } = useAuthStore();
+
+    const themedStyles = styles(Colors, Typography);
 
     const [summary, setSummary] = useState<StudentAttendanceSummary | null>(null);
     const [loading, setLoading] = useState(true);
@@ -37,29 +39,30 @@ export default function AttendanceHistoryScreen() {
 
     if (loading) {
         return (
-            <View style={[styles.container, styles.centered]}>
-                <ActivityIndicator size="large" color={Colors.primaryBlue} />
+            <View style={[themedStyles.container, themedStyles.centered]}>
+                <ActivityIndicator size="large" color={Colors.primary} />
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <View style={themedStyles.container}>
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backBtn}>
-                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+            <View style={themedStyles.header}>
+                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={themedStyles.backBtn}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Attendance History</Text>
+                <Text style={themedStyles.headerTitle}>Attendance History</Text>
                 <View style={{ width: 24 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView contentContainerStyle={themedStyles.scrollContent}>
                 {summary ? (
                     <>
-                        <View style={styles.courseInfo}>
-                            <Text style={styles.courseCode}>{summary.courseCode}</Text>
-                            <Text style={styles.courseName}>{summary.courseName}</Text>
+                        <View style={themedStyles.courseInfo}>
+                            <Text style={themedStyles.courseCode}>{summary.courseCode}</Text>
+                            <Text style={themedStyles.courseName}>{summary.courseName}</Text>
                         </View>
 
                         <AttendanceRateCard
@@ -68,25 +71,25 @@ export default function AttendanceHistoryScreen() {
                             total={summary.totalSessions}
                         />
 
-                        <Text style={styles.sectionTitle}>Attendance Calendar</Text>
+                        <Text style={themedStyles.sectionTitle}>Attendance Calendar</Text>
                         <AttendanceCalendar sessionDates={summary.sessionDates} />
 
-                        <View style={styles.legend}>
-                            <View style={styles.legendItem}>
-                                <View style={[styles.dot, { backgroundColor: Colors.success }]} />
-                                <Text style={styles.legendText}>Present</Text>
+                        <View style={themedStyles.legend}>
+                            <View style={themedStyles.legendItem}>
+                                <View style={[themedStyles.dot, { backgroundColor: Colors.success }]} />
+                                <Text style={themedStyles.legendText}>Present</Text>
                             </View>
-                            <View style={styles.legendItem}>
-                                <View style={[styles.dot, { backgroundColor: Colors.error }]} />
-                                <Text style={styles.legendText}>Absent</Text>
+                            <View style={themedStyles.legendItem}>
+                                <View style={[themedStyles.dot, { backgroundColor: Colors.error }]} />
+                                <Text style={themedStyles.legendText}>Absent</Text>
                             </View>
                         </View>
                     </>
                 ) : (
-                    <View style={styles.emptyView}>
-                        <Ionicons name="calendar-outline" size={64} color={Colors.textSecondary} />
-                        <Text style={styles.emptyTitle}>No Attendance Data</Text>
-                        <Text style={styles.emptySub}>There are no closed attendance sessions for this course yet.</Text>
+                    <View style={themedStyles.emptyView}>
+                        <Ionicons name="calendar-outline" size={64} color={Colors.onSurfaceVariant} />
+                        <Text style={themedStyles.emptyTitle}>No Attendance Data</Text>
+                        <Text style={themedStyles.emptySub}>There are no closed attendance sessions for this course yet.</Text>
                     </View>
                 )}
             </ScrollView>
@@ -94,7 +97,7 @@ export default function AttendanceHistoryScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any, Typography: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
@@ -112,7 +115,7 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
         backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '15',
+        borderBottomColor: Colors.outlineVariant,
     },
     backBtn: {
         width: 44,
@@ -121,8 +124,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerTitle: {
-        ...Typography.sectionHeader,
-        color: Colors.textPrimary,
+        fontSize: 18,
+        fontFamily: Typography.family.bold,
+        color: Colors.onSurface,
     },
     scrollContent: {
         padding: 20,
@@ -131,19 +135,22 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     courseCode: {
-        ...Typography.sectionHeader,
-        color: Colors.primaryBlue,
+        fontSize: 14,
+        fontFamily: Typography.family.bold,
+        color: Colors.primary,
         marginBottom: 4,
     },
     courseName: {
-        ...Typography.pageTitle,
-        color: Colors.textPrimary,
+        fontSize: 22,
+        fontFamily: Typography.family.bold,
+        color: Colors.onSurface,
     },
     sectionTitle: {
-        ...Typography.sectionHeader,
-        color: Colors.textPrimary,
+        fontSize: 16,
+        fontFamily: Typography.family.bold,
+        color: Colors.onSurface,
         marginTop: 24,
-        marginBottom: 8,
+        marginBottom: 12,
     },
     legend: {
         flexDirection: 'row',
@@ -162,8 +169,9 @@ const styles = StyleSheet.create({
         marginRight: 6,
     },
     legendText: {
-        ...Typography.label,
-        color: Colors.textSecondary,
+        fontSize: 12,
+        fontFamily: Typography.family.medium,
+        color: Colors.onSurfaceVariant,
     },
     emptyView: {
         alignItems: 'center',
@@ -172,14 +180,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 40,
     },
     emptyTitle: {
-        ...Typography.sectionHeader,
-        color: Colors.textPrimary,
+        fontSize: 18,
+        fontFamily: Typography.family.bold,
+        color: Colors.onSurface,
         marginTop: 16,
         marginBottom: 8,
     },
     emptySub: {
-        ...Typography.body,
-        color: Colors.textSecondary,
+        fontSize: 15,
+        fontFamily: Typography.family.regular,
+        color: Colors.onSurfaceVariant,
         textAlign: 'center',
     },
 });

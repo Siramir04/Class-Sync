@@ -20,6 +20,10 @@ import { usePushNotificationsSafe } from '../hooks/usePushNotificationsSafe';
 import { useCarryoverAutoAcceptSafe } from '../hooks/useCarryoverAutoAcceptSafe';
 import { registerBackgroundTasksSafe } from '../utils/registerBackgroundTasksSafe';
 
+// Desktop web components (lazy-loaded only on web)
+const DesktopSidebar = isWeb ? require('../components/layout/DesktopSidebar').default : null;
+const DesktopPolish = isWeb ? require('../components/web/DesktopPolish').default : null;
+
 class RenderErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean; error: Error | null }
@@ -51,7 +55,7 @@ export default function RootLayout() {
     const segments = useSegments();
     const router = useRouter();
     const { colors: Colors, isDark } = useTheme();
-    const { isDesktop } = useResponsive();
+    const { isDesktop, isMobile } = useResponsive();
 
     // --- Fix 1b: Auth hydration gate ---
     const [appReady, setAppReady] = useState(false);
@@ -142,8 +146,24 @@ export default function RootLayout() {
         </RenderErrorBoundary>
     );
 
-    const wrappedContent = isWeb && isDesktop ? (
-        <View style={{ flex: 1, maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
+    // --- Desktop web layout: sidebar + padded content ---
+    const showDesktopLayout = isWeb && isDesktop && isAuthenticated;
+
+    const wrappedContent = showDesktopLayout ? (
+        <View style={{ flexDirection: 'row', flex: 1 }}>
+            {DesktopSidebar && <DesktopSidebar />}
+            <View style={{
+                flex: 1,
+                paddingHorizontal: 32,
+                paddingVertical: 24,
+                maxWidth: 960,
+            }}>
+                {content}
+            </View>
+        </View>
+    ) : isWeb && !isMobile ? (
+        // Tablet: centered content with moderate padding
+        <View style={{ flex: 1, maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 24 }}>
             {content}
         </View>
     ) : content;
@@ -171,6 +191,8 @@ export default function RootLayout() {
     return (
         <SafeAreaProvider>
             <StatusBar style={isDark ? "light" : "dark"} />
+            {/* Desktop polish styles (web only) */}
+            {isWeb && DesktopPolish && <DesktopPolish />}
             {wrappedContent}
             {NativeComponents}
         </SafeAreaProvider>

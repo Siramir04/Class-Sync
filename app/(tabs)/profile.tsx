@@ -22,7 +22,7 @@ export default function ProfileScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { colors: Colors, typography: Typography } = useTheme();
-    const { user, logout } = useAuthStore();
+    const { user, signOut } = useAuthStore();
 
     const handleLogout = async () => {
         Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -31,8 +31,7 @@ export default function ProfileScreen() {
                 text: 'Sign Out',
                 style: 'destructive',
                 onPress: async () => {
-                    await logoutUser();
-                    logout();
+                    await signOut();
                     router.replace('/(auth)/login');
                 },
             },

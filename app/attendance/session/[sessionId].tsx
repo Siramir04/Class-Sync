@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, FlatList, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, FlatList, ActivityIndicator, Platform, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../../constants/colors';
-import { Typography } from '../../../constants/typography';
+import { useTheme } from '../../../hooks/useTheme';
 import QRDisplay from '../../../components/attendance/QRDisplay';
 import QRScanner from '../../../components/attendance/QRScanner';
 import {
@@ -19,6 +18,7 @@ import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { useAuthStore } from '../../../store/authStore';
 import { useSpaceRole } from '../../../hooks/useSpaceRole';
+import { Spacing } from '../../../constants/spacing';
 
 export default function SessionScreen() {
     const { sessionId, courseId, spaceId } = useLocalSearchParams<{
@@ -28,6 +28,7 @@ export default function SessionScreen() {
     }>();
     const router = useRouter();
     const { user } = useAuthStore();
+    const { colors: Colors, typography: Typography, isDark } = useTheme();
 
     const [session, setSession] = useState<AttendanceSession | null>(null);
     const [countdown, setCountdown] = useState(60);
@@ -35,6 +36,8 @@ export default function SessionScreen() {
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
     const [isMarking, setIsMarking] = useState(false);
     const [hasAlreadyScanned, setHasAlreadyScanned] = useState(false);
+
+    const themedStyles = styles(Colors, Typography, isDark);
 
     const { 
         isMonitor, 
@@ -179,49 +182,50 @@ export default function SessionScreen() {
     };
 
     if (!session) return (
-        <View style={[styles.container, styles.centered]}>
-            <ActivityIndicator size="large" color={Colors.accentBlue} />
+        <View style={[themedStyles.container, themedStyles.centered]}>
+            <ActivityIndicator size="large" color={Colors.primary} />
         </View>
     );
 
     if (!isLecturerOrMonitor) {
         // STUDENT VIEW
         return (
-            <View style={styles.container}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backBtn}>
-                        <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+            <View style={themedStyles.container}>
+                <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+                <View style={themedStyles.header}>
+                    <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={themedStyles.backBtn}>
+                        <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
                     </TouchableOpacity>
-                    <View style={styles.headerTitleContainer}>
-                        <Text style={styles.headerTitle}>Scan Attendance</Text>
+                    <View style={themedStyles.headerTitleContainer}>
+                        <Text style={themedStyles.headerTitle}>Scan Attendance</Text>
                     </View>
                     <View style={{ width: 44 }} />
                 </View>
 
                 {hasAlreadyScanned ? (
-                    <View style={styles.successView}>
-                        <Ionicons name="checkmark-circle" size={80} color={Colors.success} />
-                        <Text style={styles.successTitle}>Attendance Recorded</Text>
-                        <Text style={styles.successSub}>You have been marked present for this session.</Text>
+                    <View style={themedStyles.successView}>
+                        <Ionicons name="checkmark-circle" size={80} color={Colors.primary} />
+                        <Text style={themedStyles.successTitle}>Attendance Recorded</Text>
+                        <Text style={themedStyles.successSub}>You have been marked present for this session.</Text>
                         <TouchableOpacity
-                            style={styles.backButton}
+                            style={themedStyles.backButton}
                             onPress={() => router.back()}
                             activeOpacity={0.7}
                         >
-                            <Text style={styles.backButtonText}>Back to Course</Text>
+                            <Text style={themedStyles.backButtonText}>Back to Course</Text>
                         </TouchableOpacity>
                     </View>
                 ) : !session.isOpen ? (
-                    <View style={styles.successView}>
+                    <View style={themedStyles.successView}>
                         <Ionicons name="alert-circle" size={80} color={Colors.error} />
-                        <Text style={styles.successTitle}>Session Closed</Text>
-                        <Text style={styles.successSub}>This attendance session has already been closed.</Text>
+                        <Text style={themedStyles.successTitle}>Session Closed</Text>
+                        <Text style={themedStyles.successSub}>This attendance session has already been closed.</Text>
                         <TouchableOpacity
-                            style={styles.backButton}
+                            style={themedStyles.backButton}
                             onPress={() => router.back()}
                             activeOpacity={0.7}
                         >
-                            <Text style={styles.backButtonText}>Go Back</Text>
+                            <Text style={themedStyles.backButtonText}>Go Back</Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
@@ -229,9 +233,9 @@ export default function SessionScreen() {
                 )}
 
                 {isMarking && (
-                    <View style={styles.loadingOverlay}>
+                    <View style={themedStyles.loadingOverlay}>
                         <ActivityIndicator size="large" color="white" />
-                        <Text style={styles.loadingText}>Recording attendance...</Text>
+                        <Text style={themedStyles.loadingText}>Recording attendance...</Text>
                     </View>
                 )}
             </View>
@@ -240,55 +244,56 @@ export default function SessionScreen() {
 
     // LECTURER / MONITOR VIEW
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.backBtn}>
-                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+        <View style={themedStyles.container}>
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+            <View style={themedStyles.header}>
+                <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={themedStyles.backBtn}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Attendance — {session.courseCode}</Text>
-                <TouchableOpacity onPress={handleEndSession} activeOpacity={0.7} style={styles.endBtn}>
-                    <Text style={styles.endText}>End</Text>
+                <Text style={themedStyles.headerTitle}>Attendance — {session.courseCode}</Text>
+                <TouchableOpacity onPress={handleEndSession} activeOpacity={0.7} style={themedStyles.endBtn}>
+                    <Text style={themedStyles.endText}>End</Text>
                 </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.qrCard}>
-                    <Text style={styles.scanLabel}>Scan to mark attendance</Text>
+            <ScrollView contentContainerStyle={themedStyles.scrollContent}>
+                <View style={themedStyles.qrCard}>
+                    <Text style={themedStyles.scanLabel}>Scan to mark attendance</Text>
 
-                    <View style={styles.qrWrapper}>
+                    <View style={themedStyles.qrWrapper}>
                         <QRDisplay value={session.code} />
                     </View>
 
-                    <Text style={styles.timerText}>
+                    <Text style={themedStyles.timerText}>
                         Refreshes in {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
                     </Text>
 
-                    <Text style={styles.securityHint}>
+                    <Text style={themedStyles.securityHint}>
                         QR code refreshes every 60 seconds for security
                     </Text>
                 </View>
 
-                <View style={styles.statsSection}>
-                    <View style={styles.counterRow}>
-                        <Text style={styles.counterLabel}>Students present</Text>
-                        <Text style={styles.counterValue}>{session.presentCount || 0}</Text>
+                <View style={themedStyles.statsSection}>
+                    <View style={themedStyles.counterRow}>
+                        <Text style={themedStyles.counterLabel}>Students present</Text>
+                        <Text style={themedStyles.counterValue}>{session.presentCount || 0}</Text>
                     </View>
 
-                    <TouchableOpacity style={styles.listLink} onPress={fetchRecords} activeOpacity={0.7}>
-                        <Text style={styles.listLinkText}>View live list</Text>
-                        <Ionicons name="chevron-forward" size={16} color={Colors.accentBlue} />
+                    <TouchableOpacity style={themedStyles.listLink} onPress={fetchRecords} activeOpacity={0.7}>
+                        <Text style={themedStyles.listLinkText}>View live list</Text>
+                        <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
                     </TouchableOpacity>
                 </View>
             </ScrollView>
 
-            <View style={styles.footer}>
+            <View style={themedStyles.footer}>
                 <TouchableOpacity
                     onPress={handleEndSession}
                     disabled={!session.isOpen}
-                    style={[styles.endButton, !session.isOpen && { opacity: 0.5 }]}
+                    style={[themedStyles.endButton, !session.isOpen && { opacity: 0.5 }]}
                     activeOpacity={0.7}
                 >
-                    <Text style={styles.endButtonText}>
+                    <Text style={themedStyles.endButtonText}>
                         {session.isOpen ? 'End Session' : 'Session Ended'}
                     </Text>
                 </TouchableOpacity>
@@ -300,12 +305,12 @@ export default function SessionScreen() {
                 transparent={true}
                 onRequestClose={() => setShowLiveList(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Present Students ({records.length})</Text>
-                            <TouchableOpacity onPress={() => setShowLiveList(false)} activeOpacity={0.7} style={styles.closeBtn}>
-                                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+                <View style={themedStyles.modalOverlay}>
+                    <View style={themedStyles.modalContent}>
+                        <View style={themedStyles.modalHeader}>
+                            <Text style={themedStyles.modalTitle}>Present Students ({records.length})</Text>
+                            <TouchableOpacity onPress={() => setShowLiveList(false)} activeOpacity={0.7} style={themedStyles.closeBtn}>
+                                <Ionicons name="close" size={24} color={Colors.onSurface} />
                             </TouchableOpacity>
                         </View>
 
@@ -313,20 +318,20 @@ export default function SessionScreen() {
                             data={records}
                             keyExtractor={(item) => item.uid}
                             renderItem={({ item }) => (
-                                <View style={styles.recordRow}>
+                                <View style={themedStyles.recordRow}>
                                     <View>
-                                        <Text style={styles.studentName}>{item.fullName}</Text>
-                                        <Text style={styles.username}>@{item.username || item.uid.slice(0, 8)}</Text>
+                                        <Text style={themedStyles.studentName}>{item.fullName}</Text>
+                                        <Text style={themedStyles.username}>@{item.username || item.uid.slice(0, 8)}</Text>
                                     </View>
-                                    <Text style={styles.timeText}>
+                                    <Text style={themedStyles.timeText}>
                                         {item.markedAt instanceof Date ? item.markedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'}
                                     </Text>
                                 </View>
                             )}
                             ListEmptyComponent={
-                                <Text style={styles.emptyText}>No students marked yet</Text>
+                                <Text style={themedStyles.emptyText}>No students marked yet</Text>
                             }
-                            contentContainerStyle={styles.listContent}
+                            contentContainerStyle={themedStyles.listContent}
                         />
                     </View>
                 </View>
@@ -335,7 +340,7 @@ export default function SessionScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any, Typography: any, isDark: boolean) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
@@ -343,6 +348,16 @@ const styles = StyleSheet.create({
     centered: {
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingTop: Platform.OS === 'ios' ? 0 : 10,
+        height: 56,
+        backgroundColor: Colors.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.outlineVariant,
     },
     backBtn: {
         width: 44,
@@ -362,10 +377,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    headerTitleContainer: {
+        flex: 1,
+        alignItems: 'center',
+    },
     headerTitle: {
         fontSize: 17,
         fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
     },
     endText: {
         fontSize: 12,
@@ -377,7 +396,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     qrCard: {
-        backgroundColor: 'white',
+        backgroundColor: isDark ? Colors.surfaceVariant : 'white',
         borderRadius: 24,
         padding: 30,
         width: '100%',
@@ -392,26 +411,29 @@ const styles = StyleSheet.create({
     scanLabel: {
         fontSize: 15,
         fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
         marginBottom: 20,
     },
     qrWrapper: {
         marginBottom: 20,
+        backgroundColor: 'white', // QR usually needs white background
+        padding: 10,
+        borderRadius: 12,
     },
     timerText: {
         fontSize: 18,
         fontFamily: Typography.family.bold,
-        color: Colors.accentBlue,
+        color: Colors.primary,
         marginBottom: 8,
     },
     securityHint: {
         fontSize: 12,
         fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
         textAlign: 'center',
     },
     statsSection: {
-        backgroundColor: 'white',
+        backgroundColor: isDark ? Colors.surfaceVariant : 'white',
         borderRadius: 16,
         padding: 20,
         width: '100%',
@@ -423,31 +445,17 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         paddingBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
+        borderBottomColor: Colors.outlineVariant,
     },
     counterLabel: {
         fontSize: 15,
         fontFamily: Typography.family.regular,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
     },
     counterValue: {
         fontSize: 24,
         fontFamily: Typography.family.extraBold,
-        color: Colors.accentBlue,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 8,
-        paddingTop: Platform.OS === 'ios' ? 0 : 10,
-        height: 56,
-        backgroundColor: Colors.surface,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.separator,
-    },
-    headerTitleContainer: {
-        flex: 1,
-        alignItems: 'center',
+        color: Colors.primary,
     },
     listLink: {
         flexDirection: 'row',
@@ -457,15 +465,15 @@ const styles = StyleSheet.create({
     listLinkText: {
         fontSize: 14,
         fontFamily: Typography.family.bold,
-        color: Colors.accentBlue,
+        color: Colors.primary,
         marginRight: 4,
     },
     footer: {
         padding: 20,
-        backgroundColor: 'white',
+        backgroundColor: Colors.surface,
         borderTopWidth: 1,
-        borderTopColor: Colors.separator,
-        paddingBottom: 40,
+        borderTopColor: Colors.outlineVariant,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
     },
     endButton: {
         backgroundColor: Colors.error,
@@ -484,7 +492,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: 'white',
+        backgroundColor: Colors.background,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         height: '80%',
@@ -499,7 +507,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 17,
         fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
     },
     listContent: {
         paddingBottom: 100,
@@ -510,27 +518,27 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
+        borderBottomColor: Colors.outlineVariant,
     },
     studentName: {
         fontSize: 15,
         fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
     },
     username: {
         fontSize: 12,
         fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
     },
     timeText: {
         fontSize: 12,
         fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
     },
     emptyText: {
         fontSize: 15,
         fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
         textAlign: 'center',
         marginTop: 40,
     },
@@ -543,19 +551,19 @@ const styles = StyleSheet.create({
     successTitle: {
         fontSize: 22,
         fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
         marginTop: 20,
         marginBottom: 8,
     },
     successSub: {
         fontSize: 15,
         fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
         textAlign: 'center',
         marginBottom: 32,
     },
     backButton: {
-        backgroundColor: Colors.accentBlue,
+        backgroundColor: Colors.primary,
         paddingHorizontal: 24,
         paddingVertical: 12,
         borderRadius: 8,

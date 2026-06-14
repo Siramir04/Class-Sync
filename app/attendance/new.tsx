@@ -8,12 +8,11 @@ import {
     SafeAreaView,
     ActivityIndicator,
     Alert,
+    Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
+import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import { useCourses } from '../../hooks/useCourses';
 import { useRecentPosts } from '../../hooks/usePosts';
@@ -22,8 +21,11 @@ import { Button } from '../../components/ui/Button';
 import { getSpaceMembers } from '../../services/spaceService';
 import { FeatureGate } from '../../utils/platform';
 import WebFeaturePrompt from '../../components/web/WebFeaturePrompt';
+import { Spacing } from '../../constants/spacing';
 
 export default function NewAttendanceSessionScreen() {
+    const { colors: Colors, typography: Typography, isDark } = useTheme();
+    
     // Platform gate: show web fallback if native attendance features are unavailable
     if (!FeatureGate.bleAttendance && !FeatureGate.qrScan) {
         return (
@@ -47,6 +49,8 @@ export default function NewAttendanceSessionScreen() {
     const [selectedLectureId, setSelectedLectureId] = useState('');
     const [loading, setLoading] = useState(false);
     const [memberCount, setMemberCount] = useState(0);
+
+    const themedStyles = styles(Colors, Typography, isDark);
 
     // Filter lectures for the selected course
     const availableLectures = posts.filter(
@@ -101,41 +105,41 @@ export default function NewAttendanceSessionScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-                    <Ionicons name="close" size={24} color={Colors.textPrimary} />
+        <SafeAreaView style={themedStyles.container}>
+            <View style={themedStyles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={themedStyles.headerButton}>
+                    <Ionicons name="close" size={24} color={Colors.onSurface} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Start Attendance</Text>
+                <Text style={themedStyles.headerTitle}>Start Attendance</Text>
                 <View style={{ width: 44 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Select Course</Text>
-                    <View style={styles.courseList}>
+            <ScrollView contentContainerStyle={themedStyles.scrollContent} showsVerticalScrollIndicator={false}>
+                <View style={themedStyles.section}>
+                    <Text style={themedStyles.sectionTitle}>Select Course</Text>
+                    <View style={themedStyles.courseList}>
                         {courses.map((course) => (
                             <TouchableOpacity
                                 key={course.id}
                                 style={[
-                                    styles.courseItem,
-                                    selectedCourseId === course.id && styles.courseItemActive,
+                                    themedStyles.courseItem,
+                                    selectedCourseId === course.id && themedStyles.courseItemActive,
                                 ]}
                                 onPress={() => setSelectedCourseId(course.id)}
                                 activeOpacity={0.7}
                             >
-                                <View style={[styles.iconBox, { backgroundColor: selectedCourseId === course.id ? '#FFFFFF' : Colors.accentBlue + '15' }]}>
+                                <View style={[themedStyles.iconBox, { backgroundColor: selectedCourseId === course.id ? 'rgba(255,255,255,0.2)' : Colors.primaryContainer }]}>
                                     <Ionicons 
                                         name="book" 
                                         size={20} 
-                                        color={selectedCourseId === course.id ? Colors.accentBlue : Colors.accentBlue} 
+                                        color={selectedCourseId === course.id ? '#FFFFFF' : Colors.primary} 
                                     />
                                 </View>
-                                <View style={styles.courseInfo}>
-                                    <Text style={[styles.courseCode, selectedCourseId === course.id && styles.textWhite]}>
+                                <View style={themedStyles.courseInfo}>
+                                    <Text style={[themedStyles.courseCode, selectedCourseId === course.id && themedStyles.textWhite]}>
                                         {course.courseCode}
                                     </Text>
-                                    <Text style={[styles.courseName, selectedCourseId === course.id && styles.textWhiteOpacity]} numberOfLines={1}>
+                                    <Text style={[themedStyles.courseName, selectedCourseId === course.id && themedStyles.textWhiteOpacity]} numberOfLines={1}>
                                         {course.courseName}
                                     </Text>
                                 </View>
@@ -148,45 +152,45 @@ export default function NewAttendanceSessionScreen() {
                 </View>
 
                 {selectedCourseId ? (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Link to Lecture (Optional)</Text>
+                    <View style={themedStyles.section}>
+                        <Text style={themedStyles.sectionTitle}>Link to Lecture (Optional)</Text>
                         {availableLectures.length > 0 ? (
                             availableLectures.map((lecture) => (
                                 <TouchableOpacity
                                     key={lecture.id}
                                     style={[
-                                        styles.lectureItem,
-                                        selectedLectureId === lecture.id && styles.lectureItemActive,
+                                        themedStyles.lectureItem,
+                                        selectedLectureId === lecture.id && themedStyles.lectureItemActive,
                                     ]}
                                     onPress={() => setSelectedLectureId(lecture.id)}
                                     activeOpacity={0.7}
                                 >
-                                    <View style={styles.lectureInfo}>
-                                        <Text style={styles.lectureTitle}>{lecture.title}</Text>
-                                        <Text style={styles.lectureDate}>
+                                    <View style={themedStyles.lectureInfo}>
+                                        <Text style={themedStyles.lectureTitle}>{lecture.title}</Text>
+                                        <Text style={themedStyles.lectureDate}>
                                             {lecture.startTime} · {lecture.venue}
                                         </Text>
                                     </View>
-                                    <View style={[styles.radio, selectedLectureId === lecture.id && styles.radioActive]}>
-                                        {selectedLectureId === lecture.id && <View style={styles.radioInner} />}
+                                    <View style={[themedStyles.radio, selectedLectureId === lecture.id && themedStyles.radioActive]}>
+                                        {selectedLectureId === lecture.id && <View style={themedStyles.radioInner} />}
                                     </View>
                                 </TouchableOpacity>
                             ))
                         ) : (
-                            <Text style={styles.emptyText}>No lectures found for this course today.</Text>
+                            <Text style={themedStyles.emptyText}>No lectures found for this course today.</Text>
                         )}
                     </View>
                 ) : null}
 
-                <View style={styles.infoBox}>
-                    <Ionicons name="information-circle" size={20} color={Colors.textSecondary} />
-                    <Text style={styles.infoText}>
+                <View style={themedStyles.infoBoxWrapper}>
+                    <Ionicons name="information-circle" size={20} color={Colors.onSurfaceVariant} />
+                    <Text style={themedStyles.infoText}>
                         Starting a session generates a dynamic code or QR for proximity verification. Students must be nearby to join.
                     </Text>
                 </View>
             </ScrollView>
 
-            <View style={styles.footer}>
+            <View style={themedStyles.footer}>
                 <Button
                     label="Start Live Session"
                     onPress={handleStart}
@@ -198,7 +202,7 @@ export default function NewAttendanceSessionScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any, Typography: any, isDark: boolean) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
@@ -210,7 +214,7 @@ const styles = StyleSheet.create({
         height: 56,
         backgroundColor: Colors.surface,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.separator,
+        borderBottomColor: Colors.outlineVariant,
     },
     headerButton: {
         width: 44,
@@ -223,7 +227,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 18,
         fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
     },
     scrollContent: {
         padding: Spacing.screenPadding,
@@ -234,7 +238,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 13,
         fontFamily: Typography.family.bold,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
         textTransform: 'uppercase',
         letterSpacing: 1.2,
         marginBottom: 16,
@@ -249,11 +253,11 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.surface,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: Colors.separator,
+        borderColor: Colors.outlineVariant,
     },
     courseItemActive: {
-        backgroundColor: Colors.accentBlue,
-        borderColor: Colors.accentBlue,
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
     },
     iconBox: {
         width: 40,
@@ -269,12 +273,12 @@ const styles = StyleSheet.create({
     courseCode: {
         fontSize: 16,
         fontFamily: Typography.family.bold,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
     },
     courseName: {
         fontSize: 13,
         fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
     },
     textWhite: {
         color: '#FFFFFF',
@@ -290,11 +294,11 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         marginBottom: 10,
         borderWidth: 1,
-        borderColor: Colors.separator,
+        borderColor: Colors.outlineVariant,
     },
     lectureItemActive: {
-        borderColor: Colors.accentBlue,
-        backgroundColor: Colors.accentBlue + '05',
+        borderColor: Colors.primary,
+        backgroundColor: isDark ? 'rgba(0,122,255,0.05)' : 'rgba(0,122,255,0.02)',
     },
     lectureInfo: {
         flex: 1,
@@ -302,12 +306,12 @@ const styles = StyleSheet.create({
     lectureTitle: {
         fontSize: 15,
         fontFamily: Typography.family.semiBold,
-        color: Colors.textPrimary,
+        color: Colors.onSurface,
     },
     lectureDate: {
         fontSize: 12,
         fontFamily: Typography.family.regular,
-        color: Colors.textTertiary,
+        color: Colors.onSurfaceVariant,
         marginTop: 2,
     },
     radio: {
@@ -315,26 +319,26 @@ const styles = StyleSheet.create({
         height: 20,
         borderRadius: 10,
         borderWidth: 2,
-        borderColor: Colors.separator,
+        borderColor: Colors.outlineVariant,
         justifyContent: 'center',
         alignItems: 'center',
     },
     radioActive: {
-        borderColor: Colors.accentBlue,
+        borderColor: Colors.primary,
     },
     radioInner: {
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: Colors.accentBlue,
+        backgroundColor: Colors.primary,
     },
     emptyText: {
         fontSize: 14,
         fontFamily: Typography.family.regular,
-        color: Colors.textTertiary,
+        color: Colors.onSurfaceVariant,
         fontStyle: 'italic',
     },
-    infoBox: {
+    infoBoxWrapper: {
         flexDirection: 'row',
         backgroundColor: Colors.surface,
         padding: 16,
@@ -342,19 +346,20 @@ const styles = StyleSheet.create({
         gap: 12,
         alignItems: 'flex-start',
         borderWidth: 1,
-        borderColor: Colors.separator,
+        borderColor: Colors.outlineVariant,
     },
     infoText: {
         flex: 1,
         fontSize: 13,
         fontFamily: Typography.family.regular,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
         lineHeight: 18,
     },
     footer: {
         padding: Spacing.screenPadding,
         backgroundColor: Colors.surface,
         borderTopWidth: 1,
-        borderTopColor: Colors.separator,
+        borderTopColor: Colors.outlineVariant,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
     },
 });

@@ -126,7 +126,7 @@ export default function RegisterScreen() {
       router.replace('/(tabs)');
     } catch (err: unknown) {
         const error = err as { message: string };
-        Alert.alert('Registration Error', error.message || 'Something went wrong');
+        setError(error.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }

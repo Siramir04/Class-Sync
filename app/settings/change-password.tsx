@@ -10,22 +10,24 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
-import { changePassword, loginUser } from '../../services/authService';
+import { useTheme } from '../../hooks/useTheme';
+import { changePassword } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
 import Input from '../../components/ui/Input';
-import Button from '../../components/ui/Button';
+import { Button } from '../../components/ui/Button';
+import { Spacing } from '../../constants/spacing';
 
 export default function ChangePasswordScreen() {
     const router = useRouter();
+    const { colors: Colors, typography: Typography } = useTheme();
     const { user } = useAuthStore();
     
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const themedStyles = styles(Colors, Typography);
 
     const handleUpdate = async () => {
         if (!currentPassword || !newPassword || !confirmPassword) {
@@ -47,37 +49,34 @@ export default function ChangePasswordScreen() {
 
         setLoading(true);
         try {
-            // Re-authenticate first
-            await loginUser(user.email, currentPassword);
+            const result = await changePassword(currentPassword, newPassword);
             
-            // Then update password
-            await changePassword(newPassword);
-
-            Alert.alert('Success', 'Password updated successfully!', [
-                { text: 'OK', onPress: () => router.back() }
-            ]);
+            if (result.success) {
+                Alert.alert('Success', 'Password updated successfully!', [
+                    { text: 'OK', onPress: () => router.back() }
+                ]);
+            } else {
+                Alert.alert('Error', result.error || 'Could not update password.');
+            }
         } catch (error: any) {
             console.error('Change password error:', error);
-            const message = error.code === 'auth/wrong-password' 
-                ? 'Current password is incorrect.' 
-                : 'Could not update password. Please try again.';
-            Alert.alert('Error', message);
+            Alert.alert('Error', 'Could not update password. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerButton} activeOpacity={0.7}>
-                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+        <SafeAreaView style={themedStyles.container}>
+            <View style={themedStyles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={themedStyles.headerButton} activeOpacity={0.7}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
                 </TouchableOpacity>
-                <Text style={styles.title}>Change Password</Text>
+                <Text style={themedStyles.title}>Change Password</Text>
                 <View style={{ width: 44 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
+            <ScrollView contentContainerStyle={themedStyles.content}>
                 <Input
                     label="Current Password"
                     value={currentPassword}
@@ -102,9 +101,9 @@ export default function ChangePasswordScreen() {
                     secureTextEntry
                 />
 
-                <View style={styles.footer}>
+                <View style={themedStyles.footer}>
                     <Button
-                        title="Update Password"
+                        label="Update Password"
                         onPress={handleUpdate}
                         loading={loading}
                     />
@@ -114,7 +113,7 @@ export default function ChangePasswordScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any, Typography: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
@@ -126,7 +125,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         height: 56,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border + '30',
+        borderBottomColor: Colors.outlineVariant,
         backgroundColor: Colors.surface,
     },
     headerButton: {
@@ -137,8 +136,8 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 17,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
+        fontFamily: Typography.family.bold,
+        color: Colors.onSurface,
     },
     content: {
         padding: Spacing.lg,

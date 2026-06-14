@@ -1,10 +1,31 @@
-import BleAdvertiser from 'react-native-ble-advertiser';
-import BleManager from 'react-native-ble-manager';
 import * as Network from 'expo-network';
 // @ts-ignore
 import * as Location from 'expo-location';
 import { Platform, NativeEventEmitter, NativeModules, PermissionsAndroid } from 'react-native';
 import { AttendanceBeacon, ProximityScanResult, AttendanceSession } from '../types';
+
+// ─────────────────────────────────────────
+// LAZY NATIVE MODULE GETTERS
+// These only execute on native. On web, they are never called
+// because every public function guards with Platform.OS checks.
+// ─────────────────────────────────────────
+
+let _BleAdvertiser: any = null;
+let _BleManager: any = null;
+
+function getBleAdvertiser() {
+  if (!_BleAdvertiser) {
+    _BleAdvertiser = require('react-native-ble-advertiser').default;
+  }
+  return _BleAdvertiser;
+}
+
+function getBleManager() {
+  if (!_BleManager) {
+    _BleManager = require('react-native-ble-manager').default;
+  }
+  return _BleManager;
+}
 
 // ─────────────────────────────────────────
 // CONSTANTS
@@ -26,6 +47,8 @@ let activeBroadcastUUID: string | null = null;
 // ─────────────────────────────────────────
 
 export const requestProximityPermissions = async (): Promise<boolean> => {
+  if (Platform.OS === 'web') return false;
+
   if (Platform.OS === 'android') {
     const apiLevel = Platform.Version as number;
     
@@ -64,6 +87,8 @@ export const requestProximityPermissions = async (): Promise<boolean> => {
 // ─────────────────────────────────────────
 
 export const startBeaconBroadcast = async (beacon: AttendanceBeacon): Promise<void> => {
+  if (Platform.OS === 'web') return;
+
   const hasPermission = await requestProximityPermissions();
   if (!hasPermission) throw new Error('Bluetooth or Location services are disabled');
 
@@ -75,6 +100,7 @@ export const startBeaconBroadcast = async (beacon: AttendanceBeacon): Promise<vo
   // Encode sessionId into manufacturer data
   const sessionBytes = beacon.serviceUUID.replace(/-/g, '').substring(0, 16);
 
+  const BleAdvertiser = getBleAdvertiser();
   await BleAdvertiser.setCompanyId(BLE_COMPANY_ID);
   
   await BleAdvertiser.broadcast(
@@ -92,7 +118,10 @@ export const startBeaconBroadcast = async (beacon: AttendanceBeacon): Promise<vo
 };
 
 export const stopBeaconBroadcast = async (serviceUUID: string): Promise<void> => {
+  if (Platform.OS === 'web') return;
+
   try {
+    const BleAdvertiser = getBleAdvertiser();
     await (BleAdvertiser as any).stopBroadcast(serviceUUID);
     if (activeBroadcastUUID === serviceUUID) {
         activeBroadcastUUID = null;
@@ -122,12 +151,18 @@ export const scanForBeacon = (
   timeoutMs: number = 8000
 ): Promise<ProximityScanResult> => {
   return new Promise(async (resolve) => {
+    if (Platform.OS === 'web') {
+      resolve({ detected: false });
+      return;
+    }
+
     const hasPermission = await requestProximityPermissions();
     if (!hasPermission) {
       resolve({ detected: false });
       return;
     }
 
+    const BleManager = getBleManager();
     await BleManager.start({ showAlert: false });
 
     const bleManagerEmitter = new NativeEventEmitter(NativeModules.BleManager);
@@ -176,6 +211,8 @@ export const scanForBeacon = (
 // ─────────────────────────────────────────
 
 export const getWifiInfo = async (): Promise<{ ssid: string | null; bssid?: string }> => {
+  if (Platform.OS === 'web') return { ssid: null };
+
   // Check location services first - absolutely required for SSID on Android
   const locationEnabled = await (Location as any).hasServicesEnabledAsync();
   if (!locationEnabled) {
@@ -233,6 +270,8 @@ export const checkProximity = async (
   onBleDetected?: (rssi: number) => void,
   onBleNotFound?: () => void
 ): Promise<ProximityScanResult> => {
+  if (Platform.OS === 'web') return { detected: false };
+
   // Run BLE scan and WiFi check in parallel
   const [bleResult, wifiResult] = await Promise.all([
     scanForBeacon(session.serviceUUID, onBleDetected, onBleNotFound, 8000),

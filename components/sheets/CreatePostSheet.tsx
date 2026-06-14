@@ -11,11 +11,11 @@ import {
     StatusBar,
 } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { PostType } from '../../types';
 import Input from '../ui/Input';
-import Button from '../ui/Button';
+import { Button } from '../ui/Button';
 import CustomDateTimePicker from '../ui/DateTimePicker';
 
 interface CreatePostSheetProps {
@@ -68,6 +68,8 @@ export default function CreatePostSheet({
     onSubmit,
     loading = false,
 }: CreatePostSheetProps) {
+    const { colors: Colors } = useTheme();
+    const themedStyles = styles(Colors);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [venue, setVenue] = useState('');
@@ -123,31 +125,31 @@ export default function CreatePostSheet({
             animationType="fade"
             onRequestClose={onClose}
         >
-            <View style={styles.overlay}>
-                <Pressable style={styles.backdrop} onPress={onClose} />
+            <View style={themedStyles.overlay}>
+                <Pressable style={themedStyles.backdrop} onPress={onClose} />
                 <KeyboardAvoidingView 
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={styles.keyboardSpacer}
+                    style={themedStyles.keyboardSpacer}
                 >
-                    <View style={styles.sheet}>
-                        <View style={styles.handle} />
+                    <View style={themedStyles.sheet}>
+                        <View style={themedStyles.handle} />
                         
-                        <View style={styles.header}>
-                           <View style={[styles.iconBox, { backgroundColor: 'rgba(0,122,255,0.08)' }]}>
-                               <IconComponent size={24} color={Colors.accentBlue} />
+                        <View style={themedStyles.header}>
+                           <View style={[themedStyles.iconBox, { backgroundColor: Colors.primary + '15' }]}>
+                               <IconComponent size={24} color={Colors.primary} />
                            </View>
-                           <View style={styles.headerTitleBox}>
-                             <Text style={styles.title}>New {typeLabels[postType]}</Text>
-                             <Text style={styles.subtitle}>{courseCode}</Text>
+                           <View style={themedStyles.headerTitleBox}>
+                             <Text style={themedStyles.title}>New {typeLabels[postType]}</Text>
+                             <Text style={themedStyles.subtitle}>{courseCode}</Text>
                            </View>
-                           <Pressable onPress={onClose} style={styles.closeBox}>
+                           <Pressable onPress={onClose} style={themedStyles.closeBox}>
                              <LucideIcons.X size={20} color={Colors.textTertiary} />
                            </Pressable>
                         </View>
 
                         <ScrollView 
                             showsVerticalScrollIndicator={false} 
-                            contentContainerStyle={styles.scrollContent}
+                            contentContainerStyle={themedStyles.scrollContent}
                             keyboardShouldPersistTaps="handled"
                         >
                             <Input
@@ -166,16 +168,16 @@ export default function CreatePostSheet({
                             />
 
                             {showDateTimeFields && (
-                                <View style={styles.section}>
-                                    <Text style={styles.sectionLabel}>Schedule</Text>
-                                    <View style={styles.inputGroup}>
+                                <View style={themedStyles.section}>
+                                    <Text style={themedStyles.sectionLabel}>Schedule</Text>
+                                    <View style={themedStyles.inputGroup}>
                                       <CustomDateTimePicker
                                           label="Date"
                                           value={lectureDate}
                                           mode="date"
                                           onChange={setLectureDate}
                                       />
-                                      <View style={styles.timeRow}>
+                                      <View style={themedStyles.timeRow}>
                                           <View style={{ flex: 1 }}>
                                               <CustomDateTimePicker
                                                   label="Start"
@@ -207,8 +209,8 @@ export default function CreatePostSheet({
                             )}
 
                             {showDueDateField && (
-                                <View style={styles.section}>
-                                    <Text style={styles.sectionLabel}>Deadline</Text>
+                                <View style={themedStyles.section}>
+                                    <Text style={themedStyles.sectionLabel}>Deadline</Text>
                                     <CustomDateTimePicker
                                         label="Due Date"
                                         value={dueDate}
@@ -219,9 +221,9 @@ export default function CreatePostSheet({
                             )}
 
                             {(showMarksField || showTopicsField) && (
-                              <View style={styles.section}>
-                                <Text style={styles.sectionLabel}>Assessment Info</Text>
-                                <View style={styles.row}>
+                              <View style={themedStyles.section}>
+                                <Text style={themedStyles.sectionLabel}>Assessment Info</Text>
+                                <View style={themedStyles.row}>
                                     {showMarksField && (
                                         <View style={{ flex: 1, marginRight: showTopicsField ? 12 : 0 }}>
                                             <Input
@@ -249,25 +251,25 @@ export default function CreatePostSheet({
 
                             {(postType === 'announcement' || postType === 'test' || postType === 'assignment') && (
                                 <Pressable 
-                                    style={styles.toggleRow} 
+                                    style={themedStyles.toggleRow} 
                                     onPress={() => setIsImportant(!isImportant)}
                                 >
-                                    <View style={styles.toggleText}>
-                                        <Text style={styles.toggleTitle}>Mark as Important</Text>
-                                        <Text style={styles.toggleSubtitle}>Triggers high-priority priority alert</Text>
+                                    <View style={themedStyles.toggleText}>
+                                        <Text style={themedStyles.toggleTitle}>Mark as Important</Text>
+                                        <Text style={themedStyles.toggleSubtitle}>Triggers high-priority priority alert</Text>
                                     </View>
-                                    <View style={[styles.switch, isImportant && styles.switchOn]}>
-                                        <View style={[styles.switchThumb, isImportant && styles.switchThumbOn]} />
+                                    <View style={[themedStyles.switch, isImportant && themedStyles.switchOn]}>
+                                        <View style={[themedStyles.switchThumb, isImportant && themedStyles.switchThumbOn]} />
                                     </View>
                                 </Pressable>
                             )}
 
                             <Button
-                                title={`Publish ${typeLabels[postType]}`}
+                                label={`Publish ${typeLabels[postType]}`}
                                 onPress={handleSubmit}
                                 loading={loading}
                                 disabled={!title.trim()}
-                                style={styles.submitBtn}
+                                style={themedStyles.submitBtn}
                             />
                         </ScrollView>
                     </View>
@@ -277,7 +279,7 @@ export default function CreatePostSheet({
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     overlay: {
         flex: 1,
         justifyContent: 'flex-end',
@@ -290,7 +292,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     sheet: {
-        backgroundColor: 'white',
+        backgroundColor: Colors.surface,
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
         paddingTop: 12,
@@ -299,7 +301,7 @@ const styles = StyleSheet.create({
     handle: {
         width: 38,
         height: 5,
-        backgroundColor: '#E5E5EA',
+        backgroundColor: Colors.separator,
         borderRadius: 3,
         alignSelf: 'center',
         marginBottom: 20,
@@ -324,12 +326,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: '800',
-        color: '#000',
+        color: Colors.textPrimary,
         fontFamily: Typography.family.extraBold,
     },
     subtitle: {
         fontSize: 12,
-        color: Colors.accentBlue,
+        color: Colors.primary,
         fontWeight: '700',
         marginTop: 1,
         fontFamily: Typography.family.bold,
@@ -337,7 +339,7 @@ const styles = StyleSheet.create({
     closeBox: {
         width: 32,
         height: 32,
-        backgroundColor: '#F2F2F7',
+        backgroundColor: Colors.surfaceSecondary,
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
@@ -360,7 +362,7 @@ const styles = StyleSheet.create({
         fontFamily: Typography.family.bold,
     },
     inputGroup: {
-        backgroundColor: '#F9F9FB',
+        backgroundColor: Colors.surfaceSecondary,
         borderRadius: 20,
         padding: 16,
         gap: 16,
@@ -376,7 +378,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        backgroundColor: '#F9F9FB',
+        backgroundColor: Colors.surfaceSecondary,
         borderRadius: 20,
         marginBottom: 24,
     },
@@ -386,7 +388,7 @@ const styles = StyleSheet.create({
     toggleTitle: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#000',
+        color: Colors.textPrimary,
         fontFamily: Typography.family.bold,
     },
     toggleSubtitle: {
@@ -399,11 +401,11 @@ const styles = StyleSheet.create({
         width: 46,
         height: 26,
         borderRadius: 13,
-        backgroundColor: '#E5E5EA',
+        backgroundColor: Colors.separator,
         padding: 2,
     },
     switchOn: {
-        backgroundColor: Colors.accentBlue,
+        backgroundColor: Colors.primary,
     },
     switchThumb: {
         width: 22,

@@ -17,7 +17,7 @@ export const FeatureGate = {
     bleAttendance: isNative,
     qrScan: isNative,
     pushNotifications: isNative,
-    excelExport: isNative,
+    excelExport: true,  // CSV download on web, xlsx on native
     fileUpload: isNative,
     biometricAuth: isNative,
 

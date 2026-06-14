@@ -19,7 +19,6 @@ import { useAuthStore } from '../store/authStore';
 import NotificationCard from '../components/cards/NotificationCard';
 import EmptyState from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/feedback/LoadingSpinner';
-import { ErrorState } from '../components/feedback/ErrorState';
 import { logger } from '../utils/logger';
 import { AppNotification } from '../types';
 
@@ -27,7 +26,7 @@ export default function NotificationsScreen() {
     const router = useRouter();
     const { colors: Colors, typography: Typography } = useTheme();
     const { user } = useAuthStore();
-    const { notifications, loading, error, refetch, markRead, markAllRead: markAllReadLocal } = useNotifications();
+    const { notifications, markRead, markAllRead: markAllReadLocal } = useNotifications();
 
     // Group by Today / Yesterday / Earlier
     const grouped: { title: string; data: AppNotification[] }[] = [];
@@ -74,24 +73,21 @@ export default function NotificationsScreen() {
 
     const anyUnread = notifications.some(n => !n.isRead);
 
-    if (loading) return <LoadingSpinner />;
-    if (error) return <ErrorState message="Failed to load notifications" onRetry={refetch} />;
-
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: Colors.surface, borderBottomColor: Colors.separator }]}>
+            <View style={[styles.header, { backgroundColor: Colors.surface, borderBottomColor: Colors.outlineVariant }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+                    <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: Colors.textPrimary, fontFamily: Typography.family.bold }]}>Notifications</Text>
+                <Text style={[styles.headerTitle, { color: Colors.onSurface, fontFamily: Typography.family.bold }]}>Notifications</Text>
                 <TouchableOpacity 
                     onPress={handleMarkAllRead} 
                     disabled={!anyUnread}
                     style={[styles.markReadBtn, { opacity: anyUnread ? 1 : 0.3 }]}
                     activeOpacity={0.7}
                 >
-                    <Ionicons name="checkmark-done" size={22} color={Colors.accentBlue} />
+                    <Ionicons name="checkmark-done" size={22} color={Colors.primary} />
                 </TouchableOpacity>
             </View>
 
@@ -114,14 +110,14 @@ export default function NotificationsScreen() {
                     )}
                     renderSectionHeader={({ section: { title } }) => (
                         <View style={[styles.sectionHeader, { backgroundColor: Colors.background }]}>
-                            <Text style={[styles.sectionTitle, { color: Colors.textTertiary, fontFamily: Typography.family.bold }]}>{title}</Text>
+                            <Text style={[styles.sectionTitle, { color: Colors.onSurfaceVariant, fontFamily: Typography.family.bold }]}>{title}</Text>
                         </View>
                     )}
                     keyExtractor={(item) => item.id}
                     showsVerticalScrollIndicator={false}
                     stickySectionHeadersEnabled={false}
                     contentContainerStyle={styles.listPadding}
-                    ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: Colors.separator }]} />}
+                    ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: Colors.outlineVariant }]} />}
                 />
             )}
         </SafeAreaView>

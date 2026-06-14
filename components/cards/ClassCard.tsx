@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, ViewStyle, Animated } from 'react-native';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import * as LucideIcons from 'lucide-react-native';
 
 interface ClassCardProps {
@@ -35,6 +35,8 @@ export default React.memo(function ClassCard({
   onAlarmToggle,
   style,
 }: ClassCardProps) {
+  const { colors: Colors } = useTheme();
+  const themedStyles = styles(Colors);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -53,8 +55,8 @@ export default React.memo(function ClassCard({
     }).start();
   };
 
-  const accentColor = isCarryover ? Colors.tertiary : Colors.primary;
-  const containerBg = isCarryover ? Colors.tertiaryContainer : Colors.surfaceElevation1;
+  const accentColor = isCarryover ? Colors.carryover : Colors.primary;
+  const containerBg = isCarryover ? Colors.tertiaryContainer : Colors.surfaceVariant;
 
   return (
     <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
@@ -62,46 +64,46 @@ export default React.memo(function ClassCard({
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={[styles.container, { backgroundColor: containerBg }]}
+        style={[themedStyles.container, { backgroundColor: containerBg }]}
       >
-        <View style={styles.topRow}>
-          <View style={[styles.badge, { backgroundColor: isCarryover ? Colors.onTertiary : Colors.onPrimary }]}>
-             <Text style={[styles.courseCode, { color: accentColor }]}>{courseCode}</Text>
+        <View style={themedStyles.topRow}>
+          <View style={[themedStyles.badge, { backgroundColor: isCarryover ? Colors.onTertiaryContainer : Colors.onPrimary }]}>
+             <Text style={[themedStyles.courseCode, { color: accentColor }]}>{courseCode}</Text>
           </View>
           {isCarryover && (
-            <View style={styles.carryoverTag}>
-              <Text style={styles.carryoverText}>CO</Text>
+            <View style={themedStyles.carryoverTag}>
+              <Text style={themedStyles.carryoverText}>CO</Text>
             </View>
           )}
         </View>
 
-        <View style={styles.content}>
-          <Text style={styles.courseName} numberOfLines={2}>{courseName}</Text>
+        <View style={themedStyles.content}>
+          <Text style={themedStyles.courseName} numberOfLines={2}>{courseName}</Text>
 
-          <View style={styles.detailsGroup}>
-            <View style={styles.infoRow}>
+          <View style={themedStyles.detailsGroup}>
+            <View style={themedStyles.infoRow}>
               <LucideIcons.Clock size={12} color={Colors.onSurfaceVariant} />
-              <Text style={styles.infoText}>{startTime} – {endTime}</Text>
+              <Text style={themedStyles.infoText}>{startTime} – {endTime}</Text>
             </View>
 
-            <View style={styles.infoRow}>
+            <View style={themedStyles.infoRow}>
               <LucideIcons.MapPin size={12} color={Colors.onSurfaceVariant} />
-              <Text style={styles.infoText} numberOfLines={1}>{venue}</Text>
+              <Text style={themedStyles.infoText} numberOfLines={1}>{venue}</Text>
             </View>
           </View>
 
-          <View style={styles.actionRow}>
+          <View style={themedStyles.actionRow}>
             <Pressable
               onPress={(e) => {
                 e.stopPropagation();
                 onAlarmToggle?.();
               }}
               style={({ pressed }) => [
-                styles.alarmButton,
+                themedStyles.alarmButton,
                 isAlarmSet ? {
                   backgroundColor: Colors.primary,
                 } : {
-                  backgroundColor: Colors.surfaceElevation3,
+                  backgroundColor: Colors.surfaceVariant,
                 },
                 pressed && { opacity: 0.8 }
               ]}
@@ -112,7 +114,7 @@ export default React.memo(function ClassCard({
                 fill={isAlarmSet ? Colors.onPrimary : 'transparent'}
               />
               <Text style={[
-                styles.alarmText,
+                themedStyles.alarmText,
                 { color: isAlarmSet ? Colors.onPrimary : Colors.onSurfaceVariant }
               ]}>
                 {isAlarmSet ? (alarmTime || 'Set') : 'Notify'}
@@ -125,13 +127,15 @@ export default React.memo(function ClassCard({
   );
 });
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
   container: {
     width: 170,
     height: 190,
     borderRadius: 28, // M3 Extra Large Corners
     padding: 16,
     justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: Colors.separator,
   },
   topRow: {
     flexDirection: 'row',
@@ -157,14 +161,14 @@ const styles = StyleSheet.create({
   carryoverText: {
     fontSize: 9,
     fontWeight: 'bold',
-    color: Colors.tertiary,
+    color: Colors.carryover,
   },
   content: {
     flex: 1,
     marginTop: 12,
   },
   courseName: {
-    ...Typography.m3.titleSmall,
+    ...Typography.m3.labelLarge, // Changed from titleSmall
     color: Colors.onSurface,
     fontWeight: '700',
     marginBottom: 8,

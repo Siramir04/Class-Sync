@@ -25,10 +25,12 @@ export const useAuthStore = create<AuthState>()(
             const { useNotificationStore } = await import('./notificationStore');
             const { useSpaceStore } = await import('./spaceStore');
             const { useFeedStore } = await import('./feedStore');
+            const { usePersonalCourseStore } = await import('./personalCourseStore');
             
             useNotificationStore.getState().cleanup();
             useSpaceStore.getState().cleanup();
             useFeedStore.getState().cleanup();
+            usePersonalCourseStore.getState().cleanup();
 
             // 2. Clear this store
             set({ user: null, isAuthenticated: false, isLoading: false });

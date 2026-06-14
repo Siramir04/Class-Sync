@@ -91,9 +91,9 @@ export default function SpaceManageScreen() {
     };
 
     const handleSaveDetails = async () => {
-        if (!spaceId || !spaceName.trim()) return;
+        if (!spaceId || !spaceName.trim() || !user) return;
         try {
-            await updateSpace(spaceId, { name: spaceName.trim() });
+            await updateSpace(spaceId, user.uid, { name: spaceName.trim() });
             Alert.alert('Success', 'Space settings updated successfully.');
         } catch (err) {
             logger.error('Failed to update space:', err);
@@ -130,7 +130,7 @@ export default function SpaceManageScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await deleteSpace(spaceId!);
+                            await deleteSpace(spaceId!, user!.uid);
                             router.replace('/(tabs)/spaces');
                         } catch (err) {
                             logger.error('Failed to delete space:', err);
@@ -256,11 +256,11 @@ export default function SpaceManageScreen() {
                                             const options = [];
                                             
                                             if (isMonitor && member.role !== 'assistant_monitor') {
-                                                options.push({ text: 'Make Assistant Monitor', onPress: () => promoteToAssistantMonitor(spaceId!, member.uid).then(loadData) });
+                                                options.push({ text: 'Make Assistant Monitor', onPress: () => promoteToAssistantMonitor(spaceId!, member.uid, user!.uid).then(loadData) });
                                             }
                                             
                                             // Assistant Monitor cannot remove Monitor (already handled by role !== 'monitor')
-                                            options.push({ text: 'Remove from Space', style: 'destructive', onPress: () => removeSpaceMember(spaceId!, member.uid).then(loadData) });
+                                            options.push({ text: 'Remove from Space', style: 'destructive', onPress: () => removeSpaceMember(spaceId!, member.uid, user!.uid).then(loadData) });
                                             options.push({ text: 'Cancel', style: 'cancel' });
 
                                             Alert.alert('Manage Member', member.fullName || member.uid, options as any);

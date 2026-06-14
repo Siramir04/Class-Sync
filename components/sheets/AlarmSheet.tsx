@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Platform, ScrollView, Alert, Dimensions } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
 import { format, subMinutes } from 'date-fns';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { Post } from '../../types';
 import { useAlarmStore } from '../../store/alarmStore';
 import * as alarmService from '../../services/alarmService';
-import Button from '../ui/Button';
+import { Button } from '../ui/Button';
 
 const { height } = Dimensions.get('window');
 
@@ -25,6 +25,8 @@ const LEAD_TIME_OPTIONS = [
 ];
 
 export default function AlarmSheet({ visible, onClose, post }: AlarmSheetProps) {
+    const { colors: Colors } = useTheme();
+    const themedStyles = styles(Colors);
     const [leadMinutes, setLeadMinutes] = useState(30);
     const [loading, setLoading] = useState(false);
     const { setAlarm, removeAlarm, isAlarmSet, alarms } = useAlarmStore();
@@ -73,59 +75,58 @@ export default function AlarmSheet({ visible, onClose, post }: AlarmSheetProps) 
             animationType="fade"
             onRequestClose={onClose}
         >
-            <View style={styles.overlay}>
-                <Pressable style={styles.backdrop} onPress={onClose} />
-                <View style={styles.sheet}>
-                    <View style={styles.handle} />
+            <View style={themedStyles.overlay}>
+                <Pressable style={themedStyles.backdrop} onPress={onClose} />
+                <View style={themedStyles.sheet}>
+                    <View style={themedStyles.handle} />
                     
-                    <View style={styles.header}>
-                        <Text style={styles.title}>Set lecture alarm</Text>
-                        <Text style={styles.subtitle}>Choose how early to be notified</Text>
+                    <View style={themedStyles.header}>
+                        <Text style={themedStyles.title}>Set lecture alarm</Text>
+                        <Text style={themedStyles.subtitle}>Choose how early to be notified</Text>
                     </View>
 
                     {isSet ? (
-                        <View style={styles.statusSection}>
-                             <View style={styles.infoRow}>
-                               <LucideIcons.CheckCircle2 size={24} color={Colors.accentBlue} />
-                               <View style={styles.infoText}>
-                                 <Text style={styles.statusTitle}>Alarm is active</Text>
-                                 <Text style={styles.statusSubtitle}>You'll be notified before class starts.</Text>
+                        <View style={themedStyles.statusSection}>
+                             <View style={themedStyles.infoRow}>
+                               <LucideIcons.CheckCircle2 size={24} color={Colors.primary} />
+                               <View style={themedStyles.infoText}>
+                                 <Text style={themedStyles.statusTitle}>Alarm is active</Text>
+                                 <Text style={themedStyles.statusSubtitle}>You'll be notified before class starts.</Text>
                                </View>
                              </View>
                              <Button 
-                               title="Remove Alarm"
+                               label="Remove Alarm"
                                variant="ghost"
                                onPress={handleRemoveAlarm}
                                loading={loading}
                                style={{ marginTop: 10 }}
-                               textStyle={{ color: Colors.error }}
                              />
                         </View>
                     ) : (
-                        <View style={styles.optionsList}>
+                        <View style={themedStyles.optionsList}>
                             {LEAD_TIME_OPTIONS.map((option) => {
                                 const isSelected = leadMinutes === option.value;
                                 return (
                                     <Pressable 
                                         key={option.value}
                                         onPress={() => setLeadMinutes(option.value)}
-                                        style={styles.optionRow}
+                                        style={themedStyles.optionRow}
                                     >
-                                        <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
+                                        <Text style={[themedStyles.optionLabel, isSelected && themedStyles.optionLabelSelected]}>
                                             {option.label}
                                         </Text>
                                         {isSelected && (
-                                            <LucideIcons.Check size={20} color={Colors.accentBlue} strokeWidth={3} />
+                                            <LucideIcons.Check size={20} color={Colors.primary} strokeWidth={3} />
                                         )}
                                     </Pressable>
                                 );
                             })}
                             
                             <Button 
-                                title="Set Alarm"
+                                label="Set Alarm"
                                 onPress={handleSetAlarm}
                                 loading={loading}
-                                style={styles.submitButton}
+                                style={themedStyles.submitButton}
                             />
                         </View>
                     )}
@@ -135,7 +136,7 @@ export default function AlarmSheet({ visible, onClose, post }: AlarmSheetProps) 
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     overlay: {
         flex: 1,
         justifyContent: 'flex-end',
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
     },
     sheet: {
-        backgroundColor: 'white',
+        backgroundColor: Colors.surface,
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
         paddingHorizontal: 24,
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
     handle: {
         width: 38,
         height: 5,
-        backgroundColor: '#E5E5EA',
+        backgroundColor: Colors.separator,
         borderRadius: 3,
         alignSelf: 'center',
         marginBottom: 24,
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 22,
         fontWeight: '800',
-        color: '#000',
+        color: Colors.textPrimary,
         letterSpacing: -0.5,
         fontFamily: Typography.family.extraBold,
     },
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        backgroundColor: 'rgba(0,122,255,0.05)',
+        backgroundColor: Colors.primary + '10',
         borderRadius: 16,
     },
     infoText: {
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
     statusTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#000',
+        color: Colors.textPrimary,
         fontFamily: Typography.family.bold,
     },
     statusSubtitle: {
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
         fontFamily: Typography.family.medium,
     },
     optionLabelSelected: {
-        color: '#000',
+        color: Colors.textPrimary,
         fontWeight: '700',
     },
     submitButton: {

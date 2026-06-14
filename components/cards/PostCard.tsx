@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, ViewStyle, Animated } from 'react-native';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { Tag, TagType } from '../ui/Tag';
 import { Post } from '../../types';
 import { formatRelativeTime } from '../../utils/formatDate';
@@ -27,6 +27,8 @@ export default React.memo(function PostCard({
   onPress,
   style,
 }: PostCardProps) {
+  const { colors: Colors } = useTheme();
+  const themedStyles = styles(Colors);
   const [alarmSheetVisible, setAlarmSheetVisible] = useState(false);
   const { isAlarmSet } = useAlarmStore();
   
@@ -76,36 +78,36 @@ export default React.memo(function PostCard({
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           style={[
-            styles.container,
-            isCarryover && styles.carryoverContainer
+            themedStyles.container,
+            isCarryover && themedStyles.carryoverContainer
           ]}
         >
           {post.isPinned && (
-            <View style={styles.pinnedBadge}>
+            <View style={themedStyles.pinnedBadge}>
               <LucideIcons.Pin size={12} color={Colors.primary} />
-              <Text style={styles.badgeText}>Pinned</Text>
+              <Text style={themedStyles.badgeText}>Pinned</Text>
             </View>
           )}
 
           {post.isImportant && (
-            <View style={styles.importantBadge}>
+            <View style={themedStyles.importantBadge}>
               <LucideIcons.Info size={12} color={Colors.error} />
-              <Text style={[styles.badgeText, { color: Colors.error }]}>Important</Text>
+              <Text style={[themedStyles.badgeText, { color: Colors.error }]}>Important</Text>
             </View>
           )}
 
-          <View style={styles.topRow}>
+          <View style={themedStyles.topRow}>
             <Tag label={post.type} type={post.type as TagType} />
             {isCarryover && (
               <Tag label="Carryover" type="carryover" style={{ marginLeft: 6 }} />
             )}
             <View style={{ flex: 1 }} />
-            <Text style={styles.timeText}>{formatRelativeTime(post.createdAt)}</Text>
+            <Text style={themedStyles.timeText}>{formatRelativeTime(post.createdAt)}</Text>
           </View>
 
           <Text
             style={[
-              styles.title,
+              themedStyles.title,
               isCancelled && { textDecorationLine: 'line-through', opacity: 0.5 }
             ]}
             numberOfLines={1}
@@ -114,27 +116,27 @@ export default React.memo(function PostCard({
           </Text>
 
           {post.description && (
-            <Text style={styles.description} numberOfLines={2}>
+            <Text style={themedStyles.description} numberOfLines={2}>
               {post.description}
             </Text>
           )}
 
-          <View style={styles.footer}>
-            <View style={styles.authorSection}>
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>{post.authorName.charAt(0)}</Text>
+          <View style={themedStyles.footer}>
+            <View style={themedStyles.authorSection}>
+              <View style={themedStyles.avatarPlaceholder}>
+                <Text style={themedStyles.avatarText}>{post.authorName.charAt(0)}</Text>
               </View>
               <View>
-                <Text style={styles.authorName} numberOfLines={1}>{post.authorName}</Text>
+                <Text style={themedStyles.authorName} numberOfLines={1}>{post.authorName}</Text>
                 {post.authorRole && post.authorRole !== 'student' && (
-                  <Text style={[styles.roleText, { color: Colors.primary }]}>
+                  <Text style={[themedStyles.roleText, { color: Colors.primary }]}>
                     {post.authorRole.replace('_', ' ').toUpperCase()}
                   </Text>
                 )}
               </View>
             </View>
 
-            <View style={styles.actionSection}>
+            <View style={themedStyles.actionSection}>
               {isLecture && !isCancelled && (
                 <Pressable
                   onPress={(e) => {
@@ -142,8 +144,8 @@ export default React.memo(function PostCard({
                     setAlarmSheetVisible(true);
                   }}
                   style={[
-                    styles.alarmButton,
-                    hasAlarm ? { backgroundColor: Colors.primary } : { backgroundColor: Colors.surfaceElevation3 }
+                    themedStyles.alarmButton,
+                    hasAlarm ? { backgroundColor: Colors.primary } : { backgroundColor: Colors.surfaceVariant }
                   ]}
                 >
                   <LucideIcons.Bell
@@ -151,15 +153,15 @@ export default React.memo(function PostCard({
                     color={hasAlarm ? Colors.onPrimary : Colors.onSurfaceVariant}
                     fill={hasAlarm ? Colors.onPrimary : 'transparent'}
                   />
-                  <Text style={[styles.alarmText, { color: hasAlarm ? Colors.onPrimary : Colors.onSurfaceVariant }]}>
+                  <Text style={[themedStyles.alarmText, { color: hasAlarm ? Colors.onPrimary : Colors.onSurfaceVariant }]}>
                     {hasAlarm ? 'Alarm' : 'Notify'}
                   </Text>
                 </Pressable>
               )}
 
               {isTask && dueStatus && (
-                <View style={[styles.duePill, { backgroundColor: dueStatus.container }]}>
-                  <Text style={[styles.duePillText, { color: dueStatus.text }]}>
+                <View style={[themedStyles.duePill, { backgroundColor: dueStatus.container }]}>
+                  <Text style={[themedStyles.duePillText, { color: dueStatus.text }]}>
                     {dueStatus.label}
                   </Text>
                 </View>
@@ -180,12 +182,14 @@ export default React.memo(function PostCard({
   );
 });
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
   container: {
-    backgroundColor: Colors.surfaceElevation1,
+    backgroundColor: Colors.surface,
     borderRadius: 24, // M3 Large Corner
     padding: 16,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.separator,
   },
   carryoverContainer: {
     backgroundColor: Colors.tertiaryContainer,
@@ -225,7 +229,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   description: {
-    ...Typography.m3.bodySmall,
+    ...Typography.m3.labelSmall, // Changed from bodySmall
     color: Colors.onSurfaceVariant,
     lineHeight: 18,
     marginBottom: 12,
@@ -234,7 +238,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
+    borderTopColor: Colors.separator,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

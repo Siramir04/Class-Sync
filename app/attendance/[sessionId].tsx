@@ -13,12 +13,11 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LucideIcons from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import * as attendanceService from '../../services/attendanceService';
 import { proximityService } from '../../services/proximityService';
 import { AttendanceSession, AttendanceRecord } from '../../types';
-import Button from '../../components/ui/Button';
+import { Button } from '../../components/ui/Button';
 import { Avatar } from '../../components/ui/Avatar';
 import { formatRelativeTime } from '../../utils/formatDate';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -34,6 +33,7 @@ export default function LiveAttendanceScreen() {
     }>();
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { colors: Colors, typography: Typography, isDark } = useTheme();
 
     const [session, setSession] = useState<AttendanceSession | null>(null);
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -42,6 +42,8 @@ export default function LiveAttendanceScreen() {
     const [closing, setClosing] = useState(false);
     const [isBroadcasting, setIsBroadcasting] = useState(false);
     const [btError, setBtError] = useState<string | null>(null);
+
+    const themedStyles = styles(Colors, Typography, isDark);
 
     useEffect(() => {
         if (!sessionId || !spaceId || !courseId) return;
@@ -171,28 +173,28 @@ export default function LiveAttendanceScreen() {
 
     const isExpired = timeLeft === '00:00';
     const timeColor = parseInt(timeLeft.split(':')[0]) < 1 ? Colors.error : 
-                      parseInt(timeLeft.split(':')[0]) < 3 ? Colors.warning : Colors.success;
+                      parseInt(timeLeft.split(':')[0]) < 3 ? Colors.warning : Colors.primary;
 
     const bleCount = records.filter(r => r.verificationMethod === 'ble').length;
     const wifiCount = records.filter(r => r.verificationMethod === 'wifi').length;
     const codeCount = records.filter(r => r.verificationMethod === 'code').length;
 
     return (
-      <View style={styles.container}>
-        <StatusBar barStyle="dark-content" />
+      <View style={themedStyles.container}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
         
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-           <Pressable onPress={() => router.back()} style={styles.headerButton}>
-             <LucideIcons.X size={24} color="#000" />
+        <View style={[themedStyles.header, { paddingTop: insets.top + 10 }]}>
+           <Pressable onPress={() => router.back()} style={themedStyles.headerButton}>
+             <LucideIcons.X size={24} color={Colors.onSurface} />
            </Pressable>
-           <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>{session?.courseCode}</Text>
-              <Text style={styles.headerSubtitle}>{session?.lectureName}</Text>
+           <View style={themedStyles.headerTitleContainer}>
+              <Text style={themedStyles.headerTitle}>{session?.courseCode}</Text>
+              <Text style={themedStyles.headerSubtitle}>{session?.lectureName}</Text>
            </View>
-           <View style={styles.broadcastBox}>
-              <View style={[styles.pulseDot, { backgroundColor: isBroadcasting ? Colors.success : Colors.warning }]} />
-              <Text style={[styles.broadcastText, { color: isBroadcasting ? Colors.success : Colors.warning }]}>
+           <View style={themedStyles.broadcastBox}>
+              <View style={[themedStyles.pulseDot, { backgroundColor: isBroadcasting ? Colors.primary : Colors.warning }]} />
+              <Text style={[themedStyles.broadcastText, { color: isBroadcasting ? Colors.primary : Colors.warning }]}>
                 {isBroadcasting ? 'Live' : 'Code'}
               </Text>
            </View>
@@ -203,15 +205,15 @@ export default function LiveAttendanceScreen() {
           contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         >
           {/* Main Code View */}
-          <View style={styles.hero}>
-             <View style={styles.codeCard}>
-                <Text style={styles.cardLabel}>SESSION CODE</Text>
-                <Text style={[styles.codeValue, isExpired && styles.codeExpired]}>
+          <View style={themedStyles.hero}>
+             <View style={themedStyles.codeCard}>
+                <Text style={themedStyles.cardLabel}>SESSION CODE</Text>
+                <Text style={[themedStyles.codeValue, isExpired && themedStyles.codeExpired]}>
                   {session?.code.split('').join(' ')}
                 </Text>
-                <View style={[styles.timerPill, { backgroundColor: timeColor + '10' }]}>
+                <View style={[themedStyles.timerPill, { backgroundColor: timeColor + '15' }]}>
                    <LucideIcons.Clock size={14} color={timeColor} />
-                   <Text style={[styles.timerValue, { color: timeColor }]}>
+                   <Text style={[themedStyles.timerValue, { color: timeColor }]}>
                      {isExpired ? 'EXPIRED' : `${timeLeft} remaining`}
                    </Text>
                 </View>
@@ -219,91 +221,90 @@ export default function LiveAttendanceScreen() {
           </View>
 
           {/* Stats Bar */}
-          <View style={styles.statsStrip}>
-             <View style={styles.statBox}>
-               <Text style={styles.statNumber}>{records.length}</Text>
-               <Text style={styles.statLabel}>Present</Text>
+          <View style={themedStyles.statsStrip}>
+             <View style={themedStyles.statBox}>
+                <Text style={themedStyles.statNumber}>{records.length}</Text>
+                <Text style={themedStyles.statLabel}>Present</Text>
              </View>
-             <View style={styles.statDivider} />
-             <View style={styles.statBox}>
-               <Text style={styles.statNumber}>{(session?.totalMembers || 0) - records.length}</Text>
-               <Text style={styles.statLabel}>Pending</Text>
+             <View style={themedStyles.statDivider} />
+             <View style={themedStyles.statBox}>
+                <Text style={themedStyles.statNumber}>{(session?.totalMembers || 0) - records.length}</Text>
+                <Text style={themedStyles.statLabel}>Pending</Text>
              </View>
-             <View style={styles.statDivider} />
-             <View style={styles.statBox}>
-               <Text style={styles.statNumber}>{Math.round((records.length / (session?.totalMembers || 1)) * 100)}%</Text>
-               <Text style={styles.statLabel}>Attendance</Text>
+             <View style={themedStyles.statDivider} />
+             <View style={themedStyles.statBox}>
+                <Text style={themedStyles.statNumber}>{Math.round((records.length / (session?.totalMembers || 1)) * 100)}%</Text>
+                <Text style={themedStyles.statLabel}>Attendance</Text>
              </View>
           </View>
 
           {/* Verification Methods */}
-          <View style={styles.methodStrip}>
-             <View style={styles.methodItem}>
-                <LucideIcons.Bluetooth size={12} color={Colors.success} />
-                <Text style={styles.methodText}>{bleCount} BLE</Text>
+          <View style={themedStyles.methodStrip}>
+             <View style={themedStyles.methodItem}>
+                <LucideIcons.Bluetooth size={12} color={Colors.primary} />
+                <Text style={themedStyles.methodText}>{bleCount} BLE</Text>
              </View>
-             <View style={styles.methodItem}>
+             <View style={themedStyles.methodItem}>
                 <LucideIcons.Wifi size={12} color="#EAB308" />
-                <Text style={styles.methodText}>{wifiCount} WiFi</Text>
+                <Text style={themedStyles.methodText}>{wifiCount} WiFi</Text>
              </View>
-             <View style={styles.methodItem}>
+             <View style={themedStyles.methodItem}>
                 <LucideIcons.Type size={12} color={Colors.warning} />
-                <Text style={styles.methodText}>{codeCount} Code</Text>
+                <Text style={themedStyles.methodText}>{codeCount} Code</Text>
              </View>
           </View>
 
           {/* Records List */}
-          <View style={styles.listSection}>
-             <Text style={styles.sectionTitle}>Recent activity</Text>
+          <View style={themedStyles.listSection}>
+             <Text style={themedStyles.sectionTitle}>Recent activity</Text>
              {records.length === 0 ? (
-                <View style={styles.emptyView}>
-                  <LucideIcons.Users size={40} color={Colors.separatorOpaque} />
-                  <Text style={styles.emptyText}>Waiting for students...</Text>
+                <View style={themedStyles.emptyView}>
+                   <LucideIcons.Users size={40} color={Colors.outlineVariant} />
+                   <Text style={themedStyles.emptyText}>Waiting for students...</Text>
                 </View>
              ) : (
-                <View style={styles.recordsGroup}>
-                  {records.map((record, index) => {
-                    const isLast = index === records.length - 1;
+                <View style={themedStyles.recordsGroup}>
+                   {records.map((record, index) => {
                     return (
                       <Pressable 
                         key={record.uid} 
                         style={({ pressed }) => [
-                           styles.recordRow,
+                           themedStyles.recordRow,
                            pressed && record.isFlagged && { opacity: 0.7 },
-                           record.isFlagged && styles.recordRowFlagged
+                           record.isFlagged && themedStyles.recordRowFlagged
                         ]}
                         onPress={() => record.isFlagged && handleManualVerify(record.uid, record.fullName)}
                       >
                          <Avatar firstName={record.fullName.split(' ')[0]} lastName={record.fullName.split(' ')[1] || ''} size="md" />
-                         <View style={styles.recordContent}>
-                            <View style={styles.nameRow}>
-                               <Text style={styles.recordName}>{record.fullName}</Text>
+                         <View style={themedStyles.recordContent}>
+                            <View style={themedStyles.nameRow}>
+                               <Text style={themedStyles.recordName}>{record.fullName}</Text>
                                {record.isCarryover && (
-                                 <View style={styles.coBadge}><Text style={styles.coText}>CO</Text></View>
+                                 <View style={themedStyles.coBadge}><Text style={themedStyles.coText}>CO</Text></View>
                                )}
                             </View>
-                            <Text style={styles.recordTime}>
+                            <Text style={themedStyles.recordTime}>
                                {formatRelativeTime(record.markedAt instanceof Date ? record.markedAt : (record.markedAt as any).toDate())}
                                {record.isFlagged && ' · Flagged for review'}
                             </Text>
                          </View>
-                         <View style={styles.recordTrailing}>
-                            {record.verificationMethod === 'ble' && <LucideIcons.Bluetooth size={16} color={Colors.success} />}
+                         <View style={themedStyles.recordTrailing}>
+                            {record.verificationMethod === 'ble' && <LucideIcons.Bluetooth size={16} color={Colors.primary} />}
                             {record.verificationMethod === 'wifi' && <LucideIcons.Wifi size={16} color="#EAB308" />}
                             {record.verificationMethod === 'code' && <LucideIcons.AlertTriangle size={16} color={Colors.warning} />}
-                            {record.verificationMethod === 'manual' && <LucideIcons.CheckCircle2 size={16} color={Colors.success} />}
+                            {record.verificationMethod === 'manual' && <LucideIcons.CheckCircle2 size={16} color={Colors.primary} />}
                          </View>
                       </Pressable>
                     );
-                  })}
+                   })}
                 </View>
              )}
           </View>
         </ScrollView>
 
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <View style={[themedStyles.footer, { paddingBottom: insets.bottom + 16 }]}>
            <Button 
-             title="End Attendance Session" 
+             label="End Attendance Session" 
              variant="danger" 
              onPress={handleCloseSession}
              loading={closing}
@@ -314,10 +315,10 @@ export default function LiveAttendanceScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any, Typography: any, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -326,11 +327,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     borderBottomWidth: 0.5,
-    borderBottomColor: Colors.separator,
-  },
-  headerBox: {
-    flex: 1,
-    alignItems: 'center',
+    borderBottomColor: Colors.outlineVariant,
   },
   headerButton: {
     width: 32,
@@ -345,18 +342,18 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#000',
+    color: Colors.onSurface,
     fontFamily: Typography.family.extraBold,
   },
   headerSubtitle: {
     fontSize: 11,
-    color: Colors.textTertiary,
+    color: Colors.onSurfaceVariant,
     fontFamily: Typography.family.regular,
   },
   broadcastBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
+    backgroundColor: Colors.surfaceVariant,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 100,
@@ -376,7 +373,7 @@ const styles = StyleSheet.create({
     padding: 22,
   },
   codeCard: {
-    backgroundColor: '#000',
+    backgroundColor: isDark ? Colors.surfaceVariant : '#000',
     borderRadius: 28,
     paddingVertical: 40,
     alignItems: 'center',
@@ -395,7 +392,7 @@ const styles = StyleSheet.create({
   cardLabel: {
     fontSize: 10,
     fontWeight: '800',
-    color: 'rgba(255,255,255,0.4)',
+    color: isDark ? Colors.onSurfaceVariant : 'rgba(255,255,255,0.4)',
     letterSpacing: 2,
     marginBottom: 16,
     fontFamily: Typography.family.extraBold,
@@ -403,13 +400,13 @@ const styles = StyleSheet.create({
   codeValue: {
     fontSize: 56,
     fontWeight: '900',
-    color: 'white',
+    color: isDark ? Colors.onSurface : 'white',
     letterSpacing: 8,
     fontFamily: Typography.family.extraBold,
     marginBottom: 24,
   },
   codeExpired: {
-    color: 'rgba(255,255,255,0.2)',
+    color: isDark ? Colors.onSurfaceVariant : 'rgba(255,255,255,0.2)',
     textDecorationLine: 'line-through',
   },
   timerPill: {
@@ -438,19 +435,19 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#000',
+    color: Colors.onSurface,
     fontFamily: Typography.family.extraBold,
   },
   statLabel: {
     fontSize: 12,
-    color: Colors.textTertiary,
+    color: Colors.onSurfaceVariant,
     marginTop: 2,
     fontFamily: Typography.family.regular,
   },
   statDivider: {
     width: 1,
     height: '60%',
-    backgroundColor: Colors.separator,
+    backgroundColor: Colors.outlineVariant,
     alignSelf: 'center',
   },
   methodStrip: {
@@ -462,7 +459,7 @@ const styles = StyleSheet.create({
   methodItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9F9FB',
+    backgroundColor: Colors.surfaceVariant,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
@@ -471,7 +468,7 @@ const styles = StyleSheet.create({
   methodText: {
     fontSize: 11,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: Colors.onSurfaceVariant,
     fontFamily: Typography.family.semiBold,
   },
   listSection: {
@@ -480,12 +477,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#000',
+    color: Colors.onSurface,
     marginBottom: 16,
     fontFamily: Typography.family.bold,
   },
   recordsGroup: {
-    backgroundColor: '#F9F9FB',
+    backgroundColor: Colors.surfaceVariant,
     borderRadius: 24,
     overflow: 'hidden',
   },
@@ -494,7 +491,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 0.5,
-    borderBottomColor: Colors.separator,
+    borderBottomColor: Colors.outlineVariant,
   },
   recordRowFlagged: {
     backgroundColor: 'rgba(255,149,0,0.05)',
@@ -511,11 +508,11 @@ const styles = StyleSheet.create({
   recordName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#000',
+    color: Colors.onSurface,
     fontFamily: Typography.family.semiBold,
   },
   coBadge: {
-    backgroundColor: Colors.carryoverSoft,
+    backgroundColor: Colors.tertiaryContainer,
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 4,
@@ -523,11 +520,11 @@ const styles = StyleSheet.create({
   coText: {
     fontSize: 9,
     fontWeight: '800',
-    color: Colors.carryover,
+    color: Colors.onTertiaryContainer,
   },
   recordTime: {
     fontSize: 12,
-    color: Colors.textTertiary,
+    color: Colors.onSurfaceVariant,
     marginTop: 1,
     fontFamily: Typography.family.regular,
   },
@@ -542,17 +539,17 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: Colors.textTertiary,
+    color: Colors.onSurfaceVariant,
     fontFamily: Typography.family.regular,
   },
   footer: {
     position: 'absolute',
     bottom: 0,
     width: '100%',
-    backgroundColor: 'white',
+    backgroundColor: Colors.surface,
     paddingHorizontal: 22,
     paddingTop: 16,
     borderTopWidth: 0.5,
-    borderTopColor: Colors.separator,
+    borderTopColor: Colors.outlineVariant,
   }
 });

@@ -10,6 +10,15 @@ export interface User {
     createdAt: Date;
     fcmToken?: string;
     deviceId?: string; // Phase 1: Anti-fraud device binding
+    notificationPrefs?: {
+        global: {
+            lecture: boolean;
+            assignment: boolean;
+            test: boolean;
+            announcement: boolean;
+        };
+        spaces: Record<string, boolean>;
+    };
 
     // Denormalized enrollment for Spark-optimized feed queries
     primarySpaceId?: string;
@@ -230,4 +239,78 @@ export interface FeedPost extends Post {
     isCarryover: boolean;
     spaceName: string;
     courseCode: string;
+}
+
+export interface AttendanceDateEntry {
+    date: string;
+    isPresent: boolean;
+}
+
+export interface StudentAttendanceSummary {
+    courseId: string;
+    courseName: string;
+    courseCode: string;
+    totalSessions: number;
+    attendedSessions: number;
+    attendanceRate: number;
+    sessionDates: AttendanceDateEntry[];
+}
+
+// ─────────────────────────────────────────────────────────────
+// PERSONAL COURSE TYPES
+// ─────────────────────────────────────────────────────────────
+
+export interface PersonalCourse {
+  id: string;
+  ownerId: string;
+  name: string;
+  description?: string;
+  color: string;                    // Hex color for UI theming
+  icon?: string;                    // Lucide icon name
+  schedule: PersonalScheduleItem[];
+  assignments: PersonalAssignment[];
+  materials: PersonalMaterial[];
+  attendance: PersonalAttendanceRecord[];
+  createdAt: Date;
+  updatedAt: Date;
+  isArchived: boolean;
+}
+
+export interface PersonalScheduleItem {
+  id: string;
+  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6;  // 0 = Sunday
+  startTime: string;                // "HH:MM" 24h
+  endTime: string;
+  location?: string;
+  reminderMinutes: number;           // 0, 15, 30, 60
+}
+
+export interface PersonalAssignment {
+  id: string;
+  title: string;
+  description?: string;
+  dueDate: Date;
+  priority: 'low' | 'medium' | 'high';
+  isCompleted: boolean;
+  createdAt: Date;
+}
+
+export interface PersonalMaterial {
+  id: string;
+  title: string;
+  type: 'link' | 'file' | 'note';
+  url?: string;
+  content?: string;                 // For notes
+  fileName?: string;
+  storagePath?: string;
+  createdAt: Date;
+}
+
+export interface PersonalAttendanceRecord {
+  id: string;
+  date: Date;
+  status: 'present' | 'absent' | 'excused';
+  durationMinutes?: number;         // How long they studied
+  notes?: string;
+  selfMarked: boolean;              // Always true for personal courses
 }

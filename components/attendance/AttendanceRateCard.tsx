@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 
 interface AttendanceRateCardProps {
     rate: number;
@@ -10,6 +10,8 @@ interface AttendanceRateCardProps {
 }
 
 export default function AttendanceRateCard({ rate, attended, total }: AttendanceRateCardProps) {
+    const { colors: Colors } = useTheme();
+    const themedStyles = styles(Colors);
     const getStatusColor = () => {
         if (rate >= 75) return Colors.success;
         if (rate >= 50) return Colors.warning;
@@ -19,20 +21,20 @@ export default function AttendanceRateCard({ rate, attended, total }: Attendance
     const statusColor = getStatusColor();
 
     return (
-        <View style={[styles.container, { borderLeftColor: statusColor }]}>
-            <View style={styles.content}>
+        <View style={[themedStyles.container, { borderLeftColor: statusColor }]}>
+            <View style={themedStyles.content}>
                 <View>
-                    <Text style={styles.label}>Attendance Rate</Text>
-                    <Text style={styles.stats}>{attended} of {total} classes</Text>
+                    <Text style={themedStyles.label}>Attendance Rate</Text>
+                    <Text style={themedStyles.stats}>{attended} of {total} classes</Text>
                 </View>
-                <Text style={[styles.percentage, { color: statusColor }]}>
+                <Text style={[themedStyles.percentage, { color: statusColor }]}>
                     {Math.round(rate)}%
                 </Text>
             </View>
-            <View style={styles.progressBarBg}>
+            <View style={themedStyles.progressBarBg}>
                 <View
                     style={[
-                        styles.progressBarFill,
+                        themedStyles.progressBarFill,
                         { width: `${Math.min(rate, 100)}%`, backgroundColor: statusColor }
                     ]}
                 />
@@ -41,9 +43,9 @@ export default function AttendanceRateCard({ rate, attended, total }: Attendance
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     container: {
-        backgroundColor: 'white',
+        backgroundColor: Colors.background,
         borderRadius: 12,
         padding: 16,
         marginVertical: 8,
@@ -62,21 +64,21 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     label: {
-        ...Typography.label,
-        color: '#666',
+        ...Typography.footnote,
+        color: Colors.textSecondary,
         marginBottom: 4,
     },
     stats: {
-        ...Typography.sectionHeader,
-        color: '#333',
+        ...Typography.title3,
+        color: Colors.textPrimary,
     },
     percentage: {
-        ...Typography.display,
+        ...Typography.largeTitle,
         fontSize: 32,
     },
     progressBarBg: {
         height: 6,
-        backgroundColor: '#F0F0F0',
+        backgroundColor: Colors.separator,
         borderRadius: 3,
         overflow: 'hidden',
     },

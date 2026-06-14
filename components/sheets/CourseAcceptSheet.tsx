@@ -8,10 +8,10 @@ import {
     Platform,
     TouchableOpacity,
 } from 'react-native';
-import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
+import { useTheme } from '../../hooks/useTheme';
 import { Spacing } from '../../constants/spacing';
-import Button from '../ui/Button';
+import { Button } from '../ui/Button';
 import { Ionicons } from '@expo/vector-icons';
 
 interface CourseAcceptSheetProps {
@@ -31,6 +31,8 @@ export default function CourseAcceptSheet({
     onAccept,
     onDismiss,
 }: CourseAcceptSheetProps) {
+    const { colors: Colors } = useTheme();
+    const themedStyles = styles(Colors);
     return (
         <Modal
             visible={visible}
@@ -38,42 +40,42 @@ export default function CourseAcceptSheet({
             animationType="fade"
             onRequestClose={onDismiss}
         >
-            <Pressable style={styles.overlay} onPress={onDismiss}>
-                <View style={styles.keyboardSpacer}>
-                    <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-                        <View style={styles.handle} />
+            <Pressable style={themedStyles.overlay} onPress={onDismiss}>
+                <View style={themedStyles.keyboardSpacer}>
+                    <Pressable style={themedStyles.sheet} onPress={(e) => e.stopPropagation()}>
+                        <View style={themedStyles.handle} />
                         
-                        <View style={styles.iconCircle}>
-                            <Ionicons name="notifications" size={32} color={Colors.primaryBlue} />
+                        <View style={themedStyles.iconCircle}>
+                            <Ionicons name="notifications" size={32} color={Colors.primary} />
                         </View>
                         
-                        <View style={styles.header}>
-                            <Text style={styles.title}>New Course Added</Text>
-                            <Text style={styles.subtitle}>{courseName}</Text>
+                        <View style={themedStyles.header}>
+                            <Text style={themedStyles.title}>New Course Added</Text>
+                            <Text style={themedStyles.subtitle}>{courseName}</Text>
                         </View>
 
-                        <View style={styles.infoRow}>
-                            <View style={styles.badge}>
-                                <Text style={styles.badgeText}>{courseCode}</Text>
+                        <View style={themedStyles.infoRow}>
+                            <View style={themedStyles.badge}>
+                                <Text style={themedStyles.badgeText}>{courseCode}</Text>
                             </View>
-                            <View style={styles.dot} />
-                            <Text style={styles.daysText}>
+                            <View style={themedStyles.dot} />
+                            <Text style={themedStyles.daysText}>
                                 Auto-adds in {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}
                             </Text>
                         </View>
 
-                        <Text style={styles.description}>
+                        <Text style={themedStyles.description}>
                             This course was recently created for your department. You can accept it now to start tracking attendance and receiving notifications immediately.
                         </Text>
 
-                        <View style={styles.footer}>
+                        <View style={themedStyles.footer}>
                             <Button 
-                                title="Accept Now" 
+                                label="Accept Now" 
                                 onPress={onAccept} 
-                                style={styles.acceptBtn} 
+                                style={themedStyles.acceptBtn} 
                             />
-                            <TouchableOpacity style={styles.dismissBtn} onPress={onDismiss}>
-                                <Text style={styles.dismissBtnText}>Let it auto-add later</Text>
+                            <TouchableOpacity style={themedStyles.dismissBtn} onPress={onDismiss}>
+                                <Text style={themedStyles.dismissBtnText}>Let it auto-add later</Text>
                             </TouchableOpacity>
                         </View>
                     </Pressable>
@@ -83,7 +85,7 @@ export default function CourseAcceptSheet({
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -96,7 +98,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.screenPadding,
     },
     sheet: {
-        backgroundColor: Colors.background,
+        backgroundColor: Colors.surface,
         borderRadius: 28,
         padding: 24,
         width: '100%',
@@ -116,7 +118,7 @@ const styles = StyleSheet.create({
     handle: {
         width: 36,
         height: 5,
-        backgroundColor: Colors.border + '60',
+        backgroundColor: Colors.separator,
         borderRadius: 3,
         marginBottom: 20,
     },
@@ -124,7 +126,7 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: Colors.primaryBlue + '10',
+        backgroundColor: Colors.primary + '10',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
@@ -135,13 +137,13 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 22,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.textPrimary,
         marginBottom: 4,
     },
     subtitle: {
         fontSize: 15,
-        fontFamily: 'DMSans_500Medium',
+        fontFamily: Typography.family.medium,
         color: Colors.textSecondary,
         textAlign: 'center',
     },
@@ -151,15 +153,15 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     badge: {
-        backgroundColor: Colors.primaryBlue + '12',
+        backgroundColor: Colors.primary + '12',
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 6,
     },
     badgeText: {
         fontSize: 12,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.primaryBlue,
+        fontFamily: Typography.family.bold,
+        color: Colors.primary,
     },
     dot: {
         width: 4,
@@ -170,12 +172,12 @@ const styles = StyleSheet.create({
     },
     daysText: {
         fontSize: 12,
-        fontFamily: 'DMSans_700Bold',
+        fontFamily: Typography.family.bold,
         color: Colors.warning,
     },
     description: {
         fontSize: 14,
-        fontFamily: 'DMSans_400Regular',
+        fontFamily: Typography.family.regular,
         color: Colors.textSecondary,
         textAlign: 'center',
         lineHeight: 22,
@@ -196,7 +198,7 @@ const styles = StyleSheet.create({
     },
     dismissBtnText: {
         fontSize: 15,
-        fontFamily: 'DMSans_600SemiBold',
+        fontFamily: Typography.family.semiBold,
         color: Colors.textTertiary,
     },
 });

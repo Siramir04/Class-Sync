@@ -40,7 +40,7 @@ export default function SpaceFeedScreen() {
     const { spaceId } = useLocalSearchParams<{ spaceId: string }>();
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { colors: Colors, typography: Typography } = useTheme();
+    const { colors: Colors, typography: Typography, isDark } = useTheme();
     const { user } = useAuthStore();
     const { courses } = useCourses(spaceId || null);
 
@@ -146,7 +146,7 @@ export default function SpaceFeedScreen() {
 
     return (
       <View style={[styles.container, { backgroundColor: Colors.background }]}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
         
         {/* Header Section */}
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
@@ -179,17 +179,17 @@ export default function SpaceFeedScreen() {
            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
               <Pressable 
                 onPress={() => setActiveCourseId('All')}
-                style={[styles.coursePill, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }, activeCourseId === 'All' && [styles.coursePillActive, { backgroundColor: Colors.accentBlue, borderColor: Colors.accentBlue }]]}
+                style={[styles.coursePill, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }, activeCourseId === 'All' && [styles.coursePillActive, { backgroundColor: Colors.primary, borderColor: Colors.primary }]]}
               >
-                <Text style={[styles.coursePillText, { color: Colors.textSecondary, fontFamily: Typography.family.bold }, activeCourseId === 'All' && { color: Colors.white }]}>General</Text>
+                <Text style={[styles.coursePillText, { color: Colors.textSecondary, fontFamily: Typography.family.bold }, activeCourseId === 'All' && { color: '#FFFFFF' }]}>General</Text>
               </Pressable>
               {courses.map(course => (
                  <Pressable 
                    key={course.id}
                    onPress={() => setActiveCourseId(course.id)}
-                   style={[styles.coursePill, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }, activeCourseId === course.id && [styles.coursePillActive, { backgroundColor: Colors.accentBlue, borderColor: Colors.accentBlue }]]}
+                   style={[styles.coursePill, { backgroundColor: Colors.surface, borderColor: Colors.separatorOpaque }, activeCourseId === course.id && [styles.coursePillActive, { backgroundColor: Colors.primary, borderColor: Colors.primary }]]}
                  >
-                   <Text style={[styles.coursePillText, { color: Colors.textSecondary, fontFamily: Typography.family.bold }, activeCourseId === course.id && { color: Colors.white }]}>{course.courseCode}</Text>
+                   <Text style={[styles.coursePillText, { color: Colors.textSecondary, fontFamily: Typography.family.bold }, activeCourseId === course.id && { color: '#FFFFFF' }]}>{course.courseCode}</Text>
                  </Pressable>
               ))}
            </ScrollView>
@@ -220,9 +220,9 @@ export default function SpaceFeedScreen() {
                <Pressable 
                  key={filter} 
                  onPress={() => setActiveTypeFilter(filter)}
-                 style={[styles.typePill, activeTypeFilter === filter && [styles.typePillActive, { backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : '#EFF6FF' }]]}
+                 style={[styles.typePill, activeTypeFilter === filter && [styles.typePillActive, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#EFF6FF' }]]}
                >
-                 <Text style={[styles.typePillText, { color: Colors.textTertiary, fontFamily: Typography.family.medium }, activeTypeFilter === filter && { color: Colors.accentBlue, fontWeight: '700' }]}>{filter}</Text>
+                 <Text style={[styles.typePillText, { color: Colors.textTertiary, fontFamily: Typography.family.medium }, activeTypeFilter === filter && { color: Colors.primary, fontWeight: '700' }]}>{filter}</Text>
                </Pressable>
              ))}
            </ScrollView>
@@ -252,11 +252,11 @@ export default function SpaceFeedScreen() {
             onPress={() => setShowPostTypeSheet(true)}
             style={({ pressed }) => [
               styles.fab,
-              { backgroundColor: Colors.accentBlue },
+              { backgroundColor: Colors.primary },
               pressed && { transform: [{ scale: 0.92 }], opacity: 0.9 },
               Platform.select({
                 ios: {
-                  shadowColor: Colors.accentBlue,
+                  shadowColor: Colors.primary,
                 }
               })
             ]}

@@ -9,9 +9,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
-import { Typography } from '../../constants/typography';
-import { Spacing } from '../../constants/spacing';
+import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import { usePosts } from '../../hooks/usePosts';
 import { getCourseById } from '../../services/courseService';
@@ -26,6 +24,7 @@ import { useSpaceRole } from '../../hooks/useSpaceRole';
 import MemberPickerSheet from '../../components/sheets/MemberPickerSheet';
 import { assignLecturer as assignLecturerService } from '../../services/courseService';
 import * as LucideIcons from 'lucide-react-native';
+import { Spacing } from '../../constants/spacing';
 
 export default function CourseFeedScreen() {
     const { spaceId, courseId } = useLocalSearchParams<{
@@ -33,6 +32,7 @@ export default function CourseFeedScreen() {
         courseId: string;
     }>();
     const router = useRouter();
+    const { colors: Colors, typography: Typography } = useTheme();
     const { user } = useAuthStore();
 
     const [course, setCourse] = useState<Course | null>(null);
@@ -43,6 +43,8 @@ export default function CourseFeedScreen() {
     const [showCreateSheet, setShowCreateSheet] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
     const [selectedPostType, setSelectedPostType] = useState<PostType>('lecture');
+
+    const themedStyles = styles(Colors, Typography);
 
     const { role, isMonitor, isAssistant, isLecturer } = useSpaceRole(spaceId || '');
     
@@ -97,36 +99,36 @@ export default function CourseFeedScreen() {
     if (courseLoading) return <LoadingSpinner fullScreen />;
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={themedStyles.container}>
             {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+            <View style={themedStyles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={themedStyles.backBtn} activeOpacity={0.7}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.onSurface} />
                 </TouchableOpacity>
-                <View style={styles.headerContent}>
-                    <Text style={styles.courseCode}>{course?.courseCode}</Text>
-                    <Text style={styles.courseName} numberOfLines={1}>{course?.courseName}</Text>
+                <View style={themedStyles.headerContent}>
+                    <Text style={themedStyles.courseCode}>{course?.courseCode}</Text>
+                    <Text style={themedStyles.courseName} numberOfLines={1}>{course?.courseName}</Text>
                 </View>
             </View>
 
             {/* Course info bar */}
-            <View style={styles.infoBar}>
-                <View style={styles.lecturerRow}>
-                    <Text style={styles.infoText}>
+            <View style={themedStyles.infoBar}>
+                <View style={themedStyles.lecturerRow}>
+                    <Text style={themedStyles.infoText}>
                         👨‍🏫 {course?.lecturerName || 'No lecturer assigned'}
                     </Text>
                     {isMonitor && (
                         <TouchableOpacity 
                             onPress={() => setShowPicker(true)} 
-                            style={styles.manageBtn}
+                            style={themedStyles.manageBtn}
                         >
-                            <Text style={styles.manageText}>
+                            <Text style={themedStyles.manageText}>
                                 {course?.lecturerUid ? 'Change' : 'Assign'}
                             </Text>
                         </TouchableOpacity>
                     )}
                 </View>
-                <Text style={styles.infoText}>
+                <Text style={themedStyles.infoText}>
                     {course?.fullCode}
                 </Text>
             </View>
@@ -148,10 +150,10 @@ export default function CourseFeedScreen() {
                         />
                     )}
                     keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.feedContent}
+                    contentContainerStyle={themedStyles.feedContent}
                     showsVerticalScrollIndicator={false}
                     ListEmptyComponent={
-                        <EmptyState icon="📝" title="No posts yet" subtitle="Activity for this course will appear here" />
+                        <EmptyState icon="document-text-outline" title="No posts yet" subtitle="Activity for this course will appear here" />
                     }
                 />
             )}
@@ -159,7 +161,7 @@ export default function CourseFeedScreen() {
             {/* FAB for Permitted Users */}
             {canPost && (
                 <TouchableOpacity
-                    style={styles.fab}
+                    style={themedStyles.fab}
                     onPress={() => setShowPostTypeSheet(true)}
                     activeOpacity={0.8}
                 >
@@ -205,7 +207,7 @@ export default function CourseFeedScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any, Typography: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
@@ -228,26 +230,26 @@ const styles = StyleSheet.create({
         marginLeft: 12,
     },
     courseCode: {
-        fontSize: Typography.size.md,
+        fontSize: 14,
         fontFamily: Typography.family.bold,
-        color: Colors.accentBlue,
+        color: Colors.primary,
     },
     courseName: {
         fontSize: 18,
-        fontFamily: 'DMSans_700Bold',
-        color: Colors.textPrimary,
+        fontFamily: Typography.family.bold,
+        color: Colors.onSurface,
     },
     infoBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing.screenPadding,
         paddingVertical: 10,
-        backgroundColor: Colors.surfaceSecondary,
+        backgroundColor: Colors.surfaceVariant,
     },
     infoText: {
-        fontSize: Typography.size.sm,
+        fontSize: 12,
         fontFamily: Typography.family.medium,
-        color: Colors.textSecondary,
+        color: Colors.onSurfaceVariant,
     },
     lecturerRow: {
         flexDirection: 'row',
@@ -255,7 +257,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     manageBtn: {
-        backgroundColor: Colors.accentBlueSoft,
+        backgroundColor: Colors.primaryContainer,
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 4,
@@ -263,7 +265,7 @@ const styles = StyleSheet.create({
     manageText: {
         fontSize: 10,
         fontWeight: '700',
-        color: Colors.accentBlue,
+        color: Colors.onPrimaryContainer,
         fontFamily: Typography.family.bold,
         textTransform: 'uppercase',
     },
@@ -278,10 +280,10 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: Colors.accentBlue,
+        backgroundColor: Colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: Colors.accentBlue,
+        shadowColor: Colors.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,

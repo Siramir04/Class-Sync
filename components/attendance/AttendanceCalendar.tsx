@@ -1,14 +1,16 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Calendar } from 'react-native-calendars';
-import { Colors } from '../../constants/colors';
-import { AttendanceDateEntry } from '../../types/attendance';
+import { useTheme } from '../../hooks/useTheme';
+import { AttendanceDateEntry } from '../../types';
 
 interface AttendanceCalendarProps {
     sessionDates: AttendanceDateEntry[];
 }
 
 export default function AttendanceCalendar({ sessionDates }: AttendanceCalendarProps) {
+    const { colors: Colors, isDark } = useTheme();
+    const themedStyles = styles(Colors);
     const markedDates = sessionDates.reduce((acc: any, entry) => {
         acc[entry.date] = {
             marked: true,
@@ -18,23 +20,23 @@ export default function AttendanceCalendar({ sessionDates }: AttendanceCalendarP
     }, {});
 
     return (
-        <View style={styles.container}>
+        <View style={themedStyles.container}>
             <Calendar
                 theme={{
-                    backgroundColor: '#ffffff',
-                    calendarBackground: '#ffffff',
-                    textSectionTitleColor: '#b6c1cd',
-                    selectedDayBackgroundColor: Colors.primaryBlue,
+                    backgroundColor: Colors.background,
+                    calendarBackground: Colors.background,
+                    textSectionTitleColor: Colors.textTertiary,
+                    selectedDayBackgroundColor: Colors.primary,
                     selectedDayTextColor: '#ffffff',
-                    todayTextColor: Colors.primaryBlue,
-                    dayTextColor: '#2d4150',
-                    textDisabledColor: '#d9e1e8',
-                    dotColor: Colors.primaryBlue,
+                    todayTextColor: Colors.primary,
+                    dayTextColor: Colors.textPrimary,
+                    textDisabledColor: Colors.separator,
+                    dotColor: Colors.primary,
                     selectedDotColor: '#ffffff',
-                    arrowColor: Colors.primaryBlue,
-                    disabledArrowColor: '#d9e1e8',
-                    monthTextColor: Colors.primaryBlue,
-                    indicatorColor: Colors.primaryBlue,
+                    arrowColor: Colors.primary,
+                    disabledArrowColor: Colors.separator,
+                    monthTextColor: Colors.textPrimary,
+                    indicatorColor: Colors.primary,
                     textDayFontFamily: 'DMSans_400Regular',
                     textMonthFontFamily: 'DMSans_700Bold',
                     textDayHeaderFontFamily: 'DMSans_500Medium',
@@ -48,9 +50,9 @@ export default function AttendanceCalendar({ sessionDates }: AttendanceCalendarP
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (Colors: any) => StyleSheet.create({
     container: {
-        backgroundColor: 'white',
+        backgroundColor: Colors.background,
         borderRadius: 12,
         overflow: 'hidden',
         marginVertical: 16,

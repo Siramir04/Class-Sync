@@ -19,7 +19,7 @@ import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
 export default function SpacesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors: Colors, typography: Typography } = useTheme();
+  const { colors: Colors, typography: Typography, isDark } = useTheme();
   const { spaces, loading } = useSpaces();
   const { carryoverCourses } = useSpaceStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,7 +88,7 @@ export default function SpacesScreen() {
                   style={({ pressed }) => [
                     styles.spaceRow,
                     { borderBottomColor: Colors.separator },
-                    pressed && { backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }
+                    pressed && { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }
                   ]}
                   onPress={() => router.push(`/space/${space.id}`)}
                 >

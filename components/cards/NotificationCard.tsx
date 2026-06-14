@@ -75,7 +75,7 @@ const styles = (Colors: any) => StyleSheet.create({
         paddingVertical: 14,
         backgroundColor: Colors.background,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.separator,
+        borderBottomColor: Colors.borderSubtle,
     },
     unread: {
         backgroundColor: Colors.primary + '05',

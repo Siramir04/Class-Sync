@@ -5,12 +5,44 @@ import {
     onAuthStateChanged,
     sendPasswordResetEmail,
     updatePassword,
+    GoogleAuthProvider,
+    signInWithPopup,
     User as FirebaseUser,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { User, UserRole } from '../types';
 import * as Device from 'expo-device';
+import { Platform } from 'react-native';
+
+/**
+ * Sign in with Google (Web popup support).
+ */
+export async function loginWithGoogle(): Promise<FirebaseUser> {
+    if (Platform.OS !== 'web') {
+        throw new Error('Google Sign-In is currently only supported on Web. Please use email & password.');
+    }
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const firebaseUser = result.user;
+
+    const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+    if (!userDoc.exists()) {
+        const deviceId = await getDeviceId();
+        await setDoc(doc(db, 'users', firebaseUser.uid), {
+            uid: firebaseUser.uid,
+            fullName: firebaseUser.displayName || 'Google User',
+            email: firebaseUser.email || '',
+            username: firebaseUser.email?.split('@')[0].toLowerCase().trim() || 'google_user_' + Math.random().toString(36).substring(2, 6),
+            university: 'My University',
+            role: 'student' as UserRole,
+            createdAt: serverTimestamp(),
+            fcmToken: null,
+            deviceId,
+        });
+    }
+    return firebaseUser;
+}
 
 /**
  * Get a unique identifier for the current device.

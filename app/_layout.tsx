@@ -2,7 +2,7 @@ import React, { useEffect, useState, Component, ErrorInfo, ReactNode } from 'rea
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator, Text, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -54,8 +54,10 @@ export default function RootLayout() {
     const { isAuthenticated, isLoading } = useAuth();
     const segments = useSegments();
     const router = useRouter();
+    const pathname = require('expo-router').usePathname() || '';
     const { colors: Colors, isDark } = useTheme();
     const { isDesktop, isMobile } = useResponsive();
+    const inAuthGroup = segments[0] === '(auth)' || pathname.includes('/login') || pathname.includes('/register') || pathname.includes('/signup');
 
     // --- Fix 1b: Auth hydration gate ---
     const [appReady, setAppReady] = useState(false);
@@ -119,7 +121,6 @@ export default function RootLayout() {
     useEffect(() => {
         if (!appReady || !fontsLoaded) return;
 
-        const inAuthGroup = segments[0] === '(auth)';
         const isIndex = !segments[0];
         const isOnboarding = segments[0] === 'onboarding';
 
@@ -147,18 +148,61 @@ export default function RootLayout() {
     );
 
     // --- Desktop web layout: sidebar + padded content ---
-    const showDesktopLayout = isWeb && isDesktop && isAuthenticated;
+    const showDesktopLayout = isWeb && isDesktop && isAuthenticated && !inAuthGroup;
 
     const wrappedContent = showDesktopLayout ? (
-        <View style={{ flexDirection: 'row', flex: 1 }}>
+        <View style={{ flexDirection: 'row', flex: 1, overflow: 'hidden' }}>
             {DesktopSidebar && <DesktopSidebar />}
             <View style={{
                 flex: 1,
-                paddingHorizontal: 32,
+                paddingHorizontal: 40,
                 paddingVertical: 24,
-                maxWidth: 960,
+                backgroundColor: Colors.background,
+                position: 'relative',
+                overflow: 'hidden',
+                ...Platform.select({
+                    web: {
+                        backgroundImage: isDark
+                            ? 'radial-gradient(circle at 70% 20%, rgba(15, 76, 92, 0.35) 0%, rgba(15, 23, 42, 1) 75%)'
+                            : 'radial-gradient(circle at 70% 20%, rgba(56, 178, 172, 0.08) 0%, rgba(240, 244, 248, 1) 80%)',
+                    } as any
+                })
             }}>
-                {content}
+                {/* Ambient glowing circles behind dashboard items */}
+                {Platform.OS === 'web' && (
+                    <>
+                        <View style={{
+                            position: 'absolute',
+                            top: '10%',
+                            right: '10%',
+                            width: 380,
+                            height: 380,
+                            borderRadius: 190,
+                            backgroundColor: isDark ? 'rgba(56, 178, 172, 0.16)' : 'rgba(56, 178, 172, 0.08)',
+                            // @ts-ignore
+                            filter: 'blur(110px)',
+                            pointerEvents: 'none',
+                            zIndex: 0,
+                        }} />
+                        <View style={{
+                            position: 'absolute',
+                            bottom: '15%',
+                            left: '5%',
+                            width: 450,
+                            height: 450,
+                            borderRadius: 225,
+                            backgroundColor: isDark ? 'rgba(236, 201, 75, 0.05)' : 'rgba(236, 201, 75, 0.03)',
+                            // @ts-ignore
+                            filter: 'blur(130px)',
+                            pointerEvents: 'none',
+                            zIndex: 0,
+                        }} />
+                    </>
+                )}
+
+                <View style={{ flex: 1, zIndex: 1 }}>
+                    {content}
+                </View>
             </View>
         </View>
     ) : isWeb && !isMobile ? (

@@ -1,5 +1,5 @@
 // components/web/DesktopPolish.tsx
-// Injects web-only CSS for desktop polish: scrollbars, cursors, focus, smooth scroll
+// Web-only CSS for desktop polish: teal design system
 import React from 'react';
 import { Platform } from 'react-native';
 
@@ -11,7 +11,7 @@ export default function DesktopPolish() {
     if (Platform.OS !== 'web') return null;
 
     const css = `
-        /* === ClassSync Desktop Polish === */
+        /* === ClassSync Desktop Polish — Teal Design System === */
 
         /* Smooth scrolling */
         html {
@@ -27,33 +27,33 @@ export default function DesktopPolish() {
             background: transparent;
         }
         ::-webkit-scrollbar-thumb {
-            background-color: rgba(0, 0, 0, 0.15);
+            background-color: rgba(15, 76, 92, 0.15);
             border-radius: 4px;
             border: 2px solid transparent;
             background-clip: content-box;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(0, 0, 0, 0.25);
+            background-color: rgba(15, 76, 92, 0.30);
         }
 
         /* Dark mode scrollbar */
         @media (prefers-color-scheme: dark) {
             ::-webkit-scrollbar-thumb {
-                background-color: rgba(255, 255, 255, 0.12);
+                background-color: rgba(56, 178, 172, 0.15);
             }
             ::-webkit-scrollbar-thumb:hover {
-                background-color: rgba(255, 255, 255, 0.22);
+                background-color: rgba(56, 178, 172, 0.25);
             }
         }
 
         /* Firefox scrollbar */
         * {
             scrollbar-width: thin;
-            scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+            scrollbar-color: rgba(15, 76, 92, 0.15) transparent;
         }
         @media (prefers-color-scheme: dark) {
             * {
-                scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+                scrollbar-color: rgba(56, 178, 172, 0.15) transparent;
             }
         }
 
@@ -66,9 +66,9 @@ export default function DesktopPolish() {
             cursor: pointer !important;
         }
 
-        /* Keyboard focus rings for accessibility */
+        /* Keyboard focus rings for accessibility — teal */
         *:focus-visible {
-            outline: 2px solid #007AFF;
+            outline: 2px solid #38B2AC;
             outline-offset: 2px;
             border-radius: 4px;
         }
@@ -78,9 +78,9 @@ export default function DesktopPolish() {
             outline: none;
         }
 
-        /* Selection styling */
+        /* Selection styling — teal */
         ::selection {
-            background-color: rgba(0, 122, 255, 0.2);
+            background-color: rgba(56, 178, 172, 0.2);
         }
 
         /* Disable user-select on nav labels for native feel */
@@ -93,6 +93,38 @@ export default function DesktopPolish() {
         [role="button"],
         button {
             transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
+        }
+
+        /* Card hover micro-interaction */
+        [data-card="true"] {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        [data-card="true"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px -5px rgba(0,0,0,0.08);
+        }
+
+        /* Progress bar fill animation */
+        [data-progress] {
+            transition: width 0.5s ease-out;
+        }
+
+        /* Page content fade-in */
+        [data-page-content] {
+            animation: fadeIn 0.15s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Toast / notification slide */
+        [data-toast] {
+            animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
     `;
 

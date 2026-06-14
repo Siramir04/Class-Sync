@@ -1,5 +1,6 @@
 // constants/typography.ts
-// iOS Dynamic Type-aligned typography system
+// ClassSync typography system — teal remaster
+// Supplement roles: appTitle, screenTitle, cardTitle, micro
 
 type ColorScheme = 'light' | 'dark';
 
@@ -13,6 +14,13 @@ interface TextStyle {
 }
 
 interface TypographyScale {
+  // New design-system roles
+  appTitle: TextStyle;
+  screenTitle: TextStyle;
+  cardTitle: TextStyle;
+  micro: TextStyle;
+
+  // iOS Dynamic Type roles (preserved)
   largeTitle: TextStyle;
   title1: TextStyle;
   title2: TextStyle;
@@ -20,7 +28,7 @@ interface TypographyScale {
   headline: TextStyle;
   body: TextStyle;
   callout: TextStyle;
-  subHeader: TextStyle;        // ← FIXES tracker.tsx:126
+  subHeader: TextStyle;
   footnote: TextStyle;
   caption1: TextStyle;
   caption2: TextStyle;
@@ -43,19 +51,6 @@ interface TypographyScale {
   };
 }
 
-const BaseTypography: Omit<TypographyScale, 'subHeader' | 'm3' | 'family'> = {
-  largeTitle: { fontSize: 34, fontWeight: '700', lineHeight: 41, letterSpacing: 0.37 },
-  title1: { fontSize: 28, fontWeight: '700', lineHeight: 34, letterSpacing: 0.36 },
-  title2: { fontSize: 22, fontWeight: '700', lineHeight: 28, letterSpacing: 0.35 },
-  title3: { fontSize: 20, fontWeight: '600', lineHeight: 25, letterSpacing: 0.38 },
-  headline: { fontSize: 17, fontWeight: '600', lineHeight: 22, letterSpacing: -0.41 },
-  body: { fontSize: 17, fontWeight: '400', lineHeight: 22, letterSpacing: -0.41 },
-  callout: { fontSize: 16, fontWeight: '400', lineHeight: 21, letterSpacing: -0.32 },
-  footnote: { fontSize: 13, fontWeight: '400', lineHeight: 18, letterSpacing: -0.08 },
-  caption1: { fontSize: 12, fontWeight: '400', lineHeight: 16 },
-  caption2: { fontSize: 11, fontWeight: '400', lineHeight: 13, letterSpacing: 0.06 },
-};
-
 const family = {
   regular: 'DMSans_400Regular',
   semiBold: 'DMSans_500Medium',
@@ -64,9 +59,29 @@ const family = {
   extraBold: 'DMSans_700Bold',
 };
 
-// Add subHeader — semantically between callout and headline, used for section labels
+const BaseTypography: Omit<TypographyScale, 'subHeader' | 'm3' | 'family' | 'appTitle' | 'screenTitle' | 'cardTitle' | 'micro'> = {
+  largeTitle: { fontSize: 34, fontWeight: '700', lineHeight: 41, letterSpacing: 0.37 },
+  title1: { fontSize: 28, fontWeight: '700', lineHeight: 34, letterSpacing: 0.36 },
+  title2: { fontSize: 22, fontWeight: '700', lineHeight: 28, letterSpacing: 0.35 },
+  title3: { fontSize: 20, fontWeight: '600', lineHeight: 25, letterSpacing: 0.38 },
+  headline: { fontSize: 17, fontWeight: '600', lineHeight: 22, letterSpacing: -0.41 },
+  body: { fontSize: 14, fontWeight: '400', lineHeight: 21, letterSpacing: -0.32 },
+  callout: { fontSize: 16, fontWeight: '400', lineHeight: 21, letterSpacing: -0.32 },
+  footnote: { fontSize: 13, fontWeight: '400', lineHeight: 18, letterSpacing: -0.08 },
+  caption1: { fontSize: 12, fontWeight: '500', lineHeight: 17 },
+  caption2: { fontSize: 11, fontWeight: '400', lineHeight: 13, letterSpacing: 0.06 },
+};
+
+// Add new spec roles + legacy subHeader
 const Typography: TypographyScale = {
   ...BaseTypography,
+
+  // New design-system roles
+  appTitle: { fontSize: 20, fontWeight: '700', lineHeight: 24, fontFamily: family.bold },
+  screenTitle: { fontSize: 28, fontWeight: '700', lineHeight: 34, fontFamily: family.bold },
+  cardTitle: { fontSize: 18, fontWeight: '600', lineHeight: 23, fontFamily: family.semiBold },
+  micro: { fontSize: 10, fontWeight: '500', lineHeight: 12, fontFamily: family.medium },
+
   subHeader: {
     fontSize: 15,
     fontWeight: '600',

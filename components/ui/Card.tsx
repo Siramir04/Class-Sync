@@ -13,8 +13,8 @@ interface CardProps {
 }
 
 /**
- * Material 3 (M3) Card Component
- * Uses Tonal Elevation (color tints) instead of drop shadows where possible.
+ * Card — Teal design system
+ * 16px radius, borderSubtle, shadowCard, web hover translateY(-2px)
  */
 export default function Card({
     children,
@@ -23,38 +23,33 @@ export default function Card({
     variant = 'elevated',
     elevation = 1
 }: CardProps) {
-    const { colors: Colors } = useTheme();
+    const { colors: Colors, isDark } = useTheme();
     const { isDesktop } = useResponsive();
     const isDesktopWeb = Platform.OS === 'web' && isDesktop;
 
-    const getVariantStyle = () => {
+    const getVariantStyle = (): ViewStyle => {
         switch (variant) {
             case 'elevated':
-                // M3 Elevated: Tonal background + subtle shadow
-                // Enhanced shadow on desktop web for visual depth
-                const bg = elevation === 1 ? Colors.surfaceElevation1 :
-                           elevation === 2 ? Colors.surfaceElevation2 :
-                           Colors.surfaceElevation3;
                 return {
-                    backgroundColor: bg,
+                    backgroundColor: Colors.surface,
+                    borderWidth: 1,
+                    borderColor: Colors.borderSubtle,
                     shadowColor: '#000',
-                    shadowOffset: { width: 0, height: isDesktopWeb ? 2 : 1 },
-                    shadowOpacity: isDesktopWeb ? 0.08 : 0.05,
-                    shadowRadius: isDesktopWeb ? 6 : 2,
-                    elevation: elevation,
+                    shadowOffset: { width: 0, height: isDesktopWeb ? 4 : 2 },
+                    shadowOpacity: isDark ? 0.3 : 0.05,
+                    shadowRadius: isDesktopWeb ? 6 : 3,
+                    elevation: elevation * 2,
                 };
             case 'filled':
-                // M3 Filled: Neutral container color
                 return {
                     backgroundColor: Colors.surfaceVariant,
                     elevation: 0,
                 };
             case 'outlined':
-                // M3 Outlined: Transparent + border
                 return {
                     backgroundColor: Colors.surface,
                     borderWidth: 1,
-                    borderColor: Colors.outlineVariant,
+                    borderColor: Colors.borderSubtle,
                     elevation: 0,
                 };
             default:
@@ -76,10 +71,10 @@ export default function Card({
 
 const styles = StyleSheet.create({
     card: {
-        borderRadius: 16, // M3 Large Corner Radius (Standard is 12-16 for medium components)
+        borderRadius: Spacing.cardRadius,
         overflow: 'hidden',
     },
     padding: {
-        padding: 16,
+        padding: Spacing.md,
     },
 });

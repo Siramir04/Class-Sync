@@ -1,6 +1,7 @@
 // constants/colors.ts
-// iOS-native aligned color system with light/dark mode support
-// Follows Apple Human Interface Guidelines color hierarchy
+// Teal-centric design system — ClassSync UI Remaster
+// Light: airy #F0F4F8 bg, deep teal #0F4C5C sidebar
+// Dark: navy #0F172A bg, darker teal #0A2E3A sidebar
 
 type ColorScheme = 'light' | 'dark';
 
@@ -11,6 +12,9 @@ interface ColorPalette {
   accentBlue: string;
   accentBlueSoft: string;
   
+  // New: Accent Secondary (teal progress bars, success indicators)
+  accentSecondary: string;
+  
   // Surfaces
   surface: string;
   surfaceSecondary: string;
@@ -18,6 +22,9 @@ interface ColorPalette {
   surfaceElevation1: string;
   surfaceElevation2: string;
   surfaceElevation3: string;
+  
+  // Sidebar
+  bgSidebar: string;
   
   // Text (on surface)
   textPrimary: string;
@@ -30,8 +37,13 @@ interface ColorPalette {
   separator: string;
   separatorOpaque: string;
   border: string;
+  borderSubtle: string;
   outline: string;
   outlineVariant: string;
+  
+  // Shadows (as strings — applied via style objects)
+  shadowCard: string;
+  shadowFloat: string;
   
   // System
   white: string;
@@ -56,7 +68,7 @@ interface ColorPalette {
   carryover: string;
   accentBlueLegacy: string;
   
-  // M3 Tonal Containers
+  // M3 Tonal Containers (mapped to teal palette)
   primaryContainer: string;
   onPrimaryContainer: string;
   secondaryContainer: string;
@@ -69,33 +81,42 @@ interface ColorPalette {
 }
 
 const LightPalette: ColorPalette = {
-  // Brand
-  primary: '#007AFF',           // iOS system blue
-  primaryNavy: '#1C1C8C',       // Deep institutional navy
-  accentBlue: '#34C759',        // Vibrant but controlled
-  accentBlueSoft: '#34C75915',
+  // Brand — Deep teal primary
+  primary: '#0F4C5C',
+  primaryNavy: '#0F4C5C',
+  accentBlue: '#38B2AC',         // Teal accent
+  accentBlueSoft: '#38B2AC15',
+  accentSecondary: '#38B2AC',    // Progress bars, success indicators
   
-  // Surfaces (iOS system background hierarchy)
+  // Surfaces — Airy, not pure white
   surface: '#FFFFFF',
-  surfaceSecondary: '#F2F2F7',  // iOS system grouped background
-  surfaceTertiary: '#E5E5EA',   // iOS secondary grouped
+  surfaceSecondary: '#F0F4F8',   // Main app background
+  surfaceTertiary: '#E2E8F0',
   surfaceElevation1: '#FFFFFF',
-  surfaceElevation2: '#F9F9F9',
-  surfaceElevation3: '#F2F2F7',
+  surfaceElevation2: '#F7FAFC',
+  surfaceElevation3: '#F0F4F8',
+  
+  // Sidebar
+  bgSidebar: '#0F4C5C',
   
   // Text
-  textPrimary: '#000000',
-  textSecondary: '#3C3C4399',   // iOS secondary label (60% opacity black)
-  textTertiary: '#3C3C434D',    // iOS tertiary label (30% opacity black)
+  textPrimary: '#1A202C',
+  textSecondary: '#4A5568',
+  textTertiary: '#A0AEC0',
   onPrimary: '#FFFFFF',
-  onSurface: '#000000',
+  onSurface: '#1A202C',
   
   // UI
-  separator: '#3C3C434A',       // iOS separator (29% opacity)
-  separatorOpaque: '#C6C6C8',   // Opaque separator for borders
-  border: '#E5E5EA',
-  outline: '#79747E',
-  outlineVariant: '#CAC4D0',
+  separator: '#E2E8F0',
+  separatorOpaque: '#CBD5E0',
+  border: '#E2E8F0',
+  borderSubtle: '#E2E8F0',
+  outline: '#A0AEC0',
+  outlineVariant: '#E2E8F0',
+  
+  // Shadows
+  shadowCard: '0 4px 6px -1px rgba(0,0,0,0.05)',
+  shadowFloat: '0 10px 15px -3px rgba(0,0,0,0.08)',
   
   // System
   white: '#FFFFFF',
@@ -103,95 +124,106 @@ const LightPalette: ColorPalette = {
   transparent: 'transparent',
   
   // Status
-  success: '#34C759',
-  warning: '#FF9500',
-  error: '#FF3B30',
+  success: '#38B2AC',
+  warning: '#ECC94B',
+  error: '#F56565',
   onError: '#FFFFFF',
-  info: '#007AFF',
+  info: '#0F4C5C',
   
   // Attendance
-  present: '#34C759',
-  absent: '#FF3B30',
-  excused: '#FF9500',
+  present: '#38B2AC',
+  absent: '#F56565',
+  excused: '#ECC94B',
 
   // Compatibility
-  background: '#FFFFFF',
-  onSurfaceVariant: '#3C3C4399',
-  carryover: '#5856D6',
-  accentBlueLegacy: '#007AFF',
+  background: '#F0F4F8',
+  onSurfaceVariant: '#4A5568',
+  carryover: '#805AD5',
+  accentBlueLegacy: '#0F4C5C',
   
-  primaryContainer: '#D1E4FF',
-  onPrimaryContainer: '#001D36',
-  secondaryContainer: '#D7E3F7',
-  onSecondaryContainer: '#101C2B',
-  tertiaryContainer: '#F3DAFF',
-  onTertiaryContainer: '#251431',
-  errorContainer: '#FFDAD6',
-  onErrorContainer: '#410002',
-  surfaceVariant: '#E1E2EC',
+  // Tonal Containers (teal-aligned)
+  primaryContainer: '#B2DFDB',
+  onPrimaryContainer: '#0F4C5C',
+  secondaryContainer: '#E0F2F1',
+  onSecondaryContainer: '#1A202C',
+  tertiaryContainer: '#E9D8FD',
+  onTertiaryContainer: '#44337A',
+  errorContainer: '#FED7D7',
+  onErrorContainer: '#822727',
+  surfaceVariant: '#EDF2F7',
 };
 
 const DarkPalette: ColorPalette = {
-  // Brand (slightly adjusted for dark mode contrast)
-  primary: '#0A84FF',           // iOS system blue dark variant
-  primaryNavy: '#5E5CE6',       // Lighter navy for dark bg
-  accentBlue: '#30D158',        // iOS system green dark variant
-  accentBlueSoft: '#30D15815',
+  // Brand — Brighter teal for dark mode contrast
+  primary: '#38B2AC',
+  primaryNavy: '#38B2AC',
+  accentBlue: '#2DD4BF',         // Brighter teal accent
+  accentBlueSoft: '#2DD4BF15',
+  accentSecondary: '#2DD4BF',    // Progress, success
   
-  // Surfaces (iOS dark mode hierarchy)
-  surface: '#000000',
-  surfaceSecondary: '#1C1C1E',  // iOS system background dark
-  surfaceTertiary: '#2C2C2E',  // iOS secondary background dark
-  surfaceElevation1: '#1C1C1E',
-  surfaceElevation2: '#2C2C2E',
-  surfaceElevation3: '#3A3A3C',
+  // Surfaces — Navy, never pure black
+  surface: '#1E293B',
+  surfaceSecondary: '#0F172A',   // Main app background
+  surfaceTertiary: '#334155',
+  surfaceElevation1: '#1E293B',
+  surfaceElevation2: '#283548',
+  surfaceElevation3: '#334155',
   
-  // Text (on dark surface)
-  textPrimary: '#FFFFFF',
-  textSecondary: '#EBEBF599',   // iOS secondary label dark (60% opacity white)
-  textTertiary: '#EBEBF54D',    // iOS tertiary label dark (30% opacity white)
-  onPrimary: '#FFFFFF',
-  onSurface: '#FFFFFF',
+  // Sidebar
+  bgSidebar: '#0A2E3A',
+  
+  // Text
+  textPrimary: '#F1F5F9',
+  textSecondary: '#94A3B8',
+  textTertiary: '#64748B',
+  onPrimary: '#0F172A',
+  onSurface: '#F1F5F9',
   
   // UI
-  separator: '#54545899',       // iOS separator dark
-  separatorOpaque: '#38383A',   // Opaque separator dark
-  border: '#38383A',
-  outline: '#938F99',
-  outlineVariant: '#49454F',
+  separator: '#334155',
+  separatorOpaque: '#475569',
+  border: '#334155',
+  borderSubtle: '#334155',
+  outline: '#64748B',
+  outlineVariant: '#334155',
+  
+  // Shadows (stronger for dark mode)
+  shadowCard: '0 4px 6px -1px rgba(0,0,0,0.3)',
+  shadowFloat: '0 10px 15px -3px rgba(0,0,0,0.5)',
   
   // System
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
   
-  // Status (same semantic colors, adjusted for dark if needed)
-  success: '#30D158',
-  warning: '#FF9F0A',
-  error: '#FF453A',
-  onError: '#FFFFFF',
-  info: '#0A84FF',
+  // Status
+  success: '#2DD4BF',
+  warning: '#F6E05E',
+  error: '#FC8181',
+  onError: '#0F172A',
+  info: '#38B2AC',
   
   // Attendance
-  present: '#30D158',
-  absent: '#FF453A',
-  excused: '#FF9F0A',
+  present: '#2DD4BF',
+  absent: '#FC8181',
+  excused: '#F6E05E',
 
   // Compatibility
-  background: '#000000',
-  onSurfaceVariant: '#EBEBF599',
-  carryover: '#5E5CE6',
-  accentBlueLegacy: '#0A84FF',
+  background: '#0F172A',
+  onSurfaceVariant: '#94A3B8',
+  carryover: '#B794F4',
+  accentBlueLegacy: '#38B2AC',
   
-  primaryContainer: '#00497E',
-  onPrimaryContainer: '#D1E4FF',
-  secondaryContainer: '#3B4858',
-  onSecondaryContainer: '#D7E3F7',
+  // Tonal Containers (dark-adjusted teal)
+  primaryContainer: '#134E5E',
+  onPrimaryContainer: '#B2DFDB',
+  secondaryContainer: '#1A3A4A',
+  onSecondaryContainer: '#E0F2F1',
   tertiaryContainer: '#533D5E',
-  onTertiaryContainer: '#F3DAFF',
-  errorContainer: '#93000A',
-  onErrorContainer: '#FFDAD6',
-  surfaceVariant: '#44474F',
+  onTertiaryContainer: '#E9D8FD',
+  errorContainer: '#822727',
+  onErrorContainer: '#FED7D7',
+  surfaceVariant: '#283548',
 };
 
 // Theme-aware export

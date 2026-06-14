@@ -263,19 +263,19 @@ const createStyles = (Colors: any, typography: any) => StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.outlineVariant,
+    backgroundColor: Colors.borderSubtle,
   },
   progressDotActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accentSecondary,
     width: 24,
   },
   progressLine: {
     width: 40,
     height: 2,
-    backgroundColor: Colors.outlineVariant,
+    backgroundColor: Colors.borderSubtle,
   },
   progressLineActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accentSecondary,
   },
   errorBanner: {
     flexDirection: 'row',
@@ -283,7 +283,7 @@ const createStyles = (Colors: any, typography: any) => StyleSheet.create({
     gap: 8,
     padding: 16,
     backgroundColor: Colors.errorContainer,
-    borderRadius: 16,
+    borderRadius: 12,
     marginBottom: 24,
     marginHorizontal: 4,
   },
@@ -321,11 +321,11 @@ const createStyles = (Colors: any, typography: any) => StyleSheet.create({
   },
   footerText: {
     ...typography.m3.bodyMedium,
-    color: Colors.onSurfaceVariant,
+    color: Colors.textSecondary,
   },
   signupText: {
     ...typography.m3.labelLarge,
-    color: Colors.primary,
+    color: Colors.accentSecondary,
     fontWeight: '900',
   },
   backLink: {
@@ -348,9 +348,9 @@ const createStyles = (Colors: any, typography: any) => StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: Colors.surface,
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: Colors.borderSubtle,
     elevation: 4,
     zIndex: 1000,
   },
@@ -360,7 +360,7 @@ const createStyles = (Colors: any, typography: any) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 0.5,
-    borderBottomColor: Colors.outlineVariant,
+    borderBottomColor: Colors.borderSubtle,
   },
   resultName: {
     ...typography.m3.bodyMedium,
@@ -373,7 +373,7 @@ const createStyles = (Colors: any, typography: any) => StyleSheet.create({
   },
   roleLabel: {
     ...typography.m3.labelLarge,
-    color: Colors.onSurfaceVariant,
+    color: Colors.textSecondary,
     marginBottom: 12,
     fontWeight: '700',
   },
@@ -384,20 +384,20 @@ const createStyles = (Colors: any, typography: any) => StyleSheet.create({
   rolePill: {
     flex: 1,
     height: 48,
-    borderRadius: 16,
+    borderRadius: 12,
     backgroundColor: Colors.surfaceElevation1,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: Colors.borderSubtle,
   },
   rolePillActive: {
     backgroundColor: Colors.primaryContainer,
-    borderColor: Colors.primary,
+    borderColor: Colors.accentSecondary,
   },
   rolePillText: {
     ...typography.m3.labelLarge,
-    color: Colors.onSurfaceVariant,
+    color: Colors.textSecondary,
   },
   rolePillTextActive: {
     color: Colors.onPrimaryContainer,
@@ -409,12 +409,12 @@ const createStyles = (Colors: any, typography: any) => StyleSheet.create({
   },
   termsText: {
     ...typography.m3.labelSmall,
-    color: Colors.onSurfaceVariant,
+    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
   },
   linkText: {
-    color: Colors.primary,
+    color: Colors.accentSecondary,
     fontWeight: '700',
   },
 });

@@ -9,6 +9,7 @@ import {
   Animated,
 } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
+import { Spacing } from '../../constants/spacing';
 
 interface InputProps extends TextInputProps {
     label: string;
@@ -71,7 +72,7 @@ export default function Input({
 
     const borderColor = focusAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: error ? [Colors.error, Colors.error] : [Colors.border, Colors.primary],
+        outputRange: error ? [Colors.error, Colors.error] : [Colors.borderSubtle, Colors.primary],
     });
 
     const borderWidth = focusAnim.interpolate({
@@ -87,6 +88,7 @@ export default function Input({
                     {
                         borderColor,
                         borderWidth,
+                        backgroundColor: Colors.surfaceSecondary,
                         height: rest.multiline ? 120 : 56,
                     }
                 ]}
@@ -139,7 +141,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     inputWrapper: {
-        borderRadius: 4,
+        borderRadius: Spacing.buttonRadius, // 12px
         paddingHorizontal: 12,
         justifyContent: 'center',
     },

@@ -23,8 +23,8 @@ interface ButtonProps {
 }
 
 /**
- * Material 3 (M3) Button Component
- * Features fully rounded stadium shapes and tonal color mappings.
+ * Button — Teal design system
+ * Primary: deep teal bg (#0F4C5C light / #38B2AC dark), 12px radius
  */
 export const Button = ({
   label, 
@@ -35,7 +35,7 @@ export const Button = ({
   icon,
   style 
 }: ButtonProps) => {
-  const { colors: Colors, typography: Typography } = useTheme();
+  const { colors: Colors, typography: Typography, isDark } = useTheme();
   const IconComponent = icon ? (LucideIcons[icon] as any) : null;
 
   const getTextStyle = (): TextStyle => {
@@ -61,8 +61,8 @@ export const Button = ({
 
   const getContainerStyle = (pressed: boolean): ViewStyle => {
     let baseStyle: ViewStyle = {
-        height: 44,
-        borderRadius: 100,
+        height: Spacing.buttonHeight,
+        borderRadius: Spacing.buttonRadius,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -79,7 +79,7 @@ export const Button = ({
       case 'outlined':
         baseStyle.backgroundColor = 'transparent';
         baseStyle.borderWidth = 1;
-        baseStyle.borderColor = Colors.outline;
+        baseStyle.borderColor = Colors.borderSubtle;
         break;
       case 'danger':
         baseStyle.backgroundColor = Colors.error;
@@ -117,7 +117,7 @@ export const Button = ({
       {loading ? (
         <ActivityIndicator color={getIconColor()} size="small" />
       ) : (
-        <View style={styles.content}>
+        <View style={btnStyles.content}>
           {IconComponent && (
             <IconComponent 
               size={18} 
@@ -125,7 +125,7 @@ export const Button = ({
               style={{ marginRight: 8 }} 
             />
           )}
-          <Text style={[styles.label, getTextStyle(), { fontFamily: Typography.family.medium }]}>
+          <Text style={[btnStyles.label, getTextStyle(), { fontFamily: Typography.family.medium }]}>
             {label}
           </Text>
         </View>
@@ -134,7 +134,7 @@ export const Button = ({
   );
 };
 
-const styles = StyleSheet.create({
+const btnStyles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     letterSpacing: 0.1,
   },
 });

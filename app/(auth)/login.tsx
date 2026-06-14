@@ -147,7 +147,7 @@ const createStyles = (Colors: any, typography: any) => StyleSheet.create({
     gap: 8,
     padding: 16,
     backgroundColor: Colors.errorContainer,
-    borderRadius: 16,
+    borderRadius: 12,
     marginBottom: 24,
   },
   errorText: {
@@ -171,12 +171,13 @@ const createStyles = (Colors: any, typography: any) => StyleSheet.create({
   },
   forgotText: {
     ...typography.m3.labelLarge,
-    color: Colors.primary,
+    color: Colors.accentSecondary,
     fontWeight: '700',
   },
   submitBtn: {
     height: 56,
     marginBottom: 24,
+    borderRadius: 12,
   },
   footer: {
     flexDirection: 'row',
@@ -186,11 +187,11 @@ const createStyles = (Colors: any, typography: any) => StyleSheet.create({
   },
   footerText: {
     ...typography.m3.bodyMedium,
-    color: Colors.onSurfaceVariant,
+    color: Colors.textSecondary,
   },
   signupText: {
     ...typography.m3.labelLarge,
-    color: Colors.primary,
+    color: Colors.accentSecondary,
     fontWeight: '900',
   },
 });

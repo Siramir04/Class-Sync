@@ -223,7 +223,7 @@ export default function PostDetailScreen() {
                  <View style={[styles.detailsGroup, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F9F9FB' }]}>
                     {post.venue && (
                       <View style={styles.detailItem}>
-                        <View style={[styles.detailIcon, { backgroundColor: isDark ? 'rgba(0,122,255,0.2)' : '#EFF6FF' }]}>
+                        <View style={[styles.detailIcon, { backgroundColor: isDark ? Colors.primary + '25' : Colors.primary + '08' }]}>
                           <LucideIcons.MapPin size={16} color={Colors.primary} />
                         </View>
                         <View>
@@ -265,7 +265,7 @@ export default function PostDetailScreen() {
                  onPress={() => setAlarmSheetVisible(true)}
                  style={[styles.actionRow, { borderBottomColor: Colors.outlineVariant }]}
                >
-                 <View style={[styles.detailIcon, { backgroundColor: isAlarmSet(post.id) ? 'rgba(0,122,255,0.1)' : Colors.surfaceVariant }]}>
+                 <View style={[styles.detailIcon, { backgroundColor: isAlarmSet(post.id) ? Colors.primary + '18' : Colors.surfaceVariant }]}>
                     <LucideIcons.Bell size={16} color={isAlarmSet(post.id) ? Colors.primary : Colors.onSurfaceVariant} />
                  </View>
                  <Text style={[styles.actionLabel, { color: Colors.onSurface, fontFamily: Typography.family.semiBold }]}>Lecture Alarm</Text>
@@ -278,7 +278,7 @@ export default function PostDetailScreen() {
 
              {isMonitor && post.isImportant && (
                <Pressable onPress={() => setReceiptsVisible(true)} style={[styles.actionRow, { borderBottomColor: Colors.outlineVariant }]}>
-                 <View style={[styles.detailIcon, { backgroundColor: isDark ? 'rgba(0,122,255,0.2)' : '#EFF6FF' }]}>
+                  <View style={[styles.detailIcon, { backgroundColor: isDark ? Colors.primary + '25' : Colors.primary + '08' }]}>
                     <LucideIcons.Users size={16} color={Colors.primary} />
                  </View>
                  <Text style={[styles.actionLabel, { color: Colors.onSurface, fontFamily: Typography.family.semiBold }]}>Read Receipts</Text>

@@ -220,7 +220,7 @@ export default function SpaceFeedScreen() {
                <Pressable 
                  key={filter} 
                  onPress={() => setActiveTypeFilter(filter)}
-                 style={[styles.typePill, activeTypeFilter === filter && [styles.typePillActive, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#EFF6FF' }]]}
+                  style={[styles.typePill, activeTypeFilter === filter && [styles.typePillActive, { backgroundColor: isDark ? Colors.primary + '25' : Colors.primary + '08' }]]}
                >
                  <Text style={[styles.typePillText, { color: Colors.textTertiary, fontFamily: Typography.family.medium }, activeTypeFilter === filter && { color: Colors.primary, fontWeight: '700' }]}>{filter}</Text>
                </Pressable>

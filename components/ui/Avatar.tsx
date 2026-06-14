@@ -10,10 +10,10 @@ interface AvatarProps {
 }
 
 const SIZE_MAP = {
-  sm: { size: 36, fontSize: 13, radius: 10 },
-  md: { size: 40, fontSize: 14, radius: 12 },
-  lg: { size: 64, fontSize: 22, radius: 20 },
-  xl: { size: 80, fontSize: 28, radius: 24 },
+  sm: { size: 36, fontSize: 13 },
+  md: { size: 40, fontSize: 14 },
+  lg: { size: 64, fontSize: 22 },
+  xl: { size: 96, fontSize: 32 },
 };
 
 export const Avatar = ({ 
@@ -32,8 +32,10 @@ export const Avatar = ({
       { 
         width: config.size, 
         height: config.size, 
-        borderRadius: config.radius,
-        backgroundColor: Colors.primaryNavy
+        borderRadius: config.size / 2, // 50% — full circle per spec
+        backgroundColor: Colors.primary,
+        borderWidth: 2,
+        borderColor: Colors.surfaceSecondary, // bgPrimary border
       }, 
       style
     ]}>
@@ -41,7 +43,7 @@ export const Avatar = ({
         styles.initials, 
         { 
             fontSize: config.fontSize,
-            color: Colors.white,
+            color: Colors.onPrimary,
             fontFamily: Typography.family.bold
         }
       ]}>

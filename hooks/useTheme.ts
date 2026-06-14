@@ -1,9 +1,11 @@
 // hooks/useTheme.ts
-// System-aware theme hook for ClassSync
+// Theme hook with manual override support
+// Follows device color scheme by default; manual toggle overrides
 import { useColorScheme } from 'react-native';
 import { useMemo } from 'react';
 import { Colors } from '../constants/colors';
 import { Typography } from '../constants/typography';
+import { useThemeStore } from '../store/themeStore';
 
 import { ColorPalette } from '../constants/colors';
 import { TypographyScale } from '../constants/typography';
@@ -13,27 +15,36 @@ interface Theme {
     typography: TypographyScale;
     isDark: boolean;
     scheme: 'light' | 'dark';
+    themeMode: 'system' | 'light' | 'dark';
+    toggleTheme: () => void;
+    setThemeMode: (mode: 'system' | 'light' | 'dark') => void;
 }
 
 /**
- * Hook to access the current theme (colors and typography) 
- * based on the system color scheme.
+ * Hook to access the current theme (colors and typography).
+ * Follows device color scheme by default.
+ * Manual toggle overrides via themeStore.
  */
 export const useTheme = (): Theme => {
     const systemScheme = useColorScheme(); // 'light' | 'dark' | null
+    const { mode, toggleMode, setMode } = useThemeStore();
     
-    // Default to 'light' if not specified
-    const scheme = systemScheme ?? 'light';
+    // Resolve effective scheme: manual override or system
+    const effectiveScheme = mode === 'system' 
+        ? (systemScheme ?? 'light') 
+        : mode;
 
     return useMemo(() => {
-        // Use the new semantic palettes
-        const palette = scheme === 'dark' ? Colors.dark : Colors.light;
+        const palette = effectiveScheme === 'dark' ? Colors.dark : Colors.light;
         
         return {
             colors: palette,
             typography: Typography,
-            isDark: scheme === 'dark',
-            scheme,
+            isDark: effectiveScheme === 'dark',
+            scheme: effectiveScheme,
+            themeMode: mode,
+            toggleTheme: toggleMode,
+            setThemeMode: setMode,
         };
-    }, [scheme]);
+    }, [effectiveScheme, mode, toggleMode, setMode]);
 };

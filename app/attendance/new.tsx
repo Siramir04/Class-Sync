@@ -298,7 +298,7 @@ const styles = (Colors: any, Typography: any, isDark: boolean) => StyleSheet.cre
     },
     lectureItemActive: {
         borderColor: Colors.primary,
-        backgroundColor: isDark ? 'rgba(0,122,255,0.05)' : 'rgba(0,122,255,0.02)',
+        backgroundColor: Colors.primary + '10',
     },
     lectureInfo: {
         flex: 1,

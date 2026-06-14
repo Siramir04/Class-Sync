@@ -17,22 +17,23 @@ import { useResponsive } from '../../hooks/useResponsive';
 const { width } = Dimensions.get('window');
 
 /**
- * Material 3 (M3) Bottom Navigation Bar
- * Features the pill-shaped active indicator and smooth spring animations.
+ * Bottom Navigation Bar — Teal design system
  * Hidden on desktop web — DesktopSidebar takes over navigation.
  */
 export default function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { colors: Colors } = useTheme();
   const { isDesktop } = useResponsive();
-  const themedStyles = styles(Colors);
 
   // On desktop web, hide the bottom tab bar (DesktopSidebar handles nav)
   if (Platform.OS === 'web' && isDesktop) {
     return null;
   }
   return (
-    <View style={themedStyles.outerContainer}>
-        <View style={themedStyles.tabBar}>
+    <View style={[tabStyles.outerContainer, { 
+      backgroundColor: Colors.surface,
+      borderTopColor: Colors.borderSubtle,
+    }]}>
+        <View style={[tabStyles.tabBar, { backgroundColor: Colors.surface }]}>
             {state.routes.map((route, index) => {
                 const { options } = descriptors[route.key];
                 const isFocused = state.index === index;
@@ -72,15 +73,14 @@ interface TabItemProps {
 }
 
 const TabItem = ({ route, isFocused, onPress, label }: TabItemProps) => {
-    const { colors: Colors, typography: Typography } = useTheme();
-    const themedStyles = styles(Colors);
+    const { colors: Colors, typography: Typo } = useTheme();
     const animation = useRef(new Animated.Value(isFocused ? 1 : 0)).current;
     const scale = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
         Animated.spring(animation, {
             toValue: isFocused ? 1 : 0,
-            useNativeDriver: false, // Color and width don't support native driver well for this specific pill effect
+            useNativeDriver: false,
             friction: 8,
             tension: 50,
         }).start();
@@ -102,7 +102,7 @@ const TabItem = ({ route, isFocused, onPress, label }: TabItemProps) => {
 
     const indicatorWidth = animation.interpolate({
         inputRange: [0, 1],
-        outputRange: [0, 64], // Width of the M3 pill
+        outputRange: [0, 64],
     });
 
     const indicatorOpacity = animation.interpolate({
@@ -114,13 +114,13 @@ const TabItem = ({ route, isFocused, onPress, label }: TabItemProps) => {
     let IconComponent;
     switch (route.name) {
         case 'index':
-            IconComponent = LucideIcons.House;
+            IconComponent = LucideIcons.LayoutGrid;
             break;
         case 'schedule':
             IconComponent = LucideIcons.CalendarDays;
             break;
         case 'spaces':
-            IconComponent = LucideIcons.LayoutGrid;
+            IconComponent = LucideIcons.Layers;
             break;
         case 'profile':
             IconComponent = LucideIcons.UserRound;
@@ -129,23 +129,24 @@ const TabItem = ({ route, isFocused, onPress, label }: TabItemProps) => {
             IconComponent = LucideIcons.Circle;
     }
 
-    const iconColor = isFocused ? Colors.onPrimaryContainer : Colors.onSurfaceVariant;
+    const iconColor = isFocused ? Colors.primary : Colors.textTertiary;
 
     return (
         <Pressable
             onPress={onPress}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
-            style={themedStyles.tabItem}
+            style={tabStyles.tabItem}
         >
-            <Animated.View style={[themedStyles.iconWrapper, { transform: [{ scale }] }]}>
-                {/* M3 Active Indicator Pill */}
+            <Animated.View style={[tabStyles.iconWrapper, { transform: [{ scale }] }]}>
+                {/* Active Indicator Pill */}
                 <Animated.View
                     style={[
-                        themedStyles.activeIndicator,
+                        tabStyles.activeIndicator,
                         {
                             width: indicatorWidth,
                             opacity: indicatorOpacity,
+                            backgroundColor: Colors.accentSecondary + '20',
                         }
                     ]}
                 />
@@ -157,10 +158,10 @@ const TabItem = ({ route, isFocused, onPress, label }: TabItemProps) => {
             </Animated.View>
             <Text
                 style={[
-                    themedStyles.label,
+                    tabStyles.label,
                     {
                         color: iconColor,
-                        fontFamily: isFocused ? Typography.family.bold : Typography.family.medium,
+                        fontFamily: isFocused ? Typo.family.bold : Typo.family.medium,
                     }
                 ]}
             >
@@ -170,18 +171,15 @@ const TabItem = ({ route, isFocused, onPress, label }: TabItemProps) => {
     );
 };
 
-const styles = (Colors: any) => StyleSheet.create({
+const tabStyles = StyleSheet.create({
   outerContainer: {
-    backgroundColor: Colors.background,
     borderTopWidth: 1,
-    borderTopColor: Colors.separator,
     paddingBottom: Platform.OS === 'ios' ? 24 : 8,
     paddingTop: 8,
   },
   tabBar: {
     flexDirection: 'row',
     height: 64,
-    backgroundColor: Colors.background,
     justifyContent: 'space-around',
     alignItems: 'center',
   },
@@ -189,6 +187,7 @@ const styles = (Colors: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
+    minHeight: 44, // 44px minimum touch target
   },
   iconWrapper: {
     height: 32,
@@ -201,7 +200,6 @@ const styles = (Colors: any) => StyleSheet.create({
     position: 'absolute',
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.primaryContainer,
   },
   label: {
     fontSize: 12,

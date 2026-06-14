@@ -185,11 +185,11 @@ export default React.memo(function PostCard({
 const styles = (Colors: any) => StyleSheet.create({
   container: {
     backgroundColor: Colors.surface,
-    borderRadius: 24, // M3 Large Corner
+    borderRadius: 16,
     padding: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.borderSubtle,
   },
   carryoverContainer: {
     backgroundColor: Colors.tertiaryContainer,
@@ -208,7 +208,7 @@ const styles = (Colors: any) => StyleSheet.create({
   },
   badgeText: {
     ...Typography.m3.labelSmall,
-    color: Colors.primary,
+    color: Colors.accentSecondary,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
@@ -219,18 +219,18 @@ const styles = (Colors: any) => StyleSheet.create({
   },
   timeText: {
     ...Typography.m3.labelSmall,
-    color: Colors.onSurfaceVariant,
+    color: Colors.textSecondary,
     opacity: 0.8,
   },
   title: {
     ...Typography.m3.titleMedium,
-    color: Colors.onSurface,
+    color: Colors.textPrimary,
     fontWeight: '700',
     marginBottom: 4,
   },
   description: {
     ...Typography.m3.labelSmall, // Changed from bodySmall
-    color: Colors.onSurfaceVariant,
+    color: Colors.textSecondary,
     lineHeight: 18,
     marginBottom: 12,
   },
@@ -238,7 +238,7 @@ const styles = (Colors: any) => StyleSheet.create({
     marginTop: 4,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: Colors.separator,
+    borderTopColor: Colors.borderSubtle,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -264,7 +264,7 @@ const styles = (Colors: any) => StyleSheet.create({
   },
   authorName: {
     ...Typography.m3.labelLarge,
-    color: Colors.onSurface,
+    color: Colors.textPrimary,
     fontSize: 13,
   },
   roleText: {
@@ -282,14 +282,14 @@ const styles = (Colors: any) => StyleSheet.create({
     gap: 6,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 100, // Stadium
+    borderRadius: 8,
   },
   alarmText: {
     ...Typography.m3.labelSmall,
     fontWeight: '700',
   },
   duePill: {
-    borderRadius: 100,
+    borderRadius: 8,
     paddingVertical: 4,
     paddingHorizontal: 10,
   },

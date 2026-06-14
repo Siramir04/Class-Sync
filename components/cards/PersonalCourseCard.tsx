@@ -12,8 +12,8 @@ interface PersonalCourseCardProps {
 }
 
 /**
- * Card for displaying a personal course on the home screen.
- * Features course color accent, next class indicator, and quick stats.
+ * Personal Course Card — Teal design system
+ * bgSurface, borderSubtle, teal accent colors, 16px radius
  */
 export default React.memo(function PersonalCourseCard({ course }: PersonalCourseCardProps) {
   const { colors: Colors, typography: Typography } = useTheme();
@@ -55,15 +55,15 @@ export default React.memo(function PersonalCourseCard({ course }: PersonalCourse
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={[styles.container, {
-          backgroundColor: Colors.surfaceSecondary,
-          borderLeftColor: course.color,
+          backgroundColor: Colors.surface,
+          borderColor: Colors.borderSubtle,
         }]}
       >
         {/* Top Row: Name + Color Badge */}
         <View style={styles.topRow}>
           <View style={[styles.colorDot, { backgroundColor: course.color }]} />
           <Text
-            style={[styles.courseName, { color: Colors.onSurface, fontFamily: Typography.family.bold }]}
+            style={[styles.courseName, { color: Colors.textPrimary, fontFamily: Typography.family.bold }]}
             numberOfLines={1}
           >
             {course.name}
@@ -114,10 +114,10 @@ export default React.memo(function PersonalCourseCard({ course }: PersonalCourse
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 18,
     marginBottom: 12,
-    borderLeftWidth: 4,
+    borderWidth: 1,
   },
   topRow: {
     flexDirection: 'row',

@@ -13,8 +13,8 @@ interface SpaceTileProps {
 }
 
 /**
- * Material 3 (M3) Space Tile
- * Using tonal containers and smooth scale animations.
+ * Space Tile — Teal design system
+ * Teal-aligned tonal containers with smooth scale animations.
  */
 export default React.memo(function SpaceTile({
   name,
@@ -24,7 +24,6 @@ export default React.memo(function SpaceTile({
   style,
 }: SpaceTileProps) {
   const { colors: Colors } = useTheme();
-  const themedStyles = styles(Colors);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -48,16 +47,24 @@ export default React.memo(function SpaceTile({
     .toUpperCase()
     .slice(0, 2);
 
+  // Teal-centric gradient palette
+  const TILE_COLORS = [
+    { bg: '#0F4C5C', text: '#FFFFFF' },
+    { bg: '#38B2AC', text: '#FFFFFF' },
+    { bg: '#805AD5', text: '#FFFFFF' },
+    { bg: '#2D3748', text: '#FFFFFF' },
+  ];
+
+  const tileColor = TILE_COLORS[index % TILE_COLORS.length];
+
   const getBackground = () => {
     if (isAdd) return Colors.surfaceVariant;
-    const colors = [Colors.primaryContainer, Colors.secondaryContainer, Colors.tertiaryContainer];
-    return colors[index % colors.length];
+    return tileColor.bg;
   };
 
   const getTextColor = () => {
-    if (isAdd) return Colors.onSurfaceVariant;
-    const colors = [Colors.onPrimaryContainer, Colors.onSecondaryContainer, Colors.onTertiaryContainer];
-    return colors[index % colors.length];
+    if (isAdd) return Colors.textSecondary;
+    return tileColor.text;
   };
 
   return (
@@ -67,22 +74,22 @@ export default React.memo(function SpaceTile({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={[
-          themedStyles.container,
+          tileStyles.container,
           { backgroundColor: getBackground() },
-          isAdd && themedStyles.addTile
+          isAdd && { borderWidth: 1, borderColor: Colors.borderSubtle, borderStyle: 'dashed' as any }
         ]}
       >
         {isAdd ? (
-          <View style={themedStyles.addContent}>
-            <LucideIcons.Plus size={24} color={Colors.onSurfaceVariant} />
-            <Text style={themedStyles.addLabel}>Join</Text>
+          <View style={tileStyles.addContent}>
+            <LucideIcons.Plus size={24} color={Colors.textSecondary} />
+            <Text style={[tileStyles.addLabel, { color: Colors.textSecondary }]}>Join</Text>
           </View>
         ) : (
           <>
-            <View style={[themedStyles.initialsContainer, { backgroundColor: 'rgba(0,0,0,0.05)' }]}>
-              <Text style={[themedStyles.initials, { color: getTextColor() }]}>{initials}</Text>
+            <View style={[tileStyles.initialsContainer, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+              <Text style={[tileStyles.initials, { color: getTextColor() }]}>{initials}</Text>
             </View>
-            <Text style={[themedStyles.label, { color: getTextColor() }]} numberOfLines={2}>
+            <Text style={[tileStyles.label, { color: getTextColor() }]} numberOfLines={2}>
               {name}
             </Text>
           </>
@@ -92,19 +99,14 @@ export default React.memo(function SpaceTile({
   );
 });
 
-const styles = (Colors: any) => StyleSheet.create({
+const tileStyles = StyleSheet.create({
   container: {
     width: 100,
     height: 110,
-    borderRadius: 24, // M3 Large radius
+    borderRadius: 16,
     padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  addTile: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
   },
   addContent: {
     alignItems: 'center',
@@ -112,7 +114,6 @@ const styles = (Colors: any) => StyleSheet.create({
   },
   addLabel: {
     ...Typography.m3.labelSmall,
-    color: Colors.onSurfaceVariant,
     fontWeight: '700',
   },
   initialsContainer: {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   View, 
   Text, 
@@ -7,11 +7,16 @@ import {
   Pressable, 
   Platform,
   Animated,
-  Dimensions
+  Dimensions,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
 import * as LucideIcons from 'lucide-react-native';
+import { loginWithGoogle } from '../../services/authService';
+import { useAuthStore } from '../../store/authStore';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -23,8 +28,8 @@ interface AuthLayoutProps {
 }
 
 /**
- * Material 3 (M3) Auth Layout
- * Provides a clean, tonal environment for login and registration.
+ * Auth Layout — Teal design system
+ * Clean airy background, teal branding, smooth entrance animation
  */
 export const AuthLayout = ({
   title, 
@@ -35,6 +40,32 @@ export const AuthLayout = ({
   const { colors: Colors, typography: Typography } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = createStyles(Colors, Typography);
+  const setUser = useAuthStore((s) => s.setUser);
+  const router = useRouter();
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    if (googleLoading) return;
+    setGoogleLoading(true);
+    try {
+      const firebaseUser = await loginWithGoogle();
+      const { getCurrentUser } = await import('../../services/authService');
+      const userData = await getCurrentUser(firebaseUser.uid);
+      if (userData) {
+        setUser(userData);
+        router.replace('/(tabs)');
+      }
+    } catch (err: any) {
+      console.error('Google Sign-In Error:', err);
+      if (Platform.OS === 'web') {
+        alert(err.message || 'Google Sign-In failed');
+      } else {
+        Alert.alert('Sign In Failed', err.message || 'Google Sign-In failed');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   // Animation for staggered entrance
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -62,6 +93,7 @@ export const AuthLayout = ({
         paddingTop: insets.top + 32,
         paddingBottom: insets.bottom + 32,
         paddingHorizontal: 24,
+        ...(Platform.OS === 'web' ? { maxWidth: 480, alignSelf: 'center' as any, width: '100%' as any } : {}),
       }}
       showsVerticalScrollIndicator={false}
     >
@@ -83,12 +115,20 @@ export const AuthLayout = ({
             <Pressable 
               style={({ pressed }) => [
                 styles.googleButton,
-                pressed && { backgroundColor: Colors.surfaceElevation2 }
+                pressed && { backgroundColor: Colors.surfaceElevation2 },
+                googleLoading && { opacity: 0.7 }
               ]}
-              onPress={() => {}}
+              onPress={handleGoogleSignIn}
+              disabled={googleLoading}
             >
-              <LucideIcons.Globe size={18} color={Colors.primary} />
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
+              {googleLoading ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <>
+                  <LucideIcons.Globe size={18} color={Colors.primary} />
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                </>
+              )}
             </Pressable>
 
             <View style={styles.dividerContainer}>
@@ -123,18 +163,18 @@ const createStyles = (Colors: any, Typography: any) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary, // Deep teal
     alignItems: 'center',
     justifyContent: 'center',
   },
   appName: {
-    ...Typography.m3.titleLarge,
+    ...Typography.appTitle,
     fontWeight: '900',
     color: Colors.onSurface,
     letterSpacing: -0.5,
   },
   title: {
-    ...Typography.m3.headlineMedium,
+    ...Typography.screenTitle,
     color: Colors.onSurface,
     fontWeight: '900',
     fontSize: 34,
@@ -143,9 +183,9 @@ const createStyles = (Colors: any, Typography: any) => StyleSheet.create({
   },
   subtitle: {
     ...Typography.m3.bodyLarge,
-    color: Colors.onSurfaceVariant,
+    color: Colors.textSecondary,
     marginTop: 8,
-    opacity: 0.7,
+    opacity: 0.8,
   },
   content: {
     flex: 1,
@@ -156,13 +196,13 @@ const createStyles = (Colors: any, Typography: any) => StyleSheet.create({
   googleButton: {
     height: 52,
     backgroundColor: Colors.surface,
-    borderRadius: 100, // M3 Stadium
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: Colors.borderSubtle,
   },
   googleButtonText: {
     ...Typography.m3.labelLarge,
@@ -178,12 +218,12 @@ const createStyles = (Colors: any, Typography: any) => StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: Colors.outlineVariant,
-    opacity: 0.3,
+    backgroundColor: Colors.borderSubtle,
+    opacity: 0.5,
   },
   dividerText: {
     ...Typography.m3.labelLarge,
-    color: Colors.onSurfaceVariant,
+    color: Colors.textSecondary,
     fontWeight: '500',
   },
 });
